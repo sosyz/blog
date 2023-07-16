@@ -4,7 +4,7 @@ date: 2023-07-08 20:40:16
 tags: redis
 ---
 
-本文源码最新commit：
+本文源码版本截至commit：
 > 14f802b: Initialize cluster owner_not_claiming_slot to avoid warning (#12391)
 
 ## 数据结构
