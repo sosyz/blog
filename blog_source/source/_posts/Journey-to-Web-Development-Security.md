@@ -113,7 +113,7 @@ document.querySelector('div').innerHTML = content;
 
 #### 示例
 
-![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/9ab53341a3324607ab5bcda094d76e79~tplv-k3u1fbpfcp-watermark.image?)
+{% asset_img "9ab53341a3324607ab5bcda094d76e79~tplv-k3u1fbpfcp-watermark.png" %}
 
 ```html
 <!-- 用户点击 -->
@@ -137,7 +137,7 @@ document.querySelector('div').innerHTML = content;
 
 #### SQL 注入
 
-![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/04975e27e5d84a02be6baf32b6367285~tplv-k3u1fbpfcp-watermark.image?)
+{% asset_img "04975e27e5d84a02be6baf32b6367285~tplv-k3u1fbpfcp-watermark.png" %}
 
 ```js
 public async renderForm(ctx) {
@@ -223,7 +223,8 @@ console.log(str.match(nonGreedyRegExp)[0])
 ` ^((ab)*)+$ `
 
 执行过程中存在的问题
-![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/dfe511d3a3bf46caaff1992a9c02a826~tplv-k3u1fbpfcp-watermark.image?)
+
+{% asset_img "dfe511d3a3bf46caaff1992a9c02a826~tplv-k3u1fbpfcp-watermark.image.png" %}
 
 大量的回溯会造成响应时间大大加长，接口吞吐量也会随之下降
 
@@ -246,7 +247,7 @@ console.log(str.match(nonGreedyRegExp)[0])
 
 攻击者修改TCP发送大量SYN包，但不响应服务器ACK + SYN包，导致服务器无法释放连接从而堵塞
 
-![image.png](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/41cdaaf3fb8042ce8ef2eeac761b0e0c~tplv-k3u1fbpfcp-watermark.image?)
+{% asset_img "41cdaaf3fb8042ce8ef2eeac761b0e0c~tplv-k3u1fbpfcp-watermark.image.png" %}
 
 ### 中间人攻击
 
