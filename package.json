@@ -1,6 +1,6 @@
 {
 	"dependencies": {
-		"hexo": "7.0.0-rc2",
+		"hexo": "7.0.0",
 		"hexo-browsersync": "^0.3.0",
 		"hexo-generator-archive": "^2.0.0",
 		"hexo-generator-feed": "^3.0.0",
