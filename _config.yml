@@ -14,8 +14,7 @@ timezone: 'Asia/Shanghai'
 # URL
 ## Set your site url here. For example, if you use GitHub Page, set url as 'https://username.github.io/project'
 url: https://blog.sonui.cn
-permalink: /:year/:month/:day/:title/
-permalink_defaults:
+permalink: /:title/
 pretty_urls:
   trailing_index: true # Set to false to remove trailing 'index.html' from permalinks
   trailing_html: true # Set to false to remove trailing '.html' from permalinks
@@ -48,6 +47,7 @@ marked:
   postAsset: true
   mangle: true
   lazyload: true
+  autolink: true
 
 relative_link: false
 future: true
