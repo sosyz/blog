@@ -17,7 +17,7 @@
 
 <script id="hexo-configurations">
     var NexT = window.NexT || {};
-    var CONFIG = {"hostname":"blog.sonui.cn","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+    var CONFIG = {"hostname":"blog.sonui.cn","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
   </script>
 
   <meta name="description" content="攻击篇XSS(跨站脚本攻击)原理开发者盲目信息用户传递的信息而不做处理 当用户输入时，开发者盲目的把用户输入的信息传递给服务器，服务器把用户输入的信息转换成HTML标签，然后把转换后的HTML标签传递给用户 特点 难以感知 没有UI呈现 窃取用户信息(cookies &#x2F; token) 绘制 UI (例如弹窗), 诱使用户填写私密信息  案例存储型XSSI(Stored XSS) 恶意脚本">
@@ -119,11 +119,6 @@
         <li class="menu-item menu-item-home">
 
     <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
-
-  </li>
-        <li class="menu-item menu-item-about">
-
-    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
 
   </li>
         <li class="menu-item menu-item-archives">
@@ -243,11 +238,11 @@
 <li>利用用户权限(Cookies)</li>
 <li>构造指定HTTP请求，窃取或修改用户敏感信息</li>
 </ul>
-<h4 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h4><img data-src="/Journey-to-Web-Development-Security/9ab53341a3324607ab5bcda094d76e79~tplv-k3u1fbpfcp-watermark.png" class="">
+<h4 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h4><img src="/Journey-to-Web-Development-Security/9ab53341a3324607ab5bcda094d76e79~tplv-k3u1fbpfcp-watermark.png" class="">
 
 <figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- 用户点击 --&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- 点击后向黑客转账100元 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">a</span> <span class="attr">href</span>=<span class="string">&quot;http://bank.com/transfer?to=hacker&amp;amount=100&quot;</span>&gt;</span> 点我抽奖 <span class="tag">&lt;/<span class="name">a</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- 用户访问后执行 --&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- 加载图片时向黑客转账100元 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">img</span> <span class="attr">style</span>=<span class="string">&quot;display:none&quot;</span> <span class="attr">src</span>=<span class="string">&quot;http://bank.com/transfer?to=hacker&amp;amount=100&quot;</span>&gt;</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- 表单 --&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- 表单隐藏用户无法发现 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">form</span> <span class="attr">action</span>=<span class="string">&quot;http://bank.com/transfer&quot;</span> <span class="attr">method</span>=<span class="string">&quot;POST&quot;</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;to&quot;</span> <span class="attr">value</span>=<span class="string">&quot;hacker&quot;</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;amount&quot;</span> <span class="attr">value</span>=<span class="string">&quot;100&quot;</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">form</span>&gt;</span></span><br></pre></td></tr></table></figure>
 
-<h3 id="注入"><a href="#注入" class="headerlink" title="注入"></a>注入</h3><h4 id="SQL-注入"><a href="#SQL-注入" class="headerlink" title="SQL 注入"></a>SQL 注入</h4><img data-src="/Journey-to-Web-Development-Security/04975e27e5d84a02be6baf32b6367285~tplv-k3u1fbpfcp-watermark.png" class="">
+<h3 id="注入"><a href="#注入" class="headerlink" title="注入"></a>注入</h3><h4 id="SQL-注入"><a href="#SQL-注入" class="headerlink" title="SQL 注入"></a>SQL 注入</h4><img src="/Journey-to-Web-Development-Security/04975e27e5d84a02be6baf32b6367285~tplv-k3u1fbpfcp-watermark.png" class="">
 
 <figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">public <span class="keyword">async</span> <span class="title function_">renderForm</span>(<span class="params">ctx</span>) &#123;</span><br><span class="line">    <span class="keyword">const</span> &#123; username, form_id &#125; = ctx.<span class="property">query</span>;</span><br><span class="line">    <span class="keyword">const</span> sql = <span class="string">`SELECT * FROM users WHERE username=&#x27;<span class="subst">$&#123;username&#125;</span>&#x27;</span></span><br><span class="line"><span class="string">    AND form_id=&#x27;<span class="subst">$&#123;form_id&#125;</span>&#x27;`</span>;</span><br><span class="line">    <span class="keyword">const</span> users = <span class="keyword">await</span> db.<span class="title function_">query</span>(sql);</span><br><span class="line">    ctx.<span class="property">body</span> = users;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
@@ -534,11 +529,6 @@
       </div>
   </nav>
 </div>
-  <div class="links-of-author motion-element">
-      <span class="links-of-author-item">
-        <a href="https://github.com/sosyz" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;sosyz" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
-      </span>
-  </div>
 
 
 
@@ -585,8 +575,6 @@
 
   
   <script src="/lib/anime.min.js"></script>
-  <script src="/lib/pjax/pjax.min.js"></script>
-  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
   <script src="/lib/velocity/velocity.min.js"></script>
   <script src="/lib/velocity/velocity.ui.min.js"></script>
 
@@ -600,65 +588,6 @@
 
 <script src="/js/next-boot.js"></script>
 
-  <script>
-var pjax = new Pjax({
-  selectors: [
-    'head title',
-    '#page-configurations',
-    '.content-wrap',
-    '.post-toc-wrap',
-    '.languages',
-    '#pjax'
-  ],
-  switches: {
-    '.post-toc-wrap': Pjax.switches.innerHTML
-  },
-  analytics: false,
-  cacheBust: false,
-  scrollTo : !CONFIG.bookmark.enable
-});
-
-window.addEventListener('pjax:success', () => {
-  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
-    var code = element.text || element.textContent || element.innerHTML || '';
-    var parent = element.parentNode;
-    parent.removeChild(element);
-    var script = document.createElement('script');
-    if (element.id) {
-      script.id = element.id;
-    }
-    if (element.className) {
-      script.className = element.className;
-    }
-    if (element.type) {
-      script.type = element.type;
-    }
-    if (element.src) {
-      script.src = element.src;
-      // Force synchronous loading of peripheral JS.
-      script.async = false;
-    }
-    if (element.dataset.pjax !== undefined) {
-      script.dataset.pjax = '';
-    }
-    if (code !== '') {
-      script.appendChild(document.createTextNode(code));
-    }
-    parent.appendChild(script);
-  });
-  NexT.boot.refresh();
-  // Define Motion Sequence & Bootstrap Motion.
-  if (CONFIG.motion.enable) {
-    NexT.motion.integrator
-      .init()
-      .add(NexT.motion.middleWares.subMenu)
-      .add(NexT.motion.middleWares.postList)
-      .bootstrap();
-  }
-  NexT.utils.updateSidebarPosition();
-});
-</script>
-
 
 
 
@@ -678,11 +607,9 @@ window.addEventListener('pjax:success', () => {
 
 
 
-    <div id="pjax">
   
 
   
 
-    </div>
 </body>
 </html>

@@ -17,7 +17,7 @@
 
 <script id="hexo-configurations">
     var NexT = window.NexT || {};
-    var CONFIG = {"hostname":"blog.sonui.cn","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"always","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+    var CONFIG = {"hostname":"blog.sonui.cn","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
   </script>
 
   <meta name="description" content="Windows预备文件MinGW-W64国内下载国外下载 Visual Studio Code官网下载 推荐插件Code Runner &amp; C&#x2F;C++ 配置编译器将MinGW-W64解压后，复制其路径，例如解压到了C盘，路径为C:\mingw64\ 按下 Win+R 输入 sysdm.cpl 打开系统属性窗口，切换到高级选项，点击右下方环境变量   双击系统变量中的Path项目">
@@ -128,11 +128,6 @@
     <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
 
   </li>
-        <li class="menu-item menu-item-about">
-
-    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
-
-  </li>
         <li class="menu-item menu-item-archives">
 
     <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
@@ -208,33 +203,33 @@
 <h4 id="推荐插件"><a href="#推荐插件" class="headerlink" title="推荐插件"></a>推荐插件</h4><p><a target="_blank" rel="noopener" href="https://wwa.lanzoui.com/ilVjssuj56d">Code Runner &amp; C&#x2F;C++</a></p>
 <h3 id="配置编译器"><a href="#配置编译器" class="headerlink" title="配置编译器"></a>配置编译器</h3><p>将MinGW-W64解压后，复制其路径，例如解压到了C盘，路径为<code>C:\mingw64\</code></p>
 <p>按下 <code>Win+R</code> 输入 <code>sysdm.cpl</code> 打开系统属性窗口，切换到高级选项，点击右下方环境变量</p>
-<img data-src="/Setting-Up-the-VS-Code-C-C-Environment/system%20properties.png" class="" title="system properties" alt="system properties">
+<img src="/Setting-Up-the-VS-Code-C-C-Environment/system%20properties.png" class="" title="system properties" alt="system properties">
 
 <p>双击系统变量中的Path项目</p>
-<img data-src="/Setting-Up-the-VS-Code-C-C-Environment/system%20env.png" class="" title="edit env" alt="edit env">
+<img src="/Setting-Up-the-VS-Code-C-C-Environment/system%20env.png" class="" title="edit env" alt="edit env">
 
 <p>在弹出的窗口中点击右边的新建按钮，粘贴之前复制的目录，后面加上bin，例如C:\mingw64\bin，最终如图</p>
-<img data-src="/Setting-Up-the-VS-Code-C-C-Environment/edit%20env%20ok.png" class="" title="edit env ok" alt="edit env ok">
+<img src="/Setting-Up-the-VS-Code-C-C-Environment/edit%20env%20ok.png" class="" title="edit env ok" alt="edit env ok">
 
 <p>按下 <code>Win+R</code> 输入 <code>cmd</code>，在 <code>cmd</code> 窗口中输入 <code>gcc -v</code> 出现关于编译器相关信息即可，如果提示找不到可以尝试重启电脑后再运行命令</p>
-<img data-src="/Setting-Up-the-VS-Code-C-C-Environment/mingw%20print.png" class="" title="mingw print" alt="mingw print">
+<img src="/Setting-Up-the-VS-Code-C-C-Environment/mingw%20print.png" class="" title="mingw print" alt="mingw print">
 
 <h3 id="安装VS-Code"><a href="#安装VS-Code" class="headerlink" title="安装VS Code"></a>安装VS Code</h3><p>下载 <code>VSCodeUserSetup-x64.exe</code> 文件后，双击打开，选择 <code>我同意此协议</code></p>
-<img data-src="/Setting-Up-the-VS-Code-C-C-Environment/start%20install%20vscode.png" class="" title="start install vscode" alt="start install vscode">
+<img src="/Setting-Up-the-VS-Code-C-C-Environment/start%20install%20vscode.png" class="" title="start install vscode" alt="start install vscode">
 
 <p>根据自己需要勾选，也可以按照图中所示的勾选</p>
-<img data-src="/Setting-Up-the-VS-Code-C-C-Environment/vscode%20install%20config.png" class="" title="vscode install config" alt="vscode install config">
+<img src="/Setting-Up-the-VS-Code-C-C-Environment/vscode%20install%20config.png" class="" title="vscode install config" alt="vscode install config">
 
 <p>将之前下载的 <code>插件.zip</code> 文件解压到桌面，然后启动VS Code，切到图中所指标签</p>
-<img data-src="/Setting-Up-the-VS-Code-C-C-Environment/vscode%20start%20window.png" class="" title="vscode start window" alt="vscode start window">
+<img src="/Setting-Up-the-VS-Code-C-C-Environment/vscode%20start%20window.png" class="" title="vscode start window" alt="vscode start window">
 
 <p>然后将之前解压的三个文件选中，拖放到图中画框区域进行安装</p>
-<img data-src="/Setting-Up-the-VS-Code-C-C-Environment/vscode%20plugs%20window.png" class="" title="vscode plugs window" alt="vscode plugs window">
+<img src="/Setting-Up-the-VS-Code-C-C-Environment/vscode%20plugs%20window.png" class="" title="vscode plugs window" alt="vscode plugs window">
 
 <p>然后点击 <code>文件</code> → <code>首选项</code> → <code>设置</code> 找到列表中的 <code>扩展</code> 点开，寻找 <code>Run Code config</code></p>
 <p>寻找 Run In Terminal 勾选</p>
 <p>最后选择一个Hello World源码文件右键选择VS Code打开，点击右上角三角图标运行，运行如图所示就说明环境ok可以使用了</p>
-<img data-src="/Setting-Up-the-VS-Code-C-C-Environment/run%20cpp%20code.png" class="" title="run cpp code" alt="run cpp code">
+<img src="/Setting-Up-the-VS-Code-C-C-Environment/run%20cpp%20code.png" class="" title="run cpp code" alt="run cpp code">
 
     </div>
 
@@ -342,11 +337,6 @@
       </div>
   </nav>
 </div>
-  <div class="links-of-author motion-element">
-      <span class="links-of-author-item">
-        <a href="https://github.com/sosyz" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;sosyz" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
-      </span>
-  </div>
 
 
 
@@ -393,8 +383,6 @@
 
   
   <script src="/lib/anime.min.js"></script>
-  <script src="/lib/pjax/pjax.min.js"></script>
-  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
   <script src="/lib/velocity/velocity.min.js"></script>
   <script src="/lib/velocity/velocity.ui.min.js"></script>
 
@@ -408,65 +396,6 @@
 
 <script src="/js/next-boot.js"></script>
 
-  <script>
-var pjax = new Pjax({
-  selectors: [
-    'head title',
-    '#page-configurations',
-    '.content-wrap',
-    '.post-toc-wrap',
-    '.languages',
-    '#pjax'
-  ],
-  switches: {
-    '.post-toc-wrap': Pjax.switches.innerHTML
-  },
-  analytics: false,
-  cacheBust: false,
-  scrollTo : !CONFIG.bookmark.enable
-});
-
-window.addEventListener('pjax:success', () => {
-  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
-    var code = element.text || element.textContent || element.innerHTML || '';
-    var parent = element.parentNode;
-    parent.removeChild(element);
-    var script = document.createElement('script');
-    if (element.id) {
-      script.id = element.id;
-    }
-    if (element.className) {
-      script.className = element.className;
-    }
-    if (element.type) {
-      script.type = element.type;
-    }
-    if (element.src) {
-      script.src = element.src;
-      // Force synchronous loading of peripheral JS.
-      script.async = false;
-    }
-    if (element.dataset.pjax !== undefined) {
-      script.dataset.pjax = '';
-    }
-    if (code !== '') {
-      script.appendChild(document.createTextNode(code));
-    }
-    parent.appendChild(script);
-  });
-  NexT.boot.refresh();
-  // Define Motion Sequence & Bootstrap Motion.
-  if (CONFIG.motion.enable) {
-    NexT.motion.integrator
-      .init()
-      .add(NexT.motion.middleWares.subMenu)
-      .add(NexT.motion.middleWares.postList)
-      .bootstrap();
-  }
-  NexT.utils.updateSidebarPosition();
-});
-</script>
-
 
 
 
@@ -486,11 +415,9 @@ window.addEventListener('pjax:success', () => {
 
 
 
-    <div id="pjax">
   
 
   
 
-    </div>
 </body>
 </html>
