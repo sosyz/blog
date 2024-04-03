@@ -2,6 +2,7 @@
 title: Redis Reading Notes
 date: 2023-07-08 20:40:16
 tags: redis
+description: Redis 源码阅读笔记
 ---
 
 本文源码版本截至commit：
