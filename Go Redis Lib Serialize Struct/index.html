@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 7.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"blog.sonui.cn","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="Descriptiongo-redis 库对于 HSet 方法支持的数据类型为 interface&#123;&#125;, 查看下支持哪些类型的 Version github.com&#x2F;go-redis&#x2F;redis&#x2F;v8 v8.11.5 https:&#x2F;&#x2F;pkg.go.dev&#x2F;github.com&#x2F;go-redis&#x2F;redis&#x2F;v8@v8.11.5#Client.HSe">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Golang 库 Redis 对 data 类型的支持">
+<meta property="og:url" content="https://blog.sonui.cn/Go%20Redis%20Lib%20Serialize%20Struct/index.html">
+<meta property="og:site_name" content="Sonui&#39;s Blog">
+<meta property="og:description" content="Descriptiongo-redis 库对于 HSet 方法支持的数据类型为 interface&#123;&#125;, 查看下支持哪些类型的 Version github.com&#x2F;go-redis&#x2F;redis&#x2F;v8 v8.11.5 https:&#x2F;&#x2F;pkg.go.dev&#x2F;github.com&#x2F;go-redis&#x2F;redis&#x2F;v8@v8.11.5#Client.HSe">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.sonui.cn/Go%20Redis%20Lib%20Serialize%20Struct/image.png">
+<meta property="og:image" content="https://blog.sonui.cn/Go%20Redis%20Lib%20Serialize%20Struct/image-1.png">
+<meta property="og:image" content="https://blog.sonui.cn/Go%20Redis%20Lib%20Serialize%20Struct/image-2.png">
+<meta property="og:image" content="https://blog.sonui.cn/Go%20Redis%20Lib%20Serialize%20Struct/image-3.png">
+<meta property="og:image" content="https://blog.sonui.cn/Go%20Redis%20Lib%20Serialize%20Struct/image-4.png">
+<meta property="og:image" content="https://blog.sonui.cn/Go%20Redis%20Lib%20Serialize%20Struct/image-5.png">
+<meta property="og:image" content="https://blog.sonui.cn/Go%20Redis%20Lib%20Serialize%20Struct/image-6.png">
+<meta property="og:image" content="https://blog.sonui.cn/Go%20Redis%20Lib%20Serialize%20Struct/image-7.png">
+<meta property="og:image" content="https://blog.sonui.cn/Go%20Redis%20Lib%20Serialize%20Struct/image-8.png">
+<meta property="og:image" content="https://blog.sonui.cn/Go%20Redis%20Lib%20Serialize%20Struct/image-9.png">
+<meta property="article:published_time" content="2024-04-03T12:30:43.727Z">
+<meta property="article:modified_time" content="2024-04-04T13:30:28.390Z">
+<meta property="article:author" content="Sonui">
+<meta property="article:tag" content="redis, golang">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.sonui.cn/Go%20Redis%20Lib%20Serialize%20Struct/image.png">
+
+<link rel="canonical" href="https://blog.sonui.cn/Go%20Redis%20Lib%20Serialize%20Struct/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Golang 库 Redis 对 data 类型的支持 | Sonui's Blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Sonui's Blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.sonui.cn/Go%20Redis%20Lib%20Serialize%20Struct/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Sonui">
+      <meta itemprop="description" content="Sonui's Blog">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Sonui's Blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Golang 库 Redis 对 data 类型的支持
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2024-04-03 20:30:43" itemprop="dateCreated datePublished" datetime="2024-04-03T20:30:43+08:00">2024-04-03</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2024-04-04 21:30:28" itemprop="dateModified" datetime="2024-04-04T21:30:28+08:00">2024-04-04</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="Description"><a href="#Description" class="headerlink" title="Description"></a>Description</h2><p><code>go-redis</code> 库对于 <code>HSet</code> 方法支持的数据类型为 <code>interface&#123;&#125;</code>, 查看下支持哪些类型的</p>
+<h2 id="Version"><a href="#Version" class="headerlink" title="Version"></a>Version</h2><blockquote>
+<p>github.com&#x2F;go-redis&#x2F;redis&#x2F;v8 v8.11.5</p>
+<p><a target="_blank" rel="noopener" href="https://pkg.go.dev/github.com/go-redis/redis/v8@v8.11.5#Client.HSet">https://pkg.go.dev/github.com/go-redis/redis/v8@v8.11.5#Client.HSet</a></p>
+</blockquote>
+<h2 id="Code"><a href="#Code" class="headerlink" title="Code"></a>Code</h2><figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> Son <span class="keyword">struct</span> &#123;</span><br><span class="line">    A <span class="type">int</span></span><br><span class="line">    B <span class="type">string</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> Person <span class="keyword">struct</span> &#123;</span><br><span class="line">    Name <span class="type">string</span></span><br><span class="line">    Age  <span class="type">int</span></span><br><span class="line">    Son  []Son</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">TestSerialize</span><span class="params">(t *testing.T)</span></span> &#123;</span><br><span class="line">    redis := redis.NewClient(&amp;redis.Options&#123;</span><br><span class="line">        Addr: <span class="string">&quot;localhost:6379&quot;</span>,</span><br><span class="line">    &#125;)</span><br><span class="line"></span><br><span class="line">    data := Person&#123;</span><br><span class="line">        Name: <span class="string">&quot;zhangsan&quot;</span>,</span><br><span class="line">        Age:  <span class="number">18</span>,</span><br><span class="line">        Son: []Son&#123;</span><br><span class="line">            &#123;</span><br><span class="line">                A: <span class="number">1</span>,</span><br><span class="line">                B: <span class="string">&quot;a&quot;</span>,</span><br><span class="line">            &#125;,</span><br><span class="line">            &#123;</span><br><span class="line">                A: <span class="number">2</span>,</span><br><span class="line">                B: <span class="string">&quot;b&quot;</span>,</span><br><span class="line">            &#125;,</span><br><span class="line">        &#125;,</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    redis.HSet(context.Background(), <span class="string">&quot;person&quot;</span>, <span class="string">&quot;name&quot;</span>, data)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="Debug"><a href="#Debug" class="headerlink" title="Debug"></a>Debug</h2><p>可以通过跳转看到函数内部实现如下</p>
+<p><img src="/./Go%20Redis%20Lib%20Serialize%20Struct/image.png" alt="HSet code" loading="lazy"></p>
+<p><code>appendArgs</code> 函数将 <code>args</code> 追加到 <code>values</code> 参数的前面后生成一个 <code>IntCmd</code> 对象，传递给 <code>c</code> 进行处理（c的定义可以在 <code>NewClient</code> 函数中看到其为 <code>Client</code> 对象）</p>
+<p><img src="/./Go%20Redis%20Lib%20Serialize%20Struct/image-1.png" alt="NewClient Code" loading="lazy"></p>
+<p>通过调试追踪可以确认 <code>c</code> 为 <code>Client</code> 对象，<code>c</code> 的 <code>Process</code> 方法会将 <code>IntCmd</code> 对象传递给 <code>Process</code> 方法进行处理</p>
+<p><img src="/./Go%20Redis%20Lib%20Serialize%20Struct/image-2.png" alt="alt text" loading="lazy"></p>
+<p>继续查看 <code>process</code> 方法的实现，可以看到跳到了这里</p>
+<p><img src="/./Go%20Redis%20Lib%20Serialize%20Struct/image-3.png" alt="process code" loading="lazy"></p>
+<p>由于没有设置 <code>hook</code> 所以直接进入 <code>c.baseClient.process</code> 方法执行</p>
+<p><img src="/./Go%20Redis%20Lib%20Serialize%20Struct/image-4.png" alt="baseClient process code" loading="lazy"></p>
+<p>这部分进行重复尝试，进入 <code>c._process</code> 方法查看代码</p>
+<p><img src="/./Go%20Redis%20Lib%20Serialize%20Struct/image-5.png" alt="real code" loading="lazy"></p>
+<p>忽略头部的睡眠代码，直接下面</p>
+<p><code>c.withConn</code> 传递了一个匿名函数，在方法中获取到一个 <code>conn</code> 对象，然后调用该函数</p>
+<p><img src="/./Go%20Redis%20Lib%20Serialize%20Struct/image-6.png" alt="exec hand" loading="lazy"></p>
+<p>在 <code>withConn</code> 通过传递过来的 <code>fn</code> 函数对数据进行序列化处理</p>
+<p><img src="/./Go%20Redis%20Lib%20Serialize%20Struct/image-7.png" alt="alt text" loading="lazy"></p>
+<p>序列化的具体实现可以发现是调用 <code>writeCmd</code> 方法，进入该方法一路跳转可以看到具体的执行代码</p>
+<p><img src="/./Go%20Redis%20Lib%20Serialize%20Struct/image-8.png" alt="alt text" loading="lazy"></p>
+<p>最终兜底处理</p>
+<p><img src="/./Go%20Redis%20Lib%20Serialize%20Struct/image-9.png" alt="alt text" loading="lazy"></p>
+<h2 id="Summary"><a href="#Summary" class="headerlink" title="Summary"></a>Summary</h2><p><code>go-redis</code> 库对于 <code>HSet</code> 方法支持的数据类型为 <code>interface&#123;&#125;</code>，在传递数据时会调用 <code>writeCmd</code> 方法进行序列化处理，最终通过 <code>conn</code> 对象将数据传递给 <code>redis</code> 服务端</p>
+<p>支持的数据类型基本为基础数据类型，如果是自定义的结构体需要自己实现序列化和反序列化的方式</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/redis-golang/" rel="tag"># redis, golang</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/WireGuard%20Use%20Notes/" rel="prev" title="WireGuard Use Notes">
+      <i class="fa fa-chevron-left"></i> WireGuard Use Notes
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Description"><span class="nav-number">1.</span> <span class="nav-text">Description</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Version"><span class="nav-number">2.</span> <span class="nav-text">Version</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Code"><span class="nav-number">3.</span> <span class="nav-text">Code</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Debug"><span class="nav-number">4.</span> <span class="nav-text">Debug</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Summary"><span class="nav-number">5.</span> <span class="nav-text">Summary</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">Sonui</p>
+  <div class="site-description" itemprop="description">Sonui's Blog</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">13</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">9</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Sonui</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
