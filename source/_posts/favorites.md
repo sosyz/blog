@@ -1,7 +1,7 @@
 ---
 title: 一些收藏的文章
 date: 2024-04-11T15:32:37+08:00
-tags:
+tags: Kubernetes, Go, Backend
 ---
 
 ## 说明
