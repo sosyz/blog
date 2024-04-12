@@ -20,6 +20,9 @@ dependencies:
   hexo-generator-index:
     specifier: ^3.0.0
     version: 3.0.0
+  hexo-generator-searchdb:
+    specifier: ^1.4.1
+    version: 1.4.1
   hexo-generator-tag:
     specifier: ^2.0.0
     version: 2.0.0
@@ -44,6 +47,9 @@ dependencies:
   hexo-theme-next:
     specifier: ^8.19.2
     version: 8.19.2
+  hexo-word-counter:
+    specifier: ^0.1.0
+    version: 0.1.0
   nunjucks:
     specifier: ^3.2.4
     version: 3.2.4
@@ -253,6 +259,11 @@ packages:
     dependencies:
       pascal-case: 3.1.2
       tslib: 2.6.2
+    dev: false
+
+  /cargo-cp-artifact@0.1.8:
+    resolution: {integrity: sha512-3j4DaoTrsCD1MRkTF2Soacii0Nx7UHCce0EwUf4fHnggwiE4fbmF2AbnfzayR36DF8KGadfh7M/Yfy625kgPlA==}
+    hasBin: true
     dev: false
 
   /chalk@4.1.2:
@@ -806,6 +817,14 @@ packages:
       hexo-pagination: 3.0.0
     dev: false
 
+  /hexo-generator-searchdb@1.4.1:
+    resolution: {integrity: sha512-7m8IBpZbI6iKb2jRYxs4pghD6Ln8ylQSRGl6MIC4G9wws21vYSXSD8rvC3MoCO+pWBHs6E/mTA/rjG+p2AZfVg==}
+    dependencies:
+      nunjucks: 3.2.4
+    transitivePeerDependencies:
+      - chokidar
+    dev: false
+
   /hexo-generator-tag@2.0.0:
     resolution: {integrity: sha512-1px/hF3veEohWDN8jjzchQhaiz+uOStUvvMaBJC9vWOlALh30UFcapL8IrvAwwJZjFRVA+WqGgDRqoQ8+yaaFw==}
     engines: {node: '>=14'}
@@ -921,6 +940,14 @@ packages:
       htmlparser2: 9.1.0
       prismjs: 1.29.0
       strip-indent: 3.0.0
+    dev: false
+
+  /hexo-word-counter@0.1.0:
+    resolution: {integrity: sha512-6HXSL2dlPuekSqWV7DevrUjGF0JgiHKGqkKSfay00JF9GmshJCLDK+AjvVrN0J1WgCbavsUGSwukyZgfW8VdSw==}
+    requiresBuild: true
+    dependencies:
+      cargo-cp-artifact: 0.1.8
+      hexo-util: 2.7.0
     dev: false
 
   /hexo@7.1.1:

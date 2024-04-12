@@ -21,7 +21,7 @@ theme_config:
     enable: true
 
   # Remove unnecessary files after hexo generate.
-  minify: false
+  minify: true
 
   # Define custom file paths.
   # Create your custom files in site directory `source/_data` and uncomment needed files below.
@@ -71,7 +71,7 @@ theme_config:
     copyright:
 
     # Powered by Hexo & NexT
-    powered: true
+    powered: false
 
     # Beian ICP and gongan information for Chinese users. See: https://beian.miit.gov.cn, http://www.beian.gov.cn
     beian:
@@ -90,10 +90,10 @@ theme_config:
   # You can set a language value if you prefer a translated version of CC license, e.g. deed.zh
   # CC licenses are available in 39 languages, you can find the specific and correct abbreviation you need on https://creativecommons.org
   creative_commons:
-    license: by-nc-sa
-    sidebar: false
-    post: false
-    language:
+    license: by-nc-nd
+    sidebar: true
+    post: true
+    language: deed.zh
 
 
   # ---------------------------------------------------------------
@@ -102,8 +102,8 @@ theme_config:
 
   # Schemes
   # scheme: Muse
-  scheme: Mist
-  #scheme: Pisces
+  # scheme: Mist
+  scheme: Pisces
   #scheme: Gemini
 
   # Dark Mode
@@ -742,8 +742,19 @@ theme_config:
 
   # Local Search
   # Dependencies: https://github.com/theme-next/hexo-generator-searchdb
+  # local_search:
+  #   enable: false
+  #   # If auto, trigger search by changing input.
+  #   # If manual, trigger search by pressing enter key or search button.
+  #   trigger: auto
+  #   # Show top n results per article, show all results by setting to -1
+  #   top_n_per_article: 1
+  #   # Unescape html strings to the readable one.
+  #   unescape: false
+  #   # Preload the search data when the page loads.
+  #   preload: false
   local_search:
-    enable: false
+    enable: true
     # If auto, trigger search by changing input.
     # If manual, trigger search by pressing enter key or search button.
     trigger: auto
@@ -753,7 +764,6 @@ theme_config:
     unescape: false
     # Preload the search data when the page loads.
     preload: false
-
   # Swiftype Search API Key
   swiftype_key:
 
@@ -999,3 +1009,4 @@ theme_config:
   css: css
   js: js
   images: images
+cloudflare_analytics: 8f8b780ffdf54468a03bdfa2b8b33809

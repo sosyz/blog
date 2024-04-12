@@ -114,3 +114,10 @@ deploy:
   repo: git@github.com:sosyz/blog.git
   # example, https://github.com/hexojs/hexojs.github.io
   branch: gh-pages
+search:
+  path: search.xml
+  field: post
+  content: true
+  format: html
+symbols_count_time:
+  symbols: true

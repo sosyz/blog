@@ -4,6 +4,10 @@ date: 2021-03-11 23:02:06
 tags:
 ---
 
+在 Linux 系统中使用 apt-get 更新软件时，出现错误 `Certificate verification failed: The certificate is NOT trusted.` 的解决方法
+
+<!-- more -->
+
 原因为未安装ca-certificates
 
 可以先编辑 `/etc/apt/sources.list` 文件临时使用http源

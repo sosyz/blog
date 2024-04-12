@@ -5,6 +5,10 @@ updated: 2021-09-09 13:06:44
 tags: VS Code, C/C++, MinGW
 ---
 
+VS Code C/C++ 环境配置教程
+
+<!-- more -->
+
 ## Windows
 
 ### 预备文件

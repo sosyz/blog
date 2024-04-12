@@ -5,6 +5,10 @@ tags: redis
 description: Redis 源码阅读笔记
 ---
 
+Redis 是一个开源的内存数据库，它支持多种数据结构，如字符串、列表、集合、有序集合、哈希表等，同时支持持久化，主从复制，集群等功能。在这篇文章中记录了阅读 Redis 源码的一些笔记。
+
+<!-- more -->
+
 本文源码版本截至commit：
 > 14f802b: Initialize cluster owner_not_claiming_slot to avoid warning (#12391)
 

@@ -6,6 +6,8 @@ tags: PVE, Proxmox VE
 
 由于前期安装的时随便起的 Proxmox VE 节点主机名，现在想要修改为更有意义的名字便于多集群管理。
 
+<!-- more -->
+
 修改的文件有：
 
 - /etc/hosts

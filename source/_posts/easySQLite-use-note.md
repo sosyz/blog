@@ -5,6 +5,10 @@ tags: easySQLite
 updated: 2019-02-09  23:34:58
 ---
 
+由于在开发酷Q机器人时需要用到SQLite，所以找到了easySQLite，这是一个简单的SQLite封装库，使用起来比较方便，但是文档不够详细，所以在这里做一些补充
+
+<!-- more -->
+
 > easySQLite地址：<https://code.google.com/archive/p/easysqlite/>
 
 由于需要用到SQLite，经过一番兜兜转转，看到了easySQLite，下载下来，还不错，就是有些地方说明不够详细，以此做补充

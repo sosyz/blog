@@ -4,8 +4,6 @@ date: 2024-04-11T15:32:37+08:00
 tags: Kubernetes, Go, Backend
 ---
 
-## 说明
-
 一些看到觉得值得收藏的文章，或者自己的一些笔记。
 
 来源列表:
@@ -13,6 +11,8 @@ tags: Kubernetes, Go, Backend
 - 阮一峰的网络日志 weekly <https://github.com/ruanyf/weekly>
 - NK 贴贴分享群 <https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=1e8u4f54-3a53-44e6-a8c1-1a954b66218c>
 - 网络文章
+
+<!-- more -->
 
 ## 笔记
 

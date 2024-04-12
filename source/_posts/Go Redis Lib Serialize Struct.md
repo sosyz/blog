@@ -3,9 +3,9 @@ title: Golang 库 Redis 对 data 类型的支持
 tags: redis, golang
 ---
 
-## Description
-
 `go-redis` 库对于 `HSet` 方法支持的数据类型为 `interface{}`, 查看下支持哪些类型的
+
+<!-- more -->
 
 ## Version
 

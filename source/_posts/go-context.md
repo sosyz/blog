@@ -4,6 +4,10 @@ date: 2023-01-30 00:24
 tags: golang, context
 ---
 
+context 是 go 语言中的一个包， 用于在多个 goroutine 之间传递数据， 以及控制 goroutine 的执行， 在这篇文章中记录了 context 的使用方法。
+
+<!-- more -->
+
 ## 0x00 背景
 
 设想这样一个场景
