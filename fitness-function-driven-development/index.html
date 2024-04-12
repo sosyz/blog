@@ -20,20 +20,20 @@
     var CONFIG = {"hostname":"blog.sonui.cn","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
   </script>
 
-  <meta name="description" content="Redis 源码阅读笔记">
+  <meta name="description" content="对 TDD 的一个翻译，原文地址：Fitness function-driven development">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Redis Reading Notes">
-<meta property="og:url" content="https://blog.sonui.cn/Redis-Reading-Notes/index.html">
+<meta property="og:title" content="Fitness function-driven development（测试驱动开发） 翻译">
+<meta property="og:url" content="https://blog.sonui.cn/fitness-function-driven-development/index.html">
 <meta property="og:site_name" content="Sonui&#39;s Blog">
-<meta property="og:description" content="Redis 源码阅读笔记">
+<meta property="og:description" content="对 TDD 的一个翻译，原文地址：Fitness function-driven development">
 <meta property="og:locale" content="zh_CN">
-<meta property="article:published_time" content="2023-07-08T12:40:16.000Z">
-<meta property="article:modified_time" content="2024-04-12T14:47:20.456Z">
+<meta property="article:published_time" content="2023-03-30T00:35:13.000Z">
+<meta property="article:modified_time" content="2024-04-12T15:06:04.901Z">
 <meta property="article:author" content="Sonui">
-<meta property="article:tag" content="redis">
+<meta property="article:tag" content="TDD, 测试驱动开发">
 <meta name="twitter:card" content="summary">
 
-<link rel="canonical" href="https://blog.sonui.cn/Redis-Reading-Notes/">
+<link rel="canonical" href="https://blog.sonui.cn/fitness-function-driven-development/">
 
 
 <script id="page-configurations">
@@ -46,7 +46,7 @@
   };
 </script>
 
-  <title>Redis Reading Notes | Sonui's Blog</title>
+  <title>Fitness function-driven development（测试驱动开发） 翻译 | Sonui's Blog</title>
   
 
 
@@ -151,7 +151,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://blog.sonui.cn/Redis-Reading-Notes/">
+    <link itemprop="mainEntityOfPage" href="https://blog.sonui.cn/fitness-function-driven-development/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -164,7 +164,7 @@
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          Redis Reading Notes
+          Fitness function-driven development（测试驱动开发） 翻译
         </h1>
 
         <div class="post-meta">
@@ -174,14 +174,14 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2023-07-08 20:40:16" itemprop="dateCreated datePublished" datetime="2023-07-08T20:40:16+08:00">2023-07-08</time>
+              <time title="创建时间：2023-03-30 08:35:13" itemprop="dateCreated datePublished" datetime="2023-03-30T08:35:13+08:00">2023-03-30</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2024-04-12 22:47:20" itemprop="dateModified" datetime="2024-04-12T22:47:20+08:00">2024-04-12</time>
+                <time title="修改时间：2024-04-12 23:06:04" itemprop="dateModified" datetime="2024-04-12T23:06:04+08:00">2024-04-12</time>
               </span>
 
           <br>
@@ -190,16 +190,15 @@
                 <i class="far fa-file-word"></i>
               </span>
                 <span class="post-meta-item-text">本文字数：</span>
-              <span>735</span>
+              <span>180</span>
             </span>
             <span class="post-meta-item" title="阅读时长">
               <span class="post-meta-item-icon">
                 <i class="far fa-clock"></i>
               </span>
                 <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>3 分钟</span>
+              <span>1 分钟</span>
             </span>
-            <div class="post-description">Redis 源码阅读笔记</div>
 
         </div>
       </header>
@@ -210,46 +209,14 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <p>Redis 是一个开源的内存数据库，它支持多种数据结构，如字符串、列表、集合、有序集合、哈希表等，同时支持持久化，主从复制，集群等功能。在这篇文章中记录了阅读 Redis 源码的一些笔记。</p>
+        <p>对 <code>TDD</code> 的一个翻译，原文地址：<a target="_blank" rel="noopener" href="https://www.thoughtworks.com/insights/articles/fitness-function-driven-development">Fitness function-driven development</a></p>
 <span id="more"></span>
 
-<p>本文源码版本截至commit：</p>
 <blockquote>
-<p>14f802b: Initialize cluster owner_not_claiming_slot to avoid warning (#12391)</p>
+<p>原文：<a target="_blank" rel="noopener" href="https://www.thoughtworks.com/insights/articles/fitness-function-driven-development">Fitness function-driven development</a></p>
 </blockquote>
-<h2 id="数据结构"><a href="#数据结构" class="headerlink" title="数据结构"></a>数据结构</h2><h3 id="SDS-动态字符串实现"><a href="#SDS-动态字符串实现" class="headerlink" title="SDS 动态字符串实现"></a>SDS 动态字符串实现</h3><p>redis通过sds来存储字符串，相较于c语言的字符串，sds有以下优点：</p>
-<ul>
-<li>常数复杂度获取字符串长度（对于c语言字符串，需要遍历整个字符串才能获取长度）</li>
-<li>减少修改字符串时所需的内存重分配次数</li>
-<li>二进制安全（可以存储任意数据，包括空字符，如 <code>\0</code>）</li>
-</ul>
-<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">/* Note: sdshdr5 is never used, we just access the flags byte directly.</span></span><br><span class="line"><span class="comment"> * However is here to document the layout of type 5 SDS strings. */</span></span><br><span class="line"><span class="class"><span class="keyword">struct</span> __<span class="title">attribute__</span> ((__<span class="title">packed__</span>)) <span class="title">hisdshdr5</span> &#123;</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">char</span> flags; <span class="comment">/* 3 lsb of type, and 5 msb of string length */</span></span><br><span class="line">    <span class="type">char</span> buf[];</span><br><span class="line">&#125;;</span><br><span class="line"><span class="class"><span class="keyword">struct</span> __<span class="title">attribute__</span> ((__<span class="title">packed__</span>)) <span class="title">hisdshdr8</span> &#123;</span></span><br><span class="line">    <span class="type">uint8_t</span> len; <span class="comment">/* used */</span></span><br><span class="line">    <span class="type">uint8_t</span> alloc; <span class="comment">/* excluding the header and null terminator */</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">char</span> flags; <span class="comment">/* 3 lsb of type, 5 unused bits */</span></span><br><span class="line">    <span class="type">char</span> buf[];</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-
-<p>sds有两种，一种是类型长度以高低位存储在一个变量中如 <code>hisdshdr5</code>，另一种是分别存储在不同变量中，如 <code>hisdshdr8</code>，<code>hisdshdr16</code>，<code>hisdshdr32</code>，<code>hisdshdr64</code></p>
-<p>在<code>hisdshdr5</code>中，<code>flags</code>的低三位存储类型，高五位存储长度，所以长度最大为32位，即2^5-1，即31字节</p>
-<p>在代码注释中有以下说明</p>
-<blockquote>
-<p>Note: sdshdr5 is never used, we just access the flags byte directly.<br>However is here to document the layout of type 5 SDS strings.</p>
-</blockquote>
-<p>意思是说，<code>hisdshdr5</code>并没有被使用，我们直接访问<code>flags</code>字节，但是这里是为了记录类型5的sds字符串的布局。</p>
-<p>在<code>hisdshdr8</code>中，<code>len</code>存储长度，<code>alloc</code>存储分配长度，<code>flags</code>存储类型，所以长度最大为8位，即2^8-1，即255字节</p>
-<p>结构体中使用了<code>__attribute__ ((__packed__))</code>，这是gcc的扩展，用于告诉编译器不要对结构体进行字节对齐，这样可以节省内存，但是会降低访问效率，同时使用了柔性数组成员（C99标准引入），柔性数组成员是一种特殊的数组类型，它可以在结构体中定义一个没有指定大小的数组，这样就可以根据需要动态地分配内存，而不用使用指针。柔性数组成员必须是结构体的最后一个成员，并且结构体中至少要有一个其他的命名成员。柔性数组成员是C99标准引入的，但是一些编译器也支持C89和C++中使用它，只是语法有些不同。柔性数组成员的优点是可以提高内存分配的效率，提高数据的局部性，以及生成更好的代码。</p>
-<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><table>
-<thead>
-<tr>
-<th>说明</th>
-<th>链接</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Redis 官网</td>
-<td><a target="_blank" rel="noopener" href="https://redis.io/">https://redis.io/</a></td>
-</tr>
-<tr>
-<td>如何阅读 Redis 源码？</td>
-<td><a target="_blank" rel="noopener" href="https://blog.huangz.me/diary/2014/how-to-read-redis-source-code.html">https://blog.huangz.me/diary/2014/how-to-read-redis-source-code.html</a></td>
-</tr>
-</tbody></table>
+<p>测试驱动开发是以先编写测试样例然后编写最少可以通过测试样例的代码为基准进行开发的开发方式 TDD是一种成熟的功能开发实践，可以提高代码质量和测试覆盖率</p>
+<p>Test-driven development, or TDD, involves writing tests first then developing the minimal code needed to pass the tests. TDD is an established practice for feature development that can improve code quality and test coverage. What about other, non-functional requirements such as scalability, reliability, observability, and other architectural “-ilities”? How do we ensure operability and resiliency of features when they go to production? How can we encourage teams to build in these architectural standards, just as test-driven development builds in code quality and test coverage?</p>
 
     </div>
 
@@ -259,7 +226,7 @@
 
       <footer class="post-footer">
           <div class="post-tags">
-              <a href="/tags/redis/" rel="tag"># redis</a>
+              <a href="/tags/TDD-%E6%B5%8B%E8%AF%95%E9%A9%B1%E5%8A%A8%E5%BC%80%E5%8F%91/" rel="tag"># TDD, 测试驱动开发</a>
           </div>
 
         
@@ -268,12 +235,12 @@
         
     <div class="post-nav">
       <div class="post-nav-item">
-    <a href="/fitness-function-driven-development/" rel="prev" title="Fitness function-driven development（测试驱动开发） 翻译">
-      <i class="fa fa-chevron-left"></i> Fitness function-driven development（测试驱动开发） 翻译
+    <a href="/go-context/" rel="prev" title="go 中的context">
+      <i class="fa fa-chevron-left"></i> go 中的context
     </a></div>
       <div class="post-nav-item">
-    <a href="/WireGuard%20Use%20Notes/" rel="next" title="WireGuard Use Notes">
-      WireGuard Use Notes <i class="fa fa-chevron-right"></i>
+    <a href="/Redis-Reading-Notes/" rel="next" title="Redis Reading Notes">
+      Redis Reading Notes <i class="fa fa-chevron-right"></i>
     </a></div>
     </div>
       </footer>
@@ -333,7 +300,6 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84"><span class="nav-number">1.</span> <span class="nav-text">数据结构</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#SDS-%E5%8A%A8%E6%80%81%E5%AD%97%E7%AC%A6%E4%B8%B2%E5%AE%9E%E7%8E%B0"><span class="nav-number">1.1.</span> <span class="nav-text">SDS 动态字符串实现</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="nav-number">2.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
