@@ -48,8 +48,8 @@ dependencies:
     specifier: ^8.19.2
     version: 8.19.2
   hexo-word-counter:
-    specifier: ^0.1.0
-    version: 0.1.0
+    specifier: ^0.2.0
+    version: 0.2.0
   nunjucks:
     specifier: ^3.2.4
     version: 3.2.4
@@ -942,12 +942,11 @@ packages:
       strip-indent: 3.0.0
     dev: false
 
-  /hexo-word-counter@0.1.0:
-    resolution: {integrity: sha512-6HXSL2dlPuekSqWV7DevrUjGF0JgiHKGqkKSfay00JF9GmshJCLDK+AjvVrN0J1WgCbavsUGSwukyZgfW8VdSw==}
+  /hexo-word-counter@0.2.0:
+    resolution: {integrity: sha512-cHFGjynprFsSrJoYEi7ar2peoavjTy7ZBDf/bQ0doXocL/ZjR42aMIcKtTi2A64KLvyTqzyb2mdKADCeclhCpQ==}
     requiresBuild: true
     dependencies:
       cargo-cp-artifact: 0.1.8
-      hexo-util: 2.7.0
     dev: false
 
   /hexo@7.1.1:
