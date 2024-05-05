@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 7.1.1">
+<meta name="generator" content="Hexo 7.2.0">
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
@@ -27,11 +27,14 @@
 <meta property="og:site_name" content="Sonui&#39;s Blog">
 <meta property="og:description" content="前段时间参加了云原生 Meetup 杭州站活动，正好在这次活动上了解到了 KubeSphere 正在开展扩展组件开发训练营于是报名了这个活动，记录下学习过程。">
 <meta property="og:locale" content="zh_CN">
-<meta property="article:published_time" content="2024-04-24T16:53:24.680Z">
-<meta property="article:modified_time" content="2024-04-24T16:53:24.680Z">
+<meta property="og:image" content="https://blog.sonui.cn/kubesphere-extended-component-development-note/image.png">
+<meta property="og:image" content="https://blog.sonui.cn/kubesphere-extended-component-development-note/image2.png">
+<meta property="article:published_time" content="2024-05-05T16:14:37.305Z">
+<meta property="article:modified_time" content="2024-05-05T16:18:43.406Z">
 <meta property="article:author" content="Sonui">
 <meta property="article:tag" content="KubeSphere, k8s, Go, ArgoCD">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.sonui.cn/kubesphere-extended-component-development-note/image.png">
 
 <link rel="canonical" href="https://blog.sonui.cn/kubesphere-extended-component-development-note/">
 
@@ -173,8 +176,9 @@
                 <i class="far fa-calendar"></i>
               </span>
               <span class="post-meta-item-text">发表于</span>
+              
 
-              <time title="创建时间：2024-04-25 00:53:24" itemprop="dateCreated datePublished" datetime="2024-04-25T00:53:24+08:00">2024-04-25</time>
+              <time title="创建时间：2024-05-06 00:14:37 / 修改时间：00:18:43" itemprop="dateCreated datePublished" datetime="2024-05-06T00:14:37+08:00">2024-05-06</time>
             </span>
 
           <br>
@@ -183,14 +187,14 @@
                 <i class="far fa-file-word"></i>
               </span>
                 <span class="post-meta-item-text">本文字数：</span>
-              <span>530</span>
+              <span>754</span>
             </span>
             <span class="post-meta-item" title="阅读时长">
               <span class="post-meta-item-icon">
                 <i class="far fa-clock"></i>
               </span>
                 <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>2 分钟</span>
+              <span>3 分钟</span>
             </span>
 
         </div>
@@ -207,9 +211,9 @@
 
 <h2 id="说明"><a href="#说明" class="headerlink" title="说明"></a>说明</h2><p>资料来源:</p>
 <ul>
-<li><a target="_blank" rel="noopener" href="https://dev-guide.kubesphere.io/extension-dev-guide/zh/">KUBESPHERE 扩展组件开发指南</a></li>
+<li><a target="_blank" rel="noopener" href="https://dev-guide.kubesphere.io/extension-dev-guide/zh/">KubeSphere 扩展组件开发指南</a></li>
 </ul>
-<h2 id="开发环境搭建"><a href="#开发环境搭建" class="headerlink" title="开发环境搭建"></a>开发环境搭建</h2><p>开发需要一个 ks 集群，可以使用 kubesphere 官方提供的ks-dev环境，也可以自己搭建一个 ks 集群。</p>
+<h2 id="开发环境搭建"><a href="#开发环境搭建" class="headerlink" title="开发环境搭建"></a>开发环境搭建</h2><p>开发需要一个 ks 集群，可以使用 KubeSphere 官方提供的ks-dev环境，也可以自己搭建一个 ks 集群。</p>
 <h3 id="使用ks-dev环境"><a href="#使用ks-dev环境" class="headerlink" title="使用ks-dev环境"></a>使用ks-dev环境</h3><p><a target="_blank" rel="noopener" href="https://kubesphere.cloud/sign-up/?ref=REAwGESiNA">https://kubesphere.cloud/sign-up/?ref=REAwGESiNA</a> 可以在这里注册一个账号，然后在控制台创建一个 ks 集群。</p>
 <p>官方每个月会赠送 10h 的免费使用时间，可以用来开发测试。</p>
 <h3 id="本地安装"><a href="#本地安装" class="headerlink" title="本地安装"></a>本地安装</h3><p><code>Node</code> 使用 <code>nvm</code> 安装</p>
@@ -227,15 +231,31 @@
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">curl -LO <span class="string">&quot;https://dl.k8s.io/release/<span class="subst">$(curl -L -s https://dl.k8s.io/release/stable.txt)</span>/bin/linux/amd64/kubectl&quot;</span></span><br><span class="line">sudo <span class="built_in">chmod</span> +x kubectl </span><br><span class="line">sudo <span class="built_in">mv</span> kubectl /usr/local/bin</span><br></pre></td></tr></table></figure>
 
 <p>安装完成以后去 <code>ks</code> 面板下载 <code>kubeconfig</code> 文件放到 <code>~/.kube/config</code> 目录下</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">安装 `ksbuilder`</span><br><span class="line"></span><br><span class="line">```bash</span><br><span class="line">wget https://github.com/kubesphere/ksbuilder/releases/download/v0.3.13/ksbuilder_0.3.13_linux_amd64.tar.gz</span><br><span class="line">tar -zxf ksbuilder_0.3.13_linux_amd64.tar.gz</span><br><span class="line">sudo <span class="built_in">mv</span> ksbuilder /usr/local/bin</span><br></pre></td></tr></table></figure>
+<p>安装 &#96;ksbuilder</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">wget https://github.com/kubesphere/ksbuilder/releases/download/v0.3.13/ksbuilder_0.3.13_linux_amd64.tar.gz</span><br><span class="line">tar -zxf ksbuilder_0.3.13_linux_amd64.tar.gz</span><br><span class="line">sudo <span class="built_in">mv</span> ksbuilder /usr/local/bin</span><br></pre></td></tr></table></figure>
 
 <p>检查安装版本</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">sonui@server:~$ ksbuilder --version</span><br><span class="line">ksbuilder version 0.3.13</span><br><span class="line">sonui@server:~$ node --version</span><br><span class="line">v18.20.2</span><br><span class="line">sonui@server:~$ yarn --version</span><br><span class="line">1.22.22</span><br><span class="line">sonui@server:~$ helm version</span><br><span class="line">version.BuildInfo&#123;Version:<span class="string">&quot;v3.14.4&quot;</span>, GitCommit:<span class="string">&quot;81c902a123462fd4052bc5e9aa9c513c4c8fc142&quot;</span>, GitTreeState:<span class="string">&quot;clean&quot;</span>, GoVersion:<span class="string">&quot;go1.21.9&quot;</span>&#125;</span><br><span class="line">sonui@server:~$ kubectl version</span><br><span class="line">Client Version: v1.30.0</span><br><span class="line">Kustomize Version: v5.0.4-0.20230601165947-6ce0bf390ce3</span><br><span class="line">sonui@server:~$ kubectl get node</span><br><span class="line">NAME   STATUS   ROLES                         AGE   VERSION</span><br><span class="line">ks     Ready    control-plane,master,worker   15d   v1.23.10</span><br><span class="line">sonui@server:~$ kubectl -n kubesphere-system get po</span><br><span class="line">NAME                                     READY   STATUS    RESTARTS        AGE</span><br><span class="line">ks-apiserver-754d47ffcc-fx5fz            1/1     Running   2 (6d21h ago)   15d</span><br><span class="line">ks-console-54958f4674-8s225              1/1     Running   2 (6d21h ago)   15d</span><br><span class="line">ks-controller-manager-59d55bc77b-vgnl7   1/1     Running   2 (6d21h ago)   15d</span><br></pre></td></tr></table></figure>
 
 <h3 id="编写反向代理"><a href="#编写反向代理" class="headerlink" title="编写反向代理"></a>编写反向代理</h3><p>参考官方示例</p>
 <p><a target="_blank" rel="noopener" href="https://raw.githubusercontent.com/kubesphere/extension-samples/master/extensions-backend/weave-scope/weave-scope-reverse-proxy.yaml">https://raw.githubusercontent.com/kubesphere/extension-samples/master/extensions-backend/weave-scope/weave-scope-reverse-proxy.yaml</a></p>
-<p>修改为 argocd-server</p>
-<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">extensions.kubesphere.io/v1alpha1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ReverseProxy</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">argocd-server</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">directives:</span></span><br><span class="line">    <span class="attr">headerUp:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">-Authorization</span></span><br><span class="line">    <span class="attr">stripPathPrefix:</span> <span class="string">/proxy/argocd-server</span></span><br><span class="line">  <span class="attr">matcher:</span></span><br><span class="line">    <span class="attr">method:</span> <span class="string">&#x27;*&#x27;</span></span><br><span class="line">    <span class="attr">path:</span> <span class="string">/proxy/argocd-server/*</span></span><br><span class="line">  <span class="attr">upstream:</span></span><br><span class="line">    <span class="attr">url:</span> <span class="string">http://argocd-server.argocd.svc</span></span><br><span class="line"><span class="attr">status:</span></span><br><span class="line">  <span class="attr">state:</span> <span class="string">Available</span></span><br></pre></td></tr></table></figure>
+<p>修改为 argocd</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">extensions.kubesphere.io/v1alpha1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ReverseProxy</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">argocd-scope</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">directives:</span></span><br><span class="line">    <span class="attr">headerUp:</span></span><br><span class="line">    <span class="bullet">-</span> <span class="string">-Authorization</span></span><br><span class="line">    <span class="attr">stripPathPrefix:</span> <span class="string">/proxy/argocd</span></span><br><span class="line">  <span class="attr">matcher:</span></span><br><span class="line">    <span class="attr">method:</span> <span class="string">&#x27;*&#x27;</span></span><br><span class="line">    <span class="attr">path:</span> <span class="string">/proxy/argocd/*</span></span><br><span class="line">  <span class="attr">upstream:</span></span><br><span class="line">    <span class="attr">url:</span> <span class="string">http://argocd-server.argocd.svc</span></span><br><span class="line"><span class="attr">status:</span></span><br><span class="line">  <span class="attr">state:</span> <span class="string">Available</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>其中 <code>upstream.url</code> 为 argocd 的服务地址</p>
+<p><code>http://[service name].[namespace].svc</code></p>
+<p>部署 <code>ArgoCD</code> 时需要修改下 <code>argocd-server</code> Deployment 的参数</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="bullet">-</span> <span class="attr">args:</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">/usr/local/bin/argocd-server</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">--insecure</span> <span class="comment"># 关闭 http -&gt; https 重定向</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">--basehref</span> <span class="comment"># 添加 basehref 参数 使用 /proxy/argocd 作为基础路径</span></span><br><span class="line">  <span class="bullet">-</span> <span class="string">/proxy/argocd</span></span><br></pre></td></tr></table></figure>
+
+<p><code>basehref</code> 配置说明<br><img src="/./kubesphere-extended-component-development-note/image.png" alt="about basehref config" loading="lazy"></p>
+<blockquote>
+<p>If the Argo CD UI is available under a non-root path (e.g. &#x2F;argo-cd instead of &#x2F;) then the UI path should be configured in the API server. To configure the UI path add the –basehref flag into the argocd-server deployment command<br><a target="_blank" rel="noopener" href="https://argo-cd.readthedocs.io/en/stable/operator-manual/ingress/#ui-base-path">https://argo-cd.readthedocs.io/en/stable/operator-manual/ingress/#ui-base-path</a></p>
+</blockquote>
+<p>插件设置下 <code>webpack.config.js</code></p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> &#123; merge &#125; = <span class="built_in">require</span>(<span class="string">&#x27;webpack-merge&#x27;</span>);</span><br><span class="line"><span class="keyword">const</span> baseConfig = <span class="built_in">require</span>(<span class="string">&#x27;@ks-console/bootstrap/webpack/webpack.dev.conf&#x27;</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> webpackDevConfig = <span class="title function_">merge</span>(baseConfig, &#123;</span><br><span class="line">  <span class="attr">devServer</span>: &#123;</span><br><span class="line">    <span class="attr">proxy</span>: &#123;</span><br><span class="line">      <span class="string">&#x27;/proxy&#x27;</span>: &#123;</span><br><span class="line">        <span class="attr">target</span>: <span class="string">&#x27;http://192.168.2.150:30881&#x27;</span>, <span class="comment">// 修改为目标 ks-apiserver 的地址</span></span><br><span class="line">        <span class="attr">onProxyReq</span>: <span class="function">(<span class="params">proxyReq, req, res</span>) =&gt;</span> &#123;</span><br><span class="line">            <span class="keyword">const</span> username = <span class="string">&#x27;admin&#x27;</span>        <span class="comment">// 请求代理时的用户凭证</span></span><br><span class="line">            <span class="keyword">const</span> password = <span class="string">&#x27;P@88w0rd&#x27;</span></span><br><span class="line">            <span class="keyword">const</span> auth = <span class="title class_">Buffer</span>.<span class="title function_">from</span>(<span class="string">`<span class="subst">$&#123;username&#125;</span>:<span class="subst">$&#123;password&#125;</span>`</span>).<span class="title function_">toString</span>(<span class="string">&quot;base64&quot;</span>);</span><br><span class="line">            proxyReq.<span class="title function_">setHeader</span>(<span class="string">&#x27;Authorization&#x27;</span>, <span class="string">`Basic <span class="subst">$&#123;auth&#125;</span>`</span>);</span><br><span class="line">          &#125;,</span><br><span class="line">      &#125;,</span><br><span class="line">    &#125;,</span><br><span class="line">  &#125;,</span><br><span class="line">&#125;);</span><br><span class="line"></span><br><span class="line"><span class="variable language_">module</span>.<span class="property">exports</span> = webpackDevConfig;</span><br></pre></td></tr></table></figure>
+
+<p>全部完成后访问控制面板可以看到弹出 <code>ArgoCD</code> 登录界面</p>
+<p><img src="/./kubesphere-extended-component-development-note/image2.png" alt="ArgoCD login page in KubeSphere dashboard" loading="lazy"></p>
 
     </div>
 
@@ -254,8 +274,8 @@
         
     <div class="post-nav">
       <div class="post-nav-item">
-    <a href="/rename-pve-hostname/" rel="prev" title="PVE 修改节点主机名">
-      <i class="fa fa-chevron-left"></i> PVE 修改节点主机名
+    <a href="/provide-idempotence-mechanisms/" rel="prev" title="HTTP 幂等机制支持">
+      <i class="fa fa-chevron-left"></i> HTTP 幂等机制支持
     </a></div>
       <div class="post-nav-item"></div>
     </div>
@@ -330,12 +350,12 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">18</span>
+          <span class="site-state-item-count">20</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-tags">
-        <span class="site-state-item-count">14</span>
+        <span class="site-state-item-count">18</span>
         <span class="site-state-item-name">标签</span>
       </div>
   </nav>
@@ -371,12 +391,12 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-area"></i>
     </span>
-    <span title="站点总字数">11k</span>
+    <span title="站点总字数">12k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">39 分钟</span>
+    <span title="站点阅读时长">43 分钟</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> 强力驱动
   </div>

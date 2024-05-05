@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
 <meta name="theme-color" content="#222">
-<meta name="generator" content="Hexo 7.1.1">
+<meta name="generator" content="Hexo 7.2.0">
   <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
@@ -170,8 +170,9 @@
                 <i class="far fa-calendar"></i>
               </span>
               <span class="post-meta-item-text">发表于</span>
+              
 
-              <time title="创建时间：2024-04-25 00:53:24" itemprop="dateCreated datePublished" datetime="2024-04-25T00:53:24+08:00">2024-04-25</time>
+              <time title="创建时间：2024-05-06 00:14:37 / 修改时间：00:18:43" itemprop="dateCreated datePublished" datetime="2024-05-06T00:14:37+08:00">2024-05-06</time>
             </span>
 
           <br>
@@ -180,14 +181,14 @@
                 <i class="far fa-file-word"></i>
               </span>
                 <span class="post-meta-item-text">本文字数：</span>
-              <span>530</span>
+              <span>754</span>
             </span>
             <span class="post-meta-item" title="阅读时长">
               <span class="post-meta-item-icon">
                 <i class="far fa-clock"></i>
               </span>
                 <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>2 分钟</span>
+              <span>3 分钟</span>
             </span>
 
         </div>
@@ -208,6 +209,116 @@
             </div>
           <!--/noindex-->
         
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.sonui.cn/provide-idempotence-mechanisms/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Sonui">
+      <meta itemprop="description" content="Sonui's Blog">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Sonui's Blog">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/provide-idempotence-mechanisms/" class="post-title-link" itemprop="url">HTTP 幂等机制支持</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2024-04-25 02:27:32" itemprop="dateCreated datePublished" datetime="2024-04-25T02:27:32+08:00">2024-04-25</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2024-04-29 23:06:56" itemprop="dateModified" datetime="2024-04-29T23:06:56+08:00">2024-04-29</time>
+              </span>
+
+          <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>925</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>3 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="为什么要支持幂等机制"><a href="#为什么要支持幂等机制" class="headerlink" title="为什么要支持幂等机制"></a>为什么要支持幂等机制</h2><p>HTTP 协议中的幂等性是指对同一个资源的多次请求，结果是一致的。这种特性在实际开发中非常重要，可以保证在网络不稳定的情况下，请求重试不会导致资源状态的改变。</p>
+<p>对于 HTTP请求来说常见的幂等方法：<code>GET</code>、<code>HEAD</code>、<code>PUT</code>、<code>DELETE</code>、<code>OPTIONS</code>、<code>TRACE</code>，非幂等方法：<code>POST</code>、<code>PATCH</code>、<code>CONNECT</code></p>
+<p>为什么要对非幂等方法进行特殊处理从而支持幂等机制呢？比如说以下场景</p>
+<blockquote>
+<p>李四维在使用购物平台时准备提交一个订单，但是他在一个网很差的地方，而更糟糕的是因为网络不稳定他在提交时候可能会发生请求超时导致不知道是否成功提交了订单。</p>
+</blockquote>
+<p>怎么办？提交订单前先发一个预创建订单来检查吗？除非没得选再考虑这个，因为这样会增加额外的请求和处理代码，也不是很好的解决方案</p>
+<p>直接再请求一次呢？如果这个时候接口是非幂等的那么就会重复提交订单造成资源浪费，因此提供幂等机制在这个时候就显得非常有用。</p>
+<h2 id="幂等机制的设计"><a href="#幂等机制的设计" class="headerlink" title="幂等机制的设计"></a>幂等机制的设计</h2><p>这里选择一个简单的实现方式，通过在请求头中添加一个唯一标识符来实现幂等机制，这个唯一标识符可以是一个 UUID，也可以是一个自定义的字符串，只要保证唯一性即可，而唯一性由客户端保证。</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">POST</span> <span class="string">/api/v1/orders</span> <span class="meta">HTTP/1.1</span></span><br><span class="line"><span class="attribute">Host</span><span class="punctuation">: </span>example.com</span><br><span class="line"><span class="attribute">Content-Type</span><span class="punctuation">: </span>application/json</span><br><span class="line"><span class="attribute">X-Request-Id</span><span class="punctuation">: </span>e0db47c3-05c4-4205-b80a-b4a2a482fb8c</span><br><span class="line"></span><br><span class="line"><span class="language-json"><span class="punctuation">&#123;</span></span></span><br><span class="line"><span class="language-json">  <span class="attr">&quot;product_id&quot;</span><span class="punctuation">:</span> <span class="number">1</span><span class="punctuation">,</span></span></span><br><span class="line"><span class="language-json">  <span class="attr">&quot;quantity&quot;</span><span class="punctuation">:</span> <span class="number">1</span></span></span><br><span class="line"><span class="language-json"><span class="punctuation">&#125;</span></span></span><br></pre></td></tr></table></figure>
+
+<p>在服务端接收到请求后，首先检查请求头中的 <code>X-Request-Id</code> 是否存在，如果存在则检查是否已经处理过，如果已经处理过则直接返回处理结果，否则继续处理请求。</p>
+<p>请求头的 Key 可以自定义，这里使用 <code>X-Request-Id</code> 只是一个示例，实际开发中可以根据实际情况来定义。</p>
+<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">HTTP/1.1</span> <span class="number">409</span> Conflict</span><br><span class="line"><span class="attribute">Content-Type</span><span class="punctuation">: </span>application/json</span><br><span class="line"></span><br><span class="line"><span class="language-json"><span class="punctuation">&#123;</span></span></span><br><span class="line"><span class="language-json">  <span class="attr">&quot;message&quot;</span><span class="punctuation">:</span> <span class="string">&quot;Request already processed&quot;</span></span></span><br><span class="line"><span class="language-json"><span class="punctuation">&#125;</span></span></span><br></pre></td></tr></table></figure>
+
+<p>这样客户端就可以通过 <code>X-Request-Id</code> 来确保服务端只处理一次请求，即使请求重试也不会导致资源状态的改变。</p>
+<h2 id="在-Kratos-中支持幂等机制"><a href="#在-Kratos-中支持幂等机制" class="headerlink" title="在 Kratos 中支持幂等机制"></a>在 <code>Kratos</code> 中支持幂等机制</h2><p>在 <code>Kratos</code> 中可以通过中间件来实现幂等机制，具体实现方式如下：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> CtxRequestKey <span class="type">string</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> (</span><br><span class="line">    CtxReqKeyIdempotency CtxRequestKey = <span class="string">&quot;Idempotency-Key&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">SetIdempotencyKeyWithCtx</span><span class="params">(ctx context.Context, key <span class="type">string</span>)</span></span> context.Context &#123;</span><br><span class="line">    <span class="keyword">return</span> context.WithValue(ctx, CtxReqKeyIdempotency, key)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 幂等处理</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">IdempotencyMiddleware</span><span class="params">(handler middleware.Handler, r redis.Client)</span></span> middleware.Handler &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="function"><span class="keyword">func</span><span class="params">(ctx context.Context, req any)</span></span> (any, <span class="type">error</span>) &#123;</span><br><span class="line">        <span class="keyword">if</span> httpCtx, ok := http.RequestFromServerContext(ctx); ok &#123;</span><br><span class="line">            idempotencyKey := httpCtx.Header.Get(<span class="string">&quot;X-Request-Id&quot;</span>)</span><br><span class="line">            <span class="keyword">if</span> idempotencyKey != <span class="string">&quot;&quot;</span> &#123;</span><br><span class="line">                <span class="comment">// 检查redis中是否存在该key 如果不存在则创建一个bool类型的值</span></span><br><span class="line">                <span class="keyword">if</span> b, err := r.HSetNX(ctx, <span class="string">&quot;idempotency&quot;</span>, idempotencyKey, <span class="literal">true</span>).Result(); err != <span class="literal">nil</span> &#123;</span><br><span class="line">                    <span class="keyword">return</span> <span class="literal">nil</span>, err</span><br><span class="line">                &#125; <span class="keyword">else</span> <span class="keyword">if</span> !b &#123;</span><br><span class="line">                    <span class="keyword">return</span> <span class="literal">nil</span>, v1.ErrorConflict(<span class="string">&quot;Request already processed&quot;</span>)</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                ctx = server.SetIdempotencyKeyWithCtx(ctx, idempotencyKey)</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> handler(ctx, req)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>其中 <code>HSetNX</code> 方法用于在 Redis 中创建一个唯一的键值对，如果键已经存在则返回 <code>false</code>，否则返回 <code>true</code></p>
+<p>具体说明: <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/hsetnx/">HSETNX</a></p>
+<p>测试代码如下：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">TestRedisHSetNX</span><span class="params">(t *testing.T)</span></span> &#123;</span><br><span class="line">    r := redis.NewClient(&amp;redis.Options&#123;</span><br><span class="line">        Addr: <span class="string">&quot;localhost:6379&quot;</span>,</span><br><span class="line">        DB:   <span class="number">0</span>,</span><br><span class="line">    &#125;)</span><br><span class="line"></span><br><span class="line">    ctx := context.Background()</span><br><span class="line">    b, err := r.HSetNX(ctx, <span class="string">&quot;key&quot;</span>, <span class="string">&quot;field&quot;</span>, <span class="literal">true</span>).Result()</span><br><span class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">        t.Fatal(err)</span><br><span class="line">    &#125;</span><br><span class="line">    t.Log(b)</span><br><span class="line"></span><br><span class="line">    c, err := r.HSetNX(ctx, <span class="string">&quot;key&quot;</span>, <span class="string">&quot;field&quot;</span>, <span class="literal">true</span>).Result()</span><br><span class="line">    <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">        t.Fatal(err)</span><br><span class="line">    &#125;</span><br><span class="line">    t.Log(c)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>运行结果</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">Running tool: /usr/local/go/bin/go test -timeout 300s -run ^TestRedisHSetNX$ github.com/sosyz/test -v -count=1 ./...</span><br><span class="line"></span><br><span class="line">=== RUN   TestRedisHSetNX</span><br><span class="line">    /home/sonui/Documents/code/test/main_test.go:93: true</span><br><span class="line">    /home/sonui/Documents/code/test/main_test.go:99: false</span><br><span class="line">--- PASS: TestRedisHSetNX (0.00s)</span><br><span class="line">PASS</span><br><span class="line">ok      github.com/sosyz/test   0.005s</span><br></pre></td></tr></table></figure>
+
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/stickfigure/blog/wiki/How-to-(and-how-not-to)-design-REST-APIs#rule-11-do-provide-idempotence-mechanisms">https://github.com/stickfigure/blog/wiki/How-to-(and-how-not-to)-design-REST-APIs#rule-11-do-provide-idempotence-mechanisms</a></li>
+<li><a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/hsetnx/">https://redis.io/docs/latest/commands/hsetnx/</a></li>
+<li><a target="_blank" rel="noopener" href="https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Methods">https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Methods</a></li>
+</ul>
+
       
     </div>
 
@@ -386,6 +497,87 @@
             </div>
           <!--/noindex-->
         
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.sonui.cn/the-haters-guide-to-kubernetes/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Sonui">
+      <meta itemprop="description" content="Sonui's Blog">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Sonui's Blog">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/the-haters-guide-to-kubernetes/" class="post-title-link" itemprop="url">The hater’s guide to Kubernetes</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2024-04-11 07:25:20" itemprop="dateCreated datePublished" datetime="2024-04-11T07:25:20+08:00">2024-04-11</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2024-05-01 17:37:35" itemprop="dateModified" datetime="2024-05-01T17:37:35+08:00">2024-05-01</time>
+              </span>
+
+          <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>46</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>1 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="Kubernetes-的反对者指南"><a href="#Kubernetes-的反对者指南" class="headerlink" title="Kubernetes 的反对者指南"></a>Kubernetes 的反对者指南</h2><blockquote>
+<p>来源：<a target="_blank" rel="noopener" href="https://paulbutler.org/2024/the-haters-guide-to-kubernetes/">Paul Butler’s Blog</a><br>Among a certain tech set, Kubernetes has earned a reputation as an unnecessarily complicated time-sink that startups should avoid. Using Kubernetes with a small team is seen as a sign of over-engineering.</p>
+</blockquote>
+
       
     </div>
 
@@ -830,178 +1022,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://blog.sonui.cn/Journey-to-Web-Development-Security/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Sonui">
-      <meta itemprop="description" content="Sonui's Blog">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Sonui's Blog">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/Journey-to-Web-Development-Security/" class="post-title-link" itemprop="url">Web 开发的安全之旅</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2022-08-01 23:14:00" itemprop="dateCreated datePublished" datetime="2022-08-01T23:14:00+08:00">2022-08-01</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2024-04-12 22:46:03" itemprop="dateModified" datetime="2024-04-12T22:46:03+08:00">2024-04-12</time>
-              </span>
-
-          <br>
-            <span class="post-meta-item" title="本文字数">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">本文字数：</span>
-              <span>2.6k</span>
-            </span>
-            <span class="post-meta-item" title="阅读时长">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>9 分钟</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>在青训营的学习中学到的一些Web开发中的安全问题以及防御方法，将对这些内容进行总结。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/Journey-to-Web-Development-Security/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://blog.sonui.cn/css-study-2/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Sonui">
-      <meta itemprop="description" content="Sonui's Blog">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Sonui's Blog">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/css-study-2/" class="post-title-link" itemprop="url">深入CSS</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2022-07-26 23:09:00" itemprop="dateCreated datePublished" datetime="2022-07-26T23:09:00+08:00">2022-07-26</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2024-04-12 22:43:12" itemprop="dateModified" datetime="2024-04-12T22:43:12+08:00">2024-04-12</time>
-              </span>
-
-          <br>
-            <span class="post-meta-item" title="本文字数">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">本文字数：</span>
-              <span>1.2k</span>
-            </span>
-            <span class="post-meta-item" title="阅读时长">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>4 分钟</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>字节青训营学习笔记 - CSS 2</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/css-study-2/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1071,12 +1091,12 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">18</span>
+          <span class="site-state-item-count">20</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-tags">
-        <span class="site-state-item-count">14</span>
+        <span class="site-state-item-count">18</span>
         <span class="site-state-item-name">标签</span>
       </div>
   </nav>
@@ -1112,12 +1132,12 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-area"></i>
     </span>
-    <span title="站点总字数">11k</span>
+    <span title="站点总字数">12k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">39 分钟</span>
+    <span title="站点阅读时长">43 分钟</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> 强力驱动
   </div>
