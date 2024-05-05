@@ -11,11 +11,11 @@ tags: KubeSphere, k8s, Go, ArgoCD
 
 资料来源:
 
-- [KUBESPHERE 扩展组件开发指南](https://dev-guide.kubesphere.io/extension-dev-guide/zh/)
+- [KubeSphere 扩展组件开发指南](https://dev-guide.kubesphere.io/extension-dev-guide/zh/)
 
 ## 开发环境搭建
 
-开发需要一个 ks 集群，可以使用 kubesphere 官方提供的ks-dev环境，也可以自己搭建一个 ks 集群。
+开发需要一个 ks 集群，可以使用 KubeSphere 官方提供的ks-dev环境，也可以自己搭建一个 ks 集群。
 
 ### 使用ks-dev环境
 
@@ -59,9 +59,7 @@ sudo mv kubectl /usr/local/bin
 
 安装完成以后去 `ks` 面板下载 `kubeconfig` 文件放到 `~/.kube/config` 目录下
 
-```bash
-
-安装 `ksbuilder`
+安装 `ksbuilder
 
 ```bash
 wget https://github.com/kubesphere/ksbuilder/releases/download/v0.3.13/ksbuilder_0.3.13_linux_amd64.tar.gz
@@ -99,23 +97,73 @@ ks-controller-manager-59d55bc77b-vgnl7   1/1     Running   2 (6d21h ago)   15d
 
 <https://raw.githubusercontent.com/kubesphere/extension-samples/master/extensions-backend/weave-scope/weave-scope-reverse-proxy.yaml>
 
-修改为 argocd-server
+修改为 argocd
 
 ```yaml
 apiVersion: extensions.kubesphere.io/v1alpha1
 kind: ReverseProxy
 metadata:
-  name: argocd-server
+  name: argocd-scope
 spec:
   directives:
     headerUp:
     - -Authorization
-    stripPathPrefix: /proxy/argocd-server
+    stripPathPrefix: /proxy/argocd
   matcher:
     method: '*'
-    path: /proxy/argocd-server/*
+    path: /proxy/argocd/*
   upstream:
     url: http://argocd-server.argocd.svc
 status:
   state: Available
+
 ```
+
+其中 `upstream.url` 为 argocd 的服务地址
+
+`http://[service name].[namespace].svc`
+
+部署 `ArgoCD` 时需要修改下 `argocd-server` Deployment 的参数
+
+```yaml
+      - args:
+        - /usr/local/bin/argocd-server
+        - --insecure # 关闭 http -> https 重定向
+        - --basehref # 添加 basehref 参数 使用 /proxy/argocd 作为基础路径
+        - /proxy/argocd
+```
+
+`basehref` 配置说明
+![about basehref config](./kubesphere-extended-component-development-note/image.png)
+
+> If the Argo CD UI is available under a non-root path (e.g. /argo-cd instead of /) then the UI path should be configured in the API server. To configure the UI path add the --basehref flag into the argocd-server deployment command
+> <https://argo-cd.readthedocs.io/en/stable/operator-manual/ingress/#ui-base-path>
+
+插件设置下 `webpack.config.js`
+
+```js
+const { merge } = require('webpack-merge');
+const baseConfig = require('@ks-console/bootstrap/webpack/webpack.dev.conf');
+
+const webpackDevConfig = merge(baseConfig, {
+  devServer: {
+    proxy: {
+      '/proxy': {
+        target: 'http://192.168.2.150:30881', // 修改为目标 ks-apiserver 的地址
+        onProxyReq: (proxyReq, req, res) => {
+            const username = 'admin'        // 请求代理时的用户凭证
+            const password = 'P@88w0rd'
+            const auth = Buffer.from(`${username}:${password}`).toString("base64");
+            proxyReq.setHeader('Authorization', `Basic ${auth}`);
+          },
+      },
+    },
+  },
+});
+
+module.exports = webpackDevConfig;
+```
+
+全部完成后访问控制面板可以看到弹出 `ArgoCD` 登录界面
+
+![ArgoCD login page in KubeSphere dashboard](./kubesphere-extended-component-development-note/image2.png)
