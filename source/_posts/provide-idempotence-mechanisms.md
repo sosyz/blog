@@ -4,23 +4,19 @@ date: 2024-04-25T10:27:32+08:00
 tags: HTTP, Backend, Idempotence
 ---
 
-## 为什么要支持幂等机制
+## 引言
 
-HTTP 协议中的幂等性是指对同一个资源的多次请求，结果是一致的。这种特性在实际开发中非常重要，可以保证在网络不稳定的情况下，请求重试不会导致资源状态的改变。
+在HTTP协议的世界里，幂等性是一个核心概念，它确保对同一资源的多次请求结果保持一致。这一特性对于开发者来说至关重要，尤其是在网络环境不稳定时，能够保障重复的请求不会引起资源状态的变化。
 
-对于 HTTP请求来说常见的幂等方法：`GET`、`HEAD`、`PUT`、`DELETE`、`OPTIONS`、`TRACE`，非幂等方法：`POST`、`PATCH`、`CONNECT`
+HTTP协议中定义了多种请求方法，其中`GET`、`HEAD`、`PUT`、`DELETE`、`OPTIONS`和`TRACE`被认为是幂等的，而`POST`、`PATCH`和`CONNECT`则不是。那么，面对非幂等的请求方法，我们如何通过特殊处理来支持幂等性呢？
 
-为什么要对非幂等方法进行特殊处理从而支持幂等机制呢？比如说以下场景
+设想这样一个场景：用户在网络条件极差的环境下尝试提交一个订单，但因为网络不稳定他无法确定订单是否成功提交。这时如果接口不支持幂等性，重复提交可能会导致订单被重复处理，造成资源浪费。因此实现幂等机制显得尤为重要。
 
-> 李四维在使用购物平台时准备提交一个订单，但是他在一个网很差的地方，而更糟糕的是因为网络不稳定他在提交时候可能会发生请求超时导致不知道是否成功提交了订单。
+## 幂等机制的设计与实现
 
-怎么办？提交订单前先发一个预创建订单来检查吗？除非没得选再考虑这个，因为这样会增加额外的请求和处理代码，也不是很好的解决方案
+一种简单有效的实现幂等性的方法是在请求头中添加一个唯一标识符，如 `UUID` 或自定义字符串以确保每次请求的唯一性。这个唯一性由客户端保证。
 
-直接再请求一次呢？如果这个时候接口是非幂等的那么就会重复提交订单造成资源浪费，因此提供幂等机制在这个时候就显得非常有用。
-
-## 幂等机制的设计
-
-这里选择一个简单的实现方式，通过在请求头中添加一个唯一标识符来实现幂等机制，这个唯一标识符可以是一个 UUID，也可以是一个自定义的字符串，只要保证唯一性即可，而唯一性由客户端保证。
+例如，客户端在提交订单时发送如下请求：
 
 ```http
 POST /api/v1/orders HTTP/1.1
@@ -34,24 +30,11 @@ X-Request-Id: e0db47c3-05c4-4205-b80a-b4a2a482fb8c
 }
 ```
 
-在服务端接收到请求后，首先检查请求头中的 `X-Request-Id` 是否存在，如果存在则检查是否已经处理过，如果已经处理过则直接返回处理结果，否则继续处理请求。
+服务端在接收到请求后，首先检查 `X-Request-Id` 是否已存在。如果该标识符已存在表明请求已被处理，服务端则直接返回一个表示已处理的状态码，如 `400 Bad Request`。这样即使在网络不稳定导致的重试中服务端也只处理一次请求，避免了资源状态的改变。
 
-请求头的 Key 可以自定义，这里使用 `X-Request-Id` 只是一个示例，实际开发中可以根据实际情况来定义。
+## 在 `Kratos` 框架中实现幂等性
 
-```http
-HTTP/1.1 409 Conflict
-Content-Type: application/json
-
-{
-  "message": "Request already processed"
-}
-```
-
-这样客户端就可以通过 `X-Request-Id` 来确保服务端只处理一次请求，即使请求重试也不会导致资源状态的改变。
-
-## 在 `Kratos` 中支持幂等机制
-
-在 `Kratos` 中可以通过中间件来实现幂等机制，具体实现方式如下：
+在 `Kratos` 框架中可以通过中间件来轻松实现幂等性。以下是一个示例实现
 
 ```go
 type CtxRequestKey string
@@ -64,71 +47,99 @@ func SetIdempotencyKeyWithCtx(ctx context.Context, key string) context.Context {
     return context.WithValue(ctx, CtxReqKeyIdempotency, key)
 }
 
-// 幂等处理
-func IdempotencyMiddleware(handler middleware.Handler, r redis.Client) middleware.Handler {
-    return func(ctx context.Context, req any) (any, error) {
-        if httpCtx, ok := http.RequestFromServerContext(ctx); ok {
-            idempotencyKey := httpCtx.Header.Get("X-Request-Id")
-            if idempotencyKey != "" {
-                // 检查redis中是否存在该key 如果不存在则创建一个bool类型的值
-                if b, err := r.HSetNX(ctx, "idempotency", idempotencyKey, true).Result(); err != nil {
-                    return nil, err
-                } else if !b {
-                    return nil, v1.ErrorConflict("Request already processed")
+// IdempotencyMiddleware 幂等性中间件
+func IdempotencyMiddleware(r *redis.Client) middleware.Middleware {
+    return func(handler middleware.Handler) middleware.Handler {
+        return func(ctx context.Context, req any) (any, error) {
+            idempotencyKey := ""
+
+            if httpCtx, ok := http.RequestFromServerContext(ctx); ok {
+                idempotencyKey = httpCtx.Header.Get("X-Request-Id")
+                if idempotencyKey != "" {
+                    // 检查redis中是否存在该key 如果存在则拒绝请求
+                    if b, err := r.Exists(ctx, idempotencyKey).Result(); err != nil {
+                        return nil, err
+                    } else if b > 0 {
+                        return nil, v1.ErrorErrorReasonErrorConflict("idempotency key already exists")
+                    }
+
+                    ctx = SetIdempotencyKeyWithCtx(ctx, idempotencyKey)
                 }
-
-                ctx = server.SetIdempotencyKeyWithCtx(ctx, idempotencyKey)
             }
-        }
 
-        return handler(ctx, req)
+            res, err := handler(ctx, req)
+            if err == nil && idempotencyKey != "" {
+                if err := r.Set(ctx, idempotencyKey, true, 24*time.Hour).Err(); err != nil {
+                    return nil, err
+                }
+            }
+
+            return res, err
+        }
     }
 }
 ```
 
-其中 `HSetNX` 方法用于在 Redis 中创建一个唯一的键值对，如果键已经存在则返回 `false`，否则返回 `true`
+通过这种方式我们可以确保即使在多次请求的情况下服务端也只处理一次请求，有效避免了重复处理的问题。
 
-具体说明: [HSETNX](https://redis.io/docs/latest/commands/hsetnx/)
+## 测试与验证
 
-测试代码如下：
+通过以下测试代码验证幂等性中间件的有效性
 
 ```go
-func TestRedisHSetNX(t *testing.T) {
-    r := redis.NewClient(&redis.Options{
-        Addr: "localhost:6379",
-        DB:   0,
-    })
+func TestIdempotencyMiddleware(t *testing.T) {
+    uniqueIdKey := "abcd-efg1-2345"
 
-    ctx := context.Background()
-    b, err := r.HSetNX(ctx, "key", "field", true).Result()
-    if err != nil {
-        t.Fatal(err)
-    }
-    t.Log(b)
+    call := func() *http.Response {
+        req, err := http.NewRequest("GET", "http://127.0.0.1:8000/helloworld", nil)
+        if err != nil {
+            t.Fatalf("创建请求失败: %v", err)
+        }
 
-    c, err := r.HSetNX(ctx, "key", "field", true).Result()
-    if err != nil {
-        t.Fatal(err)
+        req.Header.Set("X-Request-Id", uniqueIdKey)
+
+        client := &http.Client{}
+        resp, err := client.Do(req)
+        if err != nil {
+            t.Fatalf("请求失败: %v", err)
+        }
+        defer resp.Body.Close()
+
+        t.Logf("响应状态码: %v", resp.StatusCode)
+
+        buf, _ := io.ReadAll(resp.Body)
+        t.Logf("响应内容: %v", string(buf))
+        return resp
+
     }
-    t.Log(c)
+
+    if call().StatusCode != 200 {
+        t.Fatalf("第一次请求失败")
+    }
+
+    if call().StatusCode != 400 {
+        t.Fatalf("第二次请求失败")
+    }
 }
 ```
 
 运行结果
 
 ```shell
-Running tool: /usr/local/go/bin/go test -timeout 300s -run ^TestRedisHSetNX$ github.com/sosyz/test -v -count=1 ./...
+Running tool: /usr/local/go/bin/go test -timeout 300s -run ^TestIdempotencyMiddleware$ kratos-test/internal/server -count=1
 
-=== RUN   TestRedisHSetNX
-    /home/sonui/Documents/code/test/main_test.go:93: true
-    /home/sonui/Documents/code/test/main_test.go:99: false
---- PASS: TestRedisHSetNX (0.00s)
+=== RUN   TestIdempotencyMiddleware
+    http_test.go:27: 响应状态码: 200
+    http_test.go:30: 响应内容: {"message":"Hello "}
+    http_test.go:27: 响应状态码: 400
+    http_test.go:30: 响应内容: {"code":400,"reason":"ERROR_REASON_ERROR_CONFLICT","message":"idempotency key already exists","metadata":{}}
+--- PASS: TestIdempotencyMiddleware (0.01s)
 PASS
-ok      github.com/sosyz/test   0.005s
+ok      kratos-test/internal/server     0.927s
 ```
 
 ## 参考资料
 
 - <https://github.com/stickfigure/blog/wiki/How-to-(and-how-not-to)-design-REST-APIs#rule-11-do-provide-idempotence-mechanisms>
-- <https://redis.io/docs/latest/commands/hsetnx/>
 - <https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Methods>
+- <https://http.cat/>
