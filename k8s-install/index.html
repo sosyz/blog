@@ -20,30 +20,33 @@
     var CONFIG = {"hostname":"blog.sonui.cn","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
   </script>
 
-  <meta name="description" content="Sonui&#39;s Blog">
-<meta property="og:type" content="website">
-<meta property="og:title" content="Sonui&#39;s Blog">
-<meta property="og:url" content="https://blog.sonui.cn/index.html">
+  <meta name="description" content="决定重新搭建一个 k8s 集群，记录一下过程。本次使用三台主机，分别是 master 节点和两个 worker 节点。 主机配置统一如下：    配置项 配置    OS Ubuntu 22.04.4 LTS x86_64   Kernel 5.15.0-102-generic   CPU AMD Ryzen 7 5700X (16) @ 3.399GHz   Memory 8G   Disk 1">
+<meta property="og:type" content="article">
+<meta property="og:title" content="k8s 集群安装">
+<meta property="og:url" content="https://blog.sonui.cn/k8s-install/index.html">
 <meta property="og:site_name" content="Sonui&#39;s Blog">
-<meta property="og:description" content="Sonui&#39;s Blog">
+<meta property="og:description" content="决定重新搭建一个 k8s 集群，记录一下过程。本次使用三台主机，分别是 master 节点和两个 worker 节点。 主机配置统一如下：    配置项 配置    OS Ubuntu 22.04.4 LTS x86_64   Kernel 5.15.0-102-generic   CPU AMD Ryzen 7 5700X (16) @ 3.399GHz   Memory 8G   Disk 1">
 <meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2024-05-09T07:42:16.000Z">
+<meta property="article:modified_time" content="2024-05-11T06:12:17.936Z">
 <meta property="article:author" content="Sonui">
+<meta property="article:tag" content="k8s, Linux">
 <meta name="twitter:card" content="summary">
 
-<link rel="canonical" href="https://blog.sonui.cn/">
+<link rel="canonical" href="https://blog.sonui.cn/k8s-install/">
 
 
 <script id="page-configurations">
   // https://hexo.io/docs/variables.html
   CONFIG.page = {
     sidebar: "",
-    isHome : true,
-    isPost : false,
+    isHome : false,
+    isPost : true,
     lang   : 'zh-CN'
   };
 </script>
 
-  <title>Sonui's Blog</title>
+  <title>k8s 集群安装 | Sonui's Blog</title>
   
 
 
@@ -141,9 +144,10 @@
         <div class="content-wrap">
           
 
-          <div class="content index posts-expand">
+          <div class="content post posts-expand">
             
-      
+
+    
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
@@ -159,10 +163,9 @@
       <meta itemprop="name" content="Sonui's Blog">
     </span>
       <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/k8s-install/" class="post-title-link" itemprop="url">k8s 集群安装</a>
-        </h2>
+        <h1 class="post-title" itemprop="name headline">
+          k8s 集群安装
+        </h1>
 
         <div class="post-meta">
             <span class="post-meta-item">
@@ -206,7 +209,7 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <p>决定重新搭建一个 k8s 集群，记录一下过程。本次使用三台主机，分别是 master 节点和两个 worker 节点。</p>
+        <p>决定重新搭建一个 k8s 集群，记录一下过程。本次使用三台主机，分别是 master 节点和两个 worker 节点。</p>
 <p>主机配置统一如下：</p>
 <table>
 <thead>
@@ -263,823 +266,34 @@
 </tbody></table>
 <h2 id="安装-CRI"><a href="#安装-CRI" class="headerlink" title="安装 CRI"></a>安装 CRI</h2><p>这里选择使用 <a target="_blank" rel="noopener" href="https://kubernetes.io/zh-cn/docs/setup/production-environment/tools/kubeadm/install-kubeadm/">containerd</a> 作为 CRI，安装过程如下：</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br><span class="line">242</span><br><span class="line">243</span><br><span class="line">244</span><br><span class="line">245</span><br><span class="line">246</span><br><span class="line">247</span><br><span class="line">248</span><br><span class="line">249</span><br><span class="line">250</span><br><span class="line">251</span><br><span class="line">252</span><br><span class="line">253</span><br><span class="line">254</span><br><span class="line">255</span><br><span class="line">256</span><br><span class="line">257</span><br><span class="line">258</span><br><span class="line">259</span><br><span class="line">260</span><br><span class="line">261</span><br><span class="line">262</span><br><span class="line">263</span><br><span class="line">264</span><br><span class="line">265</span><br><span class="line">266</span><br><span class="line">267</span><br><span class="line">268</span><br><span class="line">269</span><br><span class="line">270</span><br><span class="line">271</span><br><span class="line">272</span><br><span class="line">273</span><br><span class="line">274</span><br><span class="line">275</span><br><span class="line">276</span><br><span class="line">277</span><br><span class="line">278</span><br><span class="line">279</span><br><span class="line">280</span><br></pre></td><td class="code"><pre><span class="line">sonui@k8s-worker-2:~$ ip <span class="built_in">link</span></span><br><span class="line">1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000</span><br><span class="line">    <span class="built_in">link</span>/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00</span><br><span class="line">2: enp6s18: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qdisc fq_codel state UP mode DEFAULT group default qlen 1000</span><br><span class="line">    <span class="built_in">link</span>/ether 36:3b:1e:33:1f:a4 brd ff:ff:ff:ff:ff:ff</span><br><span class="line">sonui@k8s-worker-2:~$ sudo <span class="built_in">cat</span> /sys/class/dmi/id/product_uuid</span><br><span class="line">7247c410-2833-4bcf-9757-165f23dcbec4</span><br><span class="line">sonui@k8s-worker-2:~$ sudo apt-get update</span><br><span class="line">sudo apt-get install -y apt-transport-https ca-certificates curl gpg</span><br><span class="line">sonui@k8s-worker-2:~$ curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.29/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg</span><br><span class="line">sonui@k8s-worker-2:~$ <span class="built_in">echo</span> <span class="string">&#x27;deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /&#x27;</span> | sudo <span class="built_in">tee</span> /etc/apt/sources.list.d/kubernetes.list</span><br><span class="line">deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /</span><br><span class="line">sonui@k8s-worker-2:~$ sudo apt-get update &amp;&amp; sudo apt-get install -y kubelet kubeadm kubectl &amp;&amp; sudo apt-mark hold kubelet kubeadm kubectl</span><br><span class="line">Hit:2 https://cn.archive.ubuntu.com/ubuntu jammy InRelease                  </span><br><span class="line">Get:1 https://prod-cdn.packages.k8s.io/repositories/isv:/kubernetes:/core:/stable:/v1.29/deb  InRelease [1186 B]</span><br><span class="line">Hit:3 https://cn.archive.ubuntu.com/ubuntu jammy-updates InRelease</span><br><span class="line">Get:4 https://prod-cdn.packages.k8s.io/repositories/isv:/kubernetes:/core:/stable:/v1.29/deb  Packages [7781 B]</span><br><span class="line">Hit:5 https://cn.archive.ubuntu.com/ubuntu jammy-backports InRelease</span><br><span class="line">Hit:6 https://cn.archive.ubuntu.com/ubuntu jammy-security InRelease</span><br><span class="line">Fetched 8967 B <span class="keyword">in</span> 2s (4871 B/s)</span><br><span class="line">Reading package lists... Done</span><br><span class="line">Reading package lists... Done</span><br><span class="line">Building dependency tree... Done</span><br><span class="line">Reading state information... Done</span><br><span class="line">The following additional packages will be installed:</span><br><span class="line">  conntrack cri-tools ebtables ethtool iptables kubernetes-cni libip6tc2 libnetfilter-conntrack3 libnfnetlink0 libnftnl11 socat</span><br><span class="line">Suggested packages:</span><br><span class="line">  nftables firewalld</span><br><span class="line">The following NEW packages will be installed:</span><br><span class="line">  conntrack cri-tools ebtables ethtool iptables kubeadm kubectl kubelet kubernetes-cni libip6tc2 libnetfilter-conntrack3 libnfnetlink0 libnftnl11 socat</span><br><span class="line">0 upgraded, 14 newly installed, 0 to remove and 18 not upgraded.</span><br><span class="line">Need to get 93.3 MB of archives.</span><br><span class="line">After this operation, 350 MB of additional disk space will be used.</span><br><span class="line">Get:6 https://cn.archive.ubuntu.com/ubuntu jammy-updates/main amd64 libip6tc2 amd64 1.8.7-1ubuntu5.2 [20.3 kB]</span><br><span class="line">Get:1 https://prod-cdn.packages.k8s.io/repositories/isv:/kubernetes:/core:/stable:/v1.29/deb  cri-tools 1.29.0-1.1 [20.1 MB]</span><br><span class="line">Get:7 https://cn.archive.ubuntu.com/ubuntu jammy/main amd64 libnfnetlink0 amd64 1.0.1-3build3 [14.6 kB]</span><br><span class="line">Get:8 https://cn.archive.ubuntu.com/ubuntu jammy/main amd64 libnetfilter-conntrack3 amd64 1.0.9-1 [45.3 kB]</span><br><span class="line">Get:9 https://cn.archive.ubuntu.com/ubuntu jammy/main amd64 libnftnl11 amd64 1.2.1-1build1 [65.5 kB]</span><br><span class="line">Get:10 https://cn.archive.ubuntu.com/ubuntu jammy-updates/main amd64 iptables amd64 1.8.7-1ubuntu5.2 [455 kB]</span><br><span class="line">Get:11 https://cn.archive.ubuntu.com/ubuntu jammy/main amd64 conntrack amd64 1:1.4.6-2build2 [33.5 kB]</span><br><span class="line">Get:12 https://cn.archive.ubuntu.com/ubuntu jammy/main amd64 ebtables amd64 2.0.11-4build2 [84.9 kB]</span><br><span class="line">Get:13 https://cn.archive.ubuntu.com/ubuntu jammy-updates/main amd64 ethtool amd64 1:5.16-1ubuntu0.1 [207 kB]</span><br><span class="line">Get:14 https://cn.archive.ubuntu.com/ubuntu jammy/main amd64 socat amd64 1.7.4.1-3ubuntu4 [349 kB]</span><br><span class="line">Get:2 https://prod-cdn.packages.k8s.io/repositories/isv:/kubernetes:/core:/stable:/v1.29/deb  kubernetes-cni 1.3.0-1.1 [31.4 MB]</span><br><span class="line">Get:3 https://prod-cdn.packages.k8s.io/repositories/isv:/kubernetes:/core:/stable:/v1.29/deb  kubelet 1.29.4-2.1 [19.9 MB]                                         </span><br><span class="line">Get:4 https://prod-cdn.packages.k8s.io/repositories/isv:/kubernetes:/core:/stable:/v1.29/deb  kubectl 1.29.4-2.1 [10.5 MB]                                         </span><br><span class="line">Get:5 https://prod-cdn.packages.k8s.io/repositories/isv:/kubernetes:/core:/stable:/v1.29/deb  kubeadm 1.29.4-2.1 [10.1 MB]                                         </span><br><span class="line">Fetched 93.3 MB <span class="keyword">in</span> 11s (8519 kB/s)                                                                                                                                 </span><br><span class="line">debconf: delaying package configuration, since apt-utils is not installed</span><br><span class="line">Selecting previously unselected package libip6tc2:amd64.</span><br><span class="line">(Reading database ... 66219 files and directories currently installed.)</span><br><span class="line">Preparing to unpack .../00-libip6tc2_1.8.7-1ubuntu5.2_amd64.deb ...</span><br><span class="line">Unpacking libip6tc2:amd64 (1.8.7-1ubuntu5.2) ...</span><br><span class="line">Selecting previously unselected package libnfnetlink0:amd64.</span><br><span class="line">Preparing to unpack .../01-libnfnetlink0_1.0.1-3build3_amd64.deb ...</span><br><span class="line">Unpacking libnfnetlink0:amd64 (1.0.1-3build3) ...</span><br><span class="line">Selecting previously unselected package libnetfilter-conntrack3:amd64.</span><br><span class="line">Preparing to unpack .../02-libnetfilter-conntrack3_1.0.9-1_amd64.deb ...</span><br><span class="line">Unpacking libnetfilter-conntrack3:amd64 (1.0.9-1) ...</span><br><span class="line">Selecting previously unselected package libnftnl11:amd64.</span><br><span class="line">Preparing to unpack .../03-libnftnl11_1.2.1-1build1_amd64.deb ...</span><br><span class="line">Unpacking libnftnl11:amd64 (1.2.1-1build1) ...</span><br><span class="line">Selecting previously unselected package iptables.</span><br><span class="line">Preparing to unpack .../04-iptables_1.8.7-1ubuntu5.2_amd64.deb ...</span><br><span class="line">Unpacking iptables (1.8.7-1ubuntu5.2) ...</span><br><span class="line">Selecting previously unselected package conntrack.</span><br><span class="line">Preparing to unpack .../05-conntrack_1%3a1.4.6-2build2_amd64.deb ...</span><br><span class="line">Unpacking conntrack (1:1.4.6-2build2) ...</span><br><span class="line">Selecting previously unselected package cri-tools.</span><br><span class="line">Preparing to unpack .../06-cri-tools_1.29.0-1.1_amd64.deb ...</span><br><span class="line">Unpacking cri-tools (1.29.0-1.1) ...</span><br><span class="line">Selecting previously unselected package ebtables.</span><br><span class="line">Preparing to unpack .../07-ebtables_2.0.11-4build2_amd64.deb ...</span><br><span class="line">Unpacking ebtables (2.0.11-4build2) ...</span><br><span class="line">Selecting previously unselected package ethtool.</span><br><span class="line">Preparing to unpack .../08-ethtool_1%3a5.16-1ubuntu0.1_amd64.deb ...</span><br><span class="line">Unpacking ethtool (1:5.16-1ubuntu0.1) ...</span><br><span class="line">Selecting previously unselected package kubernetes-cni.</span><br><span class="line">Preparing to unpack .../09-kubernetes-cni_1.3.0-1.1_amd64.deb ...</span><br><span class="line">Unpacking kubernetes-cni (1.3.0-1.1) ...</span><br><span class="line">Selecting previously unselected package socat.</span><br><span class="line">Preparing to unpack .../10-socat_1.7.4.1-3ubuntu4_amd64.deb ...</span><br><span class="line">Unpacking socat (1.7.4.1-3ubuntu4) ...</span><br><span class="line">Selecting previously unselected package kubelet.</span><br><span class="line">Preparing to unpack .../11-kubelet_1.29.4-2.1_amd64.deb ...</span><br><span class="line">Unpacking kubelet (1.29.4-2.1) ...</span><br><span class="line">Selecting previously unselected package kubectl.</span><br><span class="line">Preparing to unpack .../12-kubectl_1.29.4-2.1_amd64.deb ...</span><br><span class="line">Unpacking kubectl (1.29.4-2.1) ...</span><br><span class="line">Selecting previously unselected package kubeadm.</span><br><span class="line">Preparing to unpack .../13-kubeadm_1.29.4-2.1_amd64.deb ...</span><br><span class="line">Unpacking kubeadm (1.29.4-2.1) ...</span><br><span class="line">Setting up libip6tc2:amd64 (1.8.7-1ubuntu5.2) ...</span><br><span class="line">Setting up libnftnl11:amd64 (1.2.1-1build1) ...</span><br><span class="line">Setting up kubectl (1.29.4-2.1) ...</span><br><span class="line">Setting up ebtables (2.0.11-4build2) ...</span><br><span class="line">update-alternatives: using /usr/sbin/ebtables-legacy to provide /usr/sbin/ebtables (ebtables) <span class="keyword">in</span> auto mode</span><br><span class="line">Setting up socat (1.7.4.1-3ubuntu4) ...</span><br><span class="line">Setting up libnfnetlink0:amd64 (1.0.1-3build3) ...</span><br><span class="line">Setting up cri-tools (1.29.0-1.1) ...</span><br><span class="line">Setting up kubernetes-cni (1.3.0-1.1) ...</span><br><span class="line">Setting up ethtool (1:5.16-1ubuntu0.1) ...</span><br><span class="line">Setting up libnetfilter-conntrack3:amd64 (1.0.9-1) ...</span><br><span class="line">Setting up iptables (1.8.7-1ubuntu5.2) ...</span><br><span class="line">update-alternatives: using /usr/sbin/iptables-legacy to provide /usr/sbin/iptables (iptables) <span class="keyword">in</span> auto mode</span><br><span class="line">update-alternatives: using /usr/sbin/ip6tables-legacy to provide /usr/sbin/ip6tables (ip6tables) <span class="keyword">in</span> auto mode</span><br><span class="line">update-alternatives: using /usr/sbin/iptables-nft to provide /usr/sbin/iptables (iptables) <span class="keyword">in</span> auto mode</span><br><span class="line">update-alternatives: using /usr/sbin/ip6tables-nft to provide /usr/sbin/ip6tables (ip6tables) <span class="keyword">in</span> auto mode</span><br><span class="line">update-alternatives: using /usr/sbin/arptables-nft to provide /usr/sbin/arptables (arptables) <span class="keyword">in</span> auto mode</span><br><span class="line">update-alternatives: using /usr/sbin/ebtables-nft to provide /usr/sbin/ebtables (ebtables) <span class="keyword">in</span> auto mode</span><br><span class="line">Setting up conntrack (1:1.4.6-2build2) ...</span><br><span class="line">Setting up kubelet (1.29.4-2.1) ...</span><br><span class="line">Setting up kubeadm (1.29.4-2.1) ...</span><br><span class="line">Processing triggers <span class="keyword">for</span> libc-bin (2.35-0ubuntu3.6) ...</span><br><span class="line">debconf: unable to initialize frontend: Dialog</span><br><span class="line">debconf: (No usable dialog-like program is installed, so the dialog based frontend cannot be used. at /usr/share/perl5/Debconf/FrontEnd/Dialog.pm line 78.)</span><br><span class="line">debconf: falling back to frontend: Readline</span><br><span class="line">Scanning processes...                                                                                                                                               </span><br><span class="line">Scanning linux images...                                                                                                                                            </span><br><span class="line"></span><br><span class="line">Running kernel seems to be up-to-date.</span><br><span class="line"></span><br><span class="line">No services need to be restarted.</span><br><span class="line"></span><br><span class="line">No containers need to be restarted.</span><br><span class="line"></span><br><span class="line">No user sessions are running outdated binaries.</span><br><span class="line"></span><br><span class="line">No VM guests are running outdated hypervisor (qemu) binaries on this host.</span><br><span class="line">kubelet <span class="built_in">set</span> on hold.</span><br><span class="line">kubeadm <span class="built_in">set</span> on hold.</span><br><span class="line">kubectl <span class="built_in">set</span> on hold.</span><br><span class="line">sonui@k8s-worker-2:~$ sudo tar Cxzvf /usr/local containerd-1.7.16-linux-amd64.tar.gz </span><br><span class="line">bin/</span><br><span class="line">bin/containerd-shim-runc-v2</span><br><span class="line">bin/containerd-stress</span><br><span class="line">bin/containerd</span><br><span class="line">bin/containerd-shim-runc-v1</span><br><span class="line">bin/ctr</span><br><span class="line">bin/containerd-shim</span><br><span class="line">sonui@k8s-worker-2:~$ wget https://raw.githubusercontent.com/containerd/containerd/main/containerd.service &amp;&amp; \</span><br><span class="line">&gt; sudo <span class="built_in">mv</span> containerd.service /lib/systemd/system/ &amp;&amp; \</span><br><span class="line">&gt; sudo systemctl daemon-reload &amp;&amp; \</span><br><span class="line">&gt; sudo systemctl <span class="built_in">enable</span> --now containerd </span><br><span class="line">--2024-05-09 15:35:50--  https://raw.githubusercontent.com/containerd/containerd/main/containerd.service</span><br><span class="line">Resolving raw.githubusercontent.com (raw.githubusercontent.com)... 198.18.0.23</span><br><span class="line">Connecting to raw.githubusercontent.com (raw.githubusercontent.com)|198.18.0.23|:443... connected.</span><br><span class="line">HTTP request sent, awaiting response... 200 OK</span><br><span class="line">Length: 1251 (1.2K) [text/plain]</span><br><span class="line">Saving to: ‘containerd.service’</span><br><span class="line"></span><br><span class="line">containerd.service                                100%[==========================================================================================================&gt;]   1.22K  --.-KB/s    <span class="keyword">in</span> 0s      </span><br><span class="line"></span><br><span class="line">2024-05-09 15:35:50 (103 MB/s) - ‘containerd.service’ saved [1251/1251]</span><br><span class="line"></span><br><span class="line"><span class="built_in">mv</span>: cannot move <span class="string">&#x27;containerd.service&#x27;</span> to <span class="string">&#x27;/lib/systemd/system/containerd.service&#x27;</span>: Permission denied</span><br><span class="line">sonui@k8s-worker-2:~$ wget https://raw.githubusercontent.com/containerd/containerd/main/containerd.service &amp;&amp; &gt; sudo <span class="built_in">mv</span> containerd.service /lib/systemd/system/ &amp;&amp; &gt; sudo systemctl daemon-reload &amp;&amp; sudo systemctl <span class="built_in">enable</span> --now containerd</span><br><span class="line">--2024-05-09 15:36:05--  https://raw.githubusercontent.com/containerd/containerd/main/containerd.service</span><br><span class="line">Resolving raw.githubusercontent.com (raw.githubusercontent.com)... 198.18.0.23</span><br><span class="line">Connecting to raw.githubusercontent.com (raw.githubusercontent.com)|198.18.0.23|:443... connected.</span><br><span class="line">HTTP request sent, awaiting response... 200 OK</span><br><span class="line">Length: 1251 (1.2K) [text/plain]</span><br><span class="line">Saving to: ‘containerd.service.1’</span><br><span class="line"></span><br><span class="line">containerd.service.1                              100%[==========================================================================================================&gt;]   1.22K  --.-KB/s    <span class="keyword">in</span> 0s      </span><br><span class="line"></span><br><span class="line">2024-05-09 15:36:06 (104 MB/s) - ‘containerd.service.1’ saved [1251/1251]</span><br><span class="line"></span><br><span class="line"><span class="built_in">mv</span>: cannot move <span class="string">&#x27;containerd.service&#x27;</span> to <span class="string">&#x27;/lib/systemd/system/containerd.service&#x27;</span>: Permission denied</span><br><span class="line">sonui@k8s-worker-2:~$ sudo systemctl daemon-reload</span><br><span class="line">sonui@k8s-worker-2:~$ sudo systemctl <span class="built_in">enable</span> --now containerd</span><br><span class="line">Failed to <span class="built_in">enable</span> unit: Unit file containerd.service does not exist.</span><br><span class="line">sonui@k8s-worker-2:~$ ll</span><br><span class="line">total 46836</span><br><span class="line">drwxr-x--- 4 sonui sonui     4096 May  9 15:36 ./</span><br><span class="line">drwxr-xr-x 3 root  root      4096 Apr 17 12:25 ../</span><br><span class="line">-rw------- 1 sonui sonui      259 May  9 12:42 .bash_history</span><br><span class="line">-rw-r--r-- 1 sonui sonui      220 Jan  6  2022 .bash_logout</span><br><span class="line">-rw-r--r-- 1 sonui sonui     3771 Jan  6  2022 .bashrc</span><br><span class="line">drwx------ 2 sonui sonui     4096 Apr 17 12:26 .cache/</span><br><span class="line">-rw-r--r-- 1 sonui sonui      807 Jan  6  2022 .profile</span><br><span class="line">drwx------ 2 sonui sonui     4096 Apr 17 12:25 .ssh/</span><br><span class="line">-rw-r--r-- 1 sonui sonui        0 Apr 17 12:26 .sudo_as_admin_successful</span><br><span class="line">-rw-rw-r-- 1 sonui sonui      180 May  9 15:36 .wget-hsts</span><br><span class="line">-rw-r--r-- 1 sonui sonui 47913222 May  9 15:28 containerd-1.7.16-linux-amd64.tar.gz</span><br><span class="line">-rw-rw-r-- 1 sonui sonui     1251 May  9 15:35 containerd.service</span><br><span class="line">-rw-rw-r-- 1 sonui sonui     1251 May  9 15:36 containerd.service.1</span><br><span class="line">-rw-rw-r-- 1 sonui sonui        0 May  9 15:36 sudo</span><br><span class="line">sonui@k8s-worker-2:~$ <span class="built_in">rm</span> containerd.service*</span><br><span class="line">sonui@k8s-worker-2:~$ wget https://raw.githubusercontent.com/containerd/containerd/main/containerd.service</span><br><span class="line">--2024-05-09 15:36:37--  https://raw.githubusercontent.com/containerd/containerd/main/containerd.service</span><br><span class="line">Resolving raw.githubusercontent.com (raw.githubusercontent.com)... 198.18.0.23</span><br><span class="line">Connecting to raw.githubusercontent.com (raw.githubusercontent.com)|198.18.0.23|:443... connected.</span><br><span class="line">HTTP request sent, awaiting response... 200 OK</span><br><span class="line">Length: 1251 (1.2K) [text/plain]</span><br><span class="line">Saving to: ‘containerd.service’</span><br><span class="line"></span><br><span class="line">containerd.service                                100%[==========================================================================================================&gt;]   1.22K  --.-KB/s    <span class="keyword">in</span> 0s      </span><br><span class="line"></span><br><span class="line">2024-05-09 15:36:37 (108 MB/s) - ‘containerd.service’ saved [1251/1251]</span><br><span class="line"></span><br><span class="line">sonui@k8s-worker-2:~$ sudo <span class="built_in">mv</span> containerd.service /lib/systemd/system/</span><br><span class="line">sonui@k8s-worker-2:~$ sudo systemctl daemon-reload</span><br><span class="line">sonui@k8s-worker-2:~$ sudo systemctl <span class="built_in">enable</span> --now containerd</span><br><span class="line">Created symlink /etc/systemd/system/multi-user.target.wants/containerd.service → /lib/systemd/system/containerd.service.</span><br><span class="line">sonui@k8s-worker-2:~$ wget https://github.com/opencontainers/runc/releases/download/v1.1.12/runc.amd64</span><br><span class="line">--2024-05-09 15:37:44--  https://github.com/opencontainers/runc/releases/download/v1.1.12/runc.amd64</span><br><span class="line">Resolving github.com (github.com)... 198.18.0.74</span><br><span class="line">Connecting to github.com (github.com)|198.18.0.74|:443... connected.</span><br><span class="line">HTTP request sent, awaiting response... 302 Found</span><br><span class="line">Location: https://objects.githubusercontent.com/github-production-release-asset-2e65be/36960321/d0ba447a-440a-43bd-a9eb-a8a2b071c200?X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=AKIAVCODYLSA53PQK4ZA%2F20240509%2Fus-east-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20240509T153739Z&amp;X-Amz-Expires=300&amp;X-Amz-Signature=7aec0ec31ec98dbd606dd01d5ac35f78865af07746d8c6f73974cfed6a70059b&amp;X-Amz-SignedHeaders=host&amp;actor_id=0&amp;key_id=0&amp;repo_id=36960321&amp;response-content-disposition=attachment%3B%20filename%3Drunc.amd64&amp;response-content-type=application%2Foctet-stream [following]</span><br><span class="line">--2024-05-09 15:37:44--  https://objects.githubusercontent.com/github-production-release-asset-2e65be/36960321/d0ba447a-440a-43bd-a9eb-a8a2b071c200?X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=AKIAVCODYLSA53PQK4ZA%2F20240509%2Fus-east-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20240509T153739Z&amp;X-Amz-Expires=300&amp;X-Amz-Signature=7aec0ec31ec98dbd606dd01d5ac35f78865af07746d8c6f73974cfed6a70059b&amp;X-Amz-SignedHeaders=host&amp;actor_id=0&amp;key_id=0&amp;repo_id=36960321&amp;response-content-disposition=attachment%3B%20filename%3Drunc.amd64&amp;response-content-type=application%2Foctet-stream</span><br><span class="line">Resolving objects.githubusercontent.com (objects.githubusercontent.com)... 198.18.6.233</span><br><span class="line">Connecting to objects.githubusercontent.com (objects.githubusercontent.com)|198.18.6.233|:443... connected.</span><br><span class="line">HTTP request sent, awaiting response... 200 OK</span><br><span class="line">Length: 10709696 (10M) [application/octet-stream]</span><br><span class="line">Saving to: ‘runc.amd64’</span><br><span class="line"></span><br><span class="line">runc.amd64                                        100%[==========================================================================================================&gt;]  10.21M  9.02MB/s    <span class="keyword">in</span> 1.1s    </span><br><span class="line"></span><br><span class="line">2024-05-09 15:37:46 (9.02 MB/s) - ‘runc.amd64’ saved [10709696/10709696]</span><br><span class="line"></span><br><span class="line">sonui@k8s-worker-2:~$ sudo install -m 755 runc.amd64 /usr/local/sbin/runc</span><br><span class="line">sonui@k8s-worker-2:~$ wget https://github.com/containernetworking/plugins/releases/download/v1.4.1/cni-plugins-linux-amd64-v1.4.1.tgz</span><br><span class="line">--2024-05-09 15:38:40--  https://github.com/containernetworking/plugins/releases/download/v1.4.1/cni-plugins-linux-amd64-v1.4.1.tgz</span><br><span class="line">Resolving github.com (github.com)... 198.18.0.74</span><br><span class="line">Connecting to github.com (github.com)|198.18.0.74|:443... connected.</span><br><span class="line">HTTP request sent, awaiting response... 302 Found</span><br><span class="line">Location: https://objects.githubusercontent.com/github-production-release-asset-2e65be/84575398/856f0a89-6331-497a-86af-60b02836794d?X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=AKIAVCODYLSA53PQK4ZA%2F20240509%2Fus-east-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20240509T153841Z&amp;X-Amz-Expires=300&amp;X-Amz-Signature=f1d20ade075f1f5bcdc0a3c215e5bb6cfec76df5bf7887c6a738b6800a62fa32&amp;X-Amz-SignedHeaders=host&amp;actor_id=0&amp;key_id=0&amp;repo_id=84575398&amp;response-content-disposition=attachment%3B%20filename%3Dcni-plugins-linux-amd64-v1.4.1.tgz&amp;response-content-type=application%2Foctet-stream [following]</span><br><span class="line">--2024-05-09 15:38:41--  https://objects.githubusercontent.com/github-production-release-asset-2e65be/84575398/856f0a89-6331-497a-86af-60b02836794d?X-Amz-Algorithm=AWS4-HMAC-SHA256&amp;X-Amz-Credential=AKIAVCODYLSA53PQK4ZA%2F20240509%2Fus-east-1%2Fs3%2Faws4_request&amp;X-Amz-Date=20240509T153841Z&amp;X-Amz-Expires=300&amp;X-Amz-Signature=f1d20ade075f1f5bcdc0a3c215e5bb6cfec76df5bf7887c6a738b6800a62fa32&amp;X-Amz-SignedHeaders=host&amp;actor_id=0&amp;key_id=0&amp;repo_id=84575398&amp;response-content-disposition=attachment%3B%20filename%3Dcni-plugins-linux-amd64-v1.4.1.tgz&amp;response-content-type=application%2Foctet-stream</span><br><span class="line">Resolving objects.githubusercontent.com (objects.githubusercontent.com)... 198.18.6.233</span><br><span class="line">Connecting to objects.githubusercontent.com (objects.githubusercontent.com)|198.18.6.233|:443... connected.</span><br><span class="line">HTTP request sent, awaiting response... 200 OK</span><br><span class="line">Length: 46991561 (45M) [application/octet-stream]</span><br><span class="line">Saving to: ‘cni-plugins-linux-amd64-v1.4.1.tgz’</span><br><span class="line"></span><br><span class="line">cni-plugins-linux-amd64-v1.4.1.tgz                100%[==========================================================================================================&gt;]  44.81M  18.7MB/s    <span class="keyword">in</span> 2.4s    </span><br><span class="line"></span><br><span class="line">2024-05-09 15:38:44 (18.7 MB/s) - ‘cni-plugins-linux-amd64-v1.4.1.tgz’ saved [46991561/46991561]</span><br><span class="line"></span><br><span class="line">sonui@k8s-worker-2:~$ sudo <span class="built_in">mkdir</span> -p /opt/cni/bin &amp;&amp; sudo  tar Cxzvf /opt/cni/bin cni-plugins-linux-amd64-v1.4.1.tgz</span><br><span class="line">./</span><br><span class="line">./LICENSE</span><br><span class="line">./host-device</span><br><span class="line">./dummy</span><br><span class="line">./README.md</span><br><span class="line">./firewall</span><br><span class="line">./macvlan</span><br><span class="line">./bridge</span><br><span class="line">./dhcp</span><br><span class="line">./bandwidth</span><br><span class="line">./tuning</span><br><span class="line">./vlan</span><br><span class="line">./ipvlan</span><br><span class="line">./ptp</span><br><span class="line">./static</span><br><span class="line">./loopback</span><br><span class="line">./tap</span><br><span class="line">./host-local</span><br><span class="line">./sbr</span><br><span class="line">./portmap</span><br><span class="line">./vrf</span><br><span class="line">sonui@k8s-worker-2:~$ ctr version</span><br><span class="line">Client:</span><br><span class="line">  Version:  v1.7.16</span><br><span class="line">  Revision: 83031836b2cf55637d7abf847b17134c51b38e53</span><br><span class="line">  Go version: go1.21.9</span><br><span class="line"></span><br><span class="line">ctr: failed to dial <span class="string">&quot;/run/containerd/containerd.sock&quot;</span>: connection error: desc = <span class="string">&quot;transport: error while dialing: dial unix /run/containerd/containerd.sock: connect: permission denied&quot;</span></span><br><span class="line">sonui@k8s-worker-2:~$ sudo ctr version</span><br><span class="line">[sudo] password <span class="keyword">for</span> sonui: </span><br><span class="line">Client:</span><br><span class="line">  Version:  v1.7.16</span><br><span class="line">  Revision: 83031836b2cf55637d7abf847b17134c51b38e53</span><br><span class="line">  Go version: go1.21.9</span><br><span class="line"></span><br><span class="line">Server:</span><br><span class="line">  Version:  v1.7.16</span><br><span class="line">  Revision: 83031836b2cf55637d7abf847b17134c51b38e53</span><br><span class="line">  UUID: 95166d03-6fc0-4748-8165-4a1ffb9a5e0a</span><br></pre></td></tr></table></figure>
-      
     </div>
 
     
     
     
+
       <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
+          <div class="post-tags">
+              <a href="/tags/k8s-Linux/" rel="tag"># k8s, Linux</a>
+          </div>
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://blog.sonui.cn/kubesphere-extended-component-development-note/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Sonui">
-      <meta itemprop="description" content="Sonui's Blog">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Sonui's Blog">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/kubesphere-extended-component-development-note/" class="post-title-link" itemprop="url">KubeSphere 扩展组件开发笔记</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2024-05-06 00:14:37 / 修改时间：00:18:43" itemprop="dateCreated datePublished" datetime="2024-05-06T00:14:37+08:00">2024-05-06</time>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="本文字数">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">本文字数：</span>
-              <span>754</span>
-            </span>
-            <span class="post-meta-item" title="阅读时长">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>3 分钟</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>前段时间参加了云原生 Meetup 杭州站活动，正好在这次活动上了解到了 KubeSphere 正在开展扩展组件开发训练营于是报名了这个活动，记录下学习过程。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/kubesphere-extended-component-development-note/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
         
-      
-    </div>
 
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://blog.sonui.cn/provide-idempotence-mechanisms/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Sonui">
-      <meta itemprop="description" content="Sonui's Blog">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Sonui's Blog">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/provide-idempotence-mechanisms/" class="post-title-link" itemprop="url">HTTP 幂等机制支持</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2024-04-25 02:27:32" itemprop="dateCreated datePublished" datetime="2024-04-25T02:27:32+08:00">2024-04-25</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2024-07-01 23:57:22" itemprop="dateModified" datetime="2024-07-01T23:57:22+08:00">2024-07-01</time>
-              </span>
-
-          <br>
-            <span class="post-meta-item" title="本文字数">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">本文字数：</span>
-              <span>1.1k</span>
-            </span>
-            <span class="post-meta-item" title="阅读时长">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>4 分钟</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h2 id="为什么要支持幂等机制"><a href="#为什么要支持幂等机制" class="headerlink" title="为什么要支持幂等机制"></a>为什么要支持幂等机制</h2><p>HTTP 协议中的幂等性是指对同一个资源的多次请求，结果是一致的。这种特性在实际开发中非常重要，可以保证在网络不稳定的情况下，请求重试不会导致资源状态的改变。</p>
-<p>对于 HTTP请求来说常见的幂等方法：<code>GET</code>、<code>HEAD</code>、<code>PUT</code>、<code>DELETE</code>、<code>OPTIONS</code>、<code>TRACE</code>，非幂等方法：<code>POST</code>、<code>PATCH</code>、<code>CONNECT</code></p>
-<p>为什么要对非幂等方法进行特殊处理从而支持幂等机制呢？比如说以下场景</p>
-<blockquote>
-<p>李四维在使用购物平台时准备提交一个订单，但是他在一个网很差的地方，而更糟糕的是因为网络不稳定他在提交时候可能会发生请求超时导致不知道是否成功提交了订单。</p>
-</blockquote>
-<p>怎么办？提交订单前先发一个预创建订单来检查吗？除非没得选再考虑这个，因为这样会增加额外的请求和处理代码，也不是很好的解决方案</p>
-<p>直接再请求一次呢？如果这个时候接口是非幂等的那么就会重复提交订单造成资源浪费，因此提供幂等机制在这个时候就显得非常有用。</p>
-<h2 id="幂等机制的设计"><a href="#幂等机制的设计" class="headerlink" title="幂等机制的设计"></a>幂等机制的设计</h2><p>这里选择一个简单的实现方式，通过在请求头中添加一个唯一标识符来实现幂等机制，这个唯一标识符可以是一个 UUID，也可以是一个自定义的字符串，只要保证唯一性即可，而唯一性由客户端保证。</p>
-<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">POST</span> <span class="string">/api/v1/orders</span> <span class="meta">HTTP/1.1</span></span><br><span class="line"><span class="attribute">Host</span><span class="punctuation">: </span>example.com</span><br><span class="line"><span class="attribute">Content-Type</span><span class="punctuation">: </span>application/json</span><br><span class="line"><span class="attribute">X-Request-Id</span><span class="punctuation">: </span>e0db47c3-05c4-4205-b80a-b4a2a482fb8c</span><br><span class="line"></span><br><span class="line"><span class="language-json"><span class="punctuation">&#123;</span></span></span><br><span class="line"><span class="language-json">  <span class="attr">&quot;product_id&quot;</span><span class="punctuation">:</span> <span class="number">1</span><span class="punctuation">,</span></span></span><br><span class="line"><span class="language-json">  <span class="attr">&quot;quantity&quot;</span><span class="punctuation">:</span> <span class="number">1</span></span></span><br><span class="line"><span class="language-json"><span class="punctuation">&#125;</span></span></span><br></pre></td></tr></table></figure>
-
-<p>在服务端接收到请求后，首先检查请求头中的 <code>X-Request-Id</code> 是否存在，如果存在则返回已经处理过的状态码，这里使用 <code>400 Bad Request</code> 状态码，当然也可以使用其他状态码，比如 <code>200 OK</code>，<code>202 Accepted</code> 等，只要能够表达请求已经处理过即可。也可以缓存请求的处理结果，如果请求重试则直接返回缓存的结果。</p>
-<p>这里因为 <code>Kratos</code> 对中间件返回的数据类型有要求，所以选择直接拒绝请求。</p>
-<p>请求头的 Key 可以自定义，这里使用 <code>X-Request-Id</code> 只是一个示例，实际开发中可以根据实际情况来定义。</p>
-<figure class="highlight http"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">HTTP/1.1</span> <span class="number">400</span> Bad Request</span><br><span class="line"><span class="attribute">Content-Type</span><span class="punctuation">: </span>application/json</span><br><span class="line"></span><br><span class="line"><span class="language-json"><span class="punctuation">&#123;</span></span></span><br><span class="line"><span class="language-json">  <span class="attr">&quot;message&quot;</span><span class="punctuation">:</span> <span class="string">&quot;Request already processed&quot;</span></span></span><br><span class="line"><span class="language-json"><span class="punctuation">&#125;</span></span></span><br></pre></td></tr></table></figure>
-
-<p>这样客户端就可以通过 <code>X-Request-Id</code> 来确保服务端只处理一次请求，即使请求重试也不会导致资源状态的改变。</p>
-<h2 id="在-Kratos-中支持幂等机制"><a href="#在-Kratos-中支持幂等机制" class="headerlink" title="在 Kratos 中支持幂等机制"></a>在 <code>Kratos</code> 中支持幂等机制</h2><p>在 <code>Kratos</code> 中可以通过中间件来实现幂等机制，具体实现方式如下：</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> CtxRequestKey <span class="type">string</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> (</span><br><span class="line">    CtxReqKeyIdempotency CtxRequestKey = <span class="string">&quot;Idempotency-Key&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">SetIdempotencyKeyWithCtx</span><span class="params">(ctx context.Context, key <span class="type">string</span>)</span></span> context.Context &#123;</span><br><span class="line">    <span class="keyword">return</span> context.WithValue(ctx, CtxReqKeyIdempotency, key)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// IdempotencyMiddleware 幂等性中间件</span></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">IdempotencyMiddleware</span><span class="params">(r *redis.Client)</span></span> middleware.Middleware &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="function"><span class="keyword">func</span><span class="params">(handler middleware.Handler)</span></span> middleware.Handler &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="function"><span class="keyword">func</span><span class="params">(ctx context.Context, req any)</span></span> (any, <span class="type">error</span>) &#123;</span><br><span class="line">            idempotencyKey := <span class="string">&quot;&quot;</span></span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> httpCtx, ok := http.RequestFromServerContext(ctx); ok &#123;</span><br><span class="line">                idempotencyKey = httpCtx.Header.Get(<span class="string">&quot;X-Request-Id&quot;</span>)</span><br><span class="line">                <span class="keyword">if</span> idempotencyKey != <span class="string">&quot;&quot;</span> &#123;</span><br><span class="line">                    <span class="comment">// 检查redis中是否存在该key 如果存在则读取</span></span><br><span class="line">                    <span class="keyword">if</span> b, err := r.Exists(ctx, idempotencyKey).Result(); err != <span class="literal">nil</span> &#123;</span><br><span class="line">                        <span class="keyword">return</span> <span class="literal">nil</span>, err</span><br><span class="line">                    &#125; <span class="keyword">else</span> <span class="keyword">if</span> b &gt; <span class="number">0</span> &#123;</span><br><span class="line">                        <span class="keyword">return</span> <span class="literal">nil</span>, v1.ErrorErrorReasonErrorConflict(<span class="string">&quot;idempotency key already exists&quot;</span>)</span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                    ctx = SetIdempotencyKeyWithCtx(ctx, idempotencyKey)</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            res, err := handler(ctx, req)</span><br><span class="line">            <span class="keyword">if</span> err == <span class="literal">nil</span> &amp;&amp; idempotencyKey != <span class="string">&quot;&quot;</span> &#123;</span><br><span class="line">                <span class="keyword">if</span> err := r.Set(ctx, idempotencyKey, <span class="literal">true</span>, <span class="number">24</span>*time.Hour).Err(); err != <span class="literal">nil</span> &#123;</span><br><span class="line">                    <span class="keyword">return</span> <span class="literal">nil</span>, err</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">return</span> res, err</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>代码逻辑如下</p>
-<ol>
-<li>从请求头中获取 <code>X-Request-Id</code>，如果存在则检查是否已经处理过，如果已经处理过则直接拒绝</li>
-<li>如果不存在则继续处理请求</li>
-<li>处理完请求后将 <code>X-Request-Id</code> 写入到 <code>redis</code> 中，设置过期时间为 24 小时</li>
-</ol>
-<p>测试代码如下：</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">TestIdempotencyMiddleware</span><span class="params">(t *testing.T)</span></span> &#123;</span><br><span class="line">    uniqueIdKey := <span class="string">&quot;abcd-efg1-2345&quot;</span></span><br><span class="line"></span><br><span class="line">    call := <span class="function"><span class="keyword">func</span><span class="params">()</span></span> *http.Response &#123;</span><br><span class="line">        req, err := http.NewRequest(<span class="string">&quot;GET&quot;</span>, <span class="string">&quot;http://127.0.0.1:8000/helloworld&quot;</span>, <span class="literal">nil</span>)</span><br><span class="line">        <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">            t.Fatalf(<span class="string">&quot;创建请求失败: %v&quot;</span>, err)</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        req.Header.Set(<span class="string">&quot;X-Request-Id&quot;</span>, uniqueIdKey)</span><br><span class="line"></span><br><span class="line">        client := &amp;http.Client&#123;&#125;</span><br><span class="line">        resp, err := client.Do(req)</span><br><span class="line">        <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">            t.Fatalf(<span class="string">&quot;请求失败: %v&quot;</span>, err)</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">defer</span> resp.Body.Close()</span><br><span class="line"></span><br><span class="line">        t.Logf(<span class="string">&quot;响应状态码: %v&quot;</span>, resp.StatusCode)</span><br><span class="line"></span><br><span class="line">        buf, _ := io.ReadAll(resp.Body)</span><br><span class="line">        t.Logf(<span class="string">&quot;响应内容: %v&quot;</span>, <span class="type">string</span>(buf))</span><br><span class="line">        <span class="keyword">return</span> resp</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> call().StatusCode != <span class="number">200</span> &#123;</span><br><span class="line">        t.Fatalf(<span class="string">&quot;第一次请求失败&quot;</span>)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> call().StatusCode != <span class="number">400</span> &#123;</span><br><span class="line">        t.Fatalf(<span class="string">&quot;第二次请求失败&quot;</span>)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>运行结果</p>
-<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">Running tool: /usr/local/go/bin/go test -timeout 300s -run ^TestIdempotencyMiddleware$ kratos-test/internal/server -count=1</span><br><span class="line"></span><br><span class="line">=== RUN   TestIdempotencyMiddleware</span><br><span class="line">    http_test.go:27: 响应状态码: 200</span><br><span class="line">    http_test.go:30: 响应内容: &#123;&quot;message&quot;:&quot;Hello &quot;&#125;</span><br><span class="line">    http_test.go:27: 响应状态码: 400</span><br><span class="line">    http_test.go:30: 响应内容: &#123;&quot;code&quot;:400,&quot;reason&quot;:&quot;ERROR_REASON_ERROR_CONFLICT&quot;,&quot;message&quot;:&quot;idempotency key already exists&quot;,&quot;metadata&quot;:&#123;&#125;&#125;</span><br><span class="line">--- PASS: TestIdempotencyMiddleware (0.01s)</span><br><span class="line">PASS</span><br><span class="line">ok      kratos-test/internal/server     0.927s</span><br></pre></td></tr></table></figure>
-
-<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
-<li><a target="_blank" rel="noopener" href="https://github.com/stickfigure/blog/wiki/How-to-(and-how-not-to)-design-REST-APIs#rule-11-do-provide-idempotence-mechanisms">https://github.com/stickfigure/blog/wiki/How-to-(and-how-not-to)-design-REST-APIs#rule-11-do-provide-idempotence-mechanisms</a></li>
-<li><a target="_blank" rel="noopener" href="https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Methods">https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Methods</a></li>
-<li><a target="_blank" rel="noopener" href="https://http.cat/">https://http.cat/</a></li>
-</ul>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://blog.sonui.cn/rename-pve-hostname/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Sonui">
-      <meta itemprop="description" content="Sonui's Blog">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Sonui's Blog">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/rename-pve-hostname/" class="post-title-link" itemprop="url">PVE 修改节点主机名</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2024-04-11 16:07:35" itemprop="dateCreated datePublished" datetime="2024-04-11T16:07:35+08:00">2024-04-11</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2024-04-12 22:41:09" itemprop="dateModified" datetime="2024-04-12T22:41:09+08:00">2024-04-12</time>
-              </span>
-
-          <br>
-            <span class="post-meta-item" title="本文字数">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">本文字数：</span>
-              <span>348</span>
-            </span>
-            <span class="post-meta-item" title="阅读时长">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>1 分钟</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>由于前期安装的时随便起的 Proxmox VE 节点主机名，现在想要修改为更有意义的名字便于多集群管理。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/rename-pve-hostname/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
         
-      
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/kubesphere-extended-component-development-note/" rel="prev" title="KubeSphere 扩展组件开发笔记">
+      <i class="fa fa-chevron-left"></i> KubeSphere 扩展组件开发笔记
+    </a></div>
+      <div class="post-nav-item"></div>
     </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
       </footer>
+    
   </article>
   
   
   
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://blog.sonui.cn/favorites/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Sonui">
-      <meta itemprop="description" content="Sonui's Blog">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Sonui's Blog">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/favorites/" class="post-title-link" itemprop="url">一些收藏的文章</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2024-04-11 07:32:37" itemprop="dateCreated datePublished" datetime="2024-04-11T07:32:37+08:00">2024-04-11</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2024-04-12 22:43:44" itemprop="dateModified" datetime="2024-04-12T22:43:44+08:00">2024-04-12</time>
-              </span>
-
-          <br>
-            <span class="post-meta-item" title="本文字数">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">本文字数：</span>
-              <span>113</span>
-            </span>
-            <span class="post-meta-item" title="阅读时长">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>1 分钟</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>一些看到觉得值得收藏的文章，或者自己的一些笔记。</p>
-<p>来源列表:</p>
-<ul>
-<li>阮一峰的网络日志 weekly <a target="_blank" rel="noopener" href="https://github.com/ruanyf/weekly">https://github.com/ruanyf/weekly</a></li>
-<li>NK 贴贴分享群 <a target="_blank" rel="noopener" href="https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=1e8u4f54-3a53-44e6-a8c1-1a954b66218c">https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=1e8u4f54-3a53-44e6-a8c1-1a954b66218c</a></li>
-<li>网络文章</li>
-</ul>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/favorites/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://blog.sonui.cn/the-haters-guide-to-kubernetes/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Sonui">
-      <meta itemprop="description" content="Sonui's Blog">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Sonui's Blog">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/the-haters-guide-to-kubernetes/" class="post-title-link" itemprop="url">The hater’s guide to Kubernetes</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2024-04-11 07:25:20" itemprop="dateCreated datePublished" datetime="2024-04-11T07:25:20+08:00">2024-04-11</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2024-05-09 20:39:32" itemprop="dateModified" datetime="2024-05-09T20:39:32+08:00">2024-05-09</time>
-              </span>
-
-          <br>
-            <span class="post-meta-item" title="本文字数">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">本文字数：</span>
-              <span>46</span>
-            </span>
-            <span class="post-meta-item" title="阅读时长">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>1 分钟</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h2 id="Kubernetes-的反对者指南"><a href="#Kubernetes-的反对者指南" class="headerlink" title="Kubernetes 的反对者指南"></a>Kubernetes 的反对者指南</h2><blockquote>
-<p>来源：<a target="_blank" rel="noopener" href="https://paulbutler.org/2024/the-haters-guide-to-kubernetes/">Paul Butler’s Blog</a><br>Among a certain tech set, Kubernetes has earned a reputation as an unnecessarily complicated time-sink that startups should avoid. Using Kubernetes with a small team is seen as a sign of over-engineering.</p>
-</blockquote>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://blog.sonui.cn/Go%20Redis%20Lib%20Serialize%20Struct/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Sonui">
-      <meta itemprop="description" content="Sonui's Blog">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Sonui's Blog">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/Go%20Redis%20Lib%20Serialize%20Struct/" class="post-title-link" itemprop="url">Golang 库 Redis 对 data 类型的支持</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2024-04-03 20:30:43" itemprop="dateCreated datePublished" datetime="2024-04-03T20:30:43+08:00">2024-04-03</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2024-04-12 22:44:06" itemprop="dateModified" datetime="2024-04-12T22:44:06+08:00">2024-04-12</time>
-              </span>
-
-          <br>
-            <span class="post-meta-item" title="本文字数">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">本文字数：</span>
-              <span>475</span>
-            </span>
-            <span class="post-meta-item" title="阅读时长">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>2 分钟</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p><code>go-redis</code> 库对于 <code>HSet</code> 方法支持的数据类型为 <code>interface&#123;&#125;</code>, 查看下支持哪些类型的</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/Go%20Redis%20Lib%20Serialize%20Struct/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://blog.sonui.cn/WireGuard%20Use%20Notes/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Sonui">
-      <meta itemprop="description" content="Sonui's Blog">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Sonui's Blog">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/WireGuard%20Use%20Notes/" class="post-title-link" itemprop="url">WireGuard Use Notes</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2024-04-03 20:23:09" itemprop="dateCreated datePublished" datetime="2024-04-03T20:23:09+08:00">2024-04-03</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2024-04-12 22:47:50" itemprop="dateModified" datetime="2024-04-12T22:47:50+08:00">2024-04-12</time>
-              </span>
-
-          <br>
-            <span class="post-meta-item" title="本文字数">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">本文字数：</span>
-              <span>420</span>
-            </span>
-            <span class="post-meta-item" title="阅读时长">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>2 分钟</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>由于家庭和公司各存在一套开发环境，同时外出时需要能够连接至某台服务器上进行工作，所以需要一个组网的方案，考虑到安全性及性能选择了 WireGuard。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/WireGuard%20Use%20Notes/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://blog.sonui.cn/Redis-Reading-Notes/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Sonui">
-      <meta itemprop="description" content="Sonui's Blog">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Sonui's Blog">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/Redis-Reading-Notes/" class="post-title-link" itemprop="url">Redis Reading Notes</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2023-07-08 20:40:16" itemprop="dateCreated datePublished" datetime="2023-07-08T20:40:16+08:00">2023-07-08</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2024-04-12 22:47:20" itemprop="dateModified" datetime="2024-04-12T22:47:20+08:00">2024-04-12</time>
-              </span>
-
-          <br>
-            <span class="post-meta-item" title="本文字数">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">本文字数：</span>
-              <span>735</span>
-            </span>
-            <span class="post-meta-item" title="阅读时长">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>3 分钟</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>Redis 源码阅读笔记</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/Redis-Reading-Notes/">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://blog.sonui.cn/fitness-function-driven-development/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Sonui">
-      <meta itemprop="description" content="Sonui's Blog">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Sonui's Blog">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/fitness-function-driven-development/" class="post-title-link" itemprop="url">Fitness function-driven development（测试驱动开发） 翻译</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2023-03-30 08:35:13" itemprop="dateCreated datePublished" datetime="2023-03-30T08:35:13+08:00">2023-03-30</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2024-04-12 23:06:04" itemprop="dateModified" datetime="2024-04-12T23:06:04+08:00">2024-04-12</time>
-              </span>
-
-          <br>
-            <span class="post-meta-item" title="本文字数">
-              <span class="post-meta-item-icon">
-                <i class="far fa-file-word"></i>
-              </span>
-                <span class="post-meta-item-text">本文字数：</span>
-              <span>180</span>
-            </span>
-            <span class="post-meta-item" title="阅读时长">
-              <span class="post-meta-item-icon">
-                <i class="far fa-clock"></i>
-              </span>
-                <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>1 分钟</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>对 <code>TDD</code> 的一个翻译，原文地址：<a target="_blank" rel="noopener" href="https://www.thoughtworks.com/insights/articles/fitness-function-driven-development">Fitness function-driven development</a></p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/fitness-function-driven-development/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-
-  
-  <nav class="pagination">
-    <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="page-number" href="/page/3/">3</a><a class="extend next" rel="next" href="/page/2/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
-  </nav>
 
 
 
@@ -1131,6 +345,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%89%E8%A3%85-CRI"><span class="nav-number">1.</span> <span class="nav-text">安装 CRI</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
