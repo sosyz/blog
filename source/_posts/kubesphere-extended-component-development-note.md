@@ -1,6 +1,7 @@
 ---
 title: KubeSphere 扩展组件开发笔记
 tags: KubeSphere, k8s, Go, ArgoCD
+date: 2024-04-12 00:21:00
 ---
 
 前段时间参加了云原生 Meetup 杭州站活动，正好在这次活动上了解到了 KubeSphere 正在开展扩展组件开发训练营于是报名了这个活动，记录下学习过程。
