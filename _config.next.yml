@@ -813,12 +813,13 @@ theme_config:
     # Default height
     height: 500px
 
-  # Mermaid tag
-  mermaid:
-    enable: false
-    # Available themes: default | dark | forest | neutral
-    theme: forest
-
+# Mermaid tag
+mermaid:
+  enable: true
+  # Available themes: default | dark | forest | neutral
+  theme:
+    light: default
+    dark: dark
 
   # ---------------------------------------------------------------
   # Animation Settings
