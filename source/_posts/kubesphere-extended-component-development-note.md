@@ -168,3 +168,37 @@ module.exports = webpackDevConfig;
 全部完成后访问控制面板可以看到弹出 `ArgoCD` 登录界面
 
 ![ArgoCD login page in KubeSphere dashboard](./kubesphere-extended-component-development-note/image2.png)
+
+按照文档说明尝试登录出现进入面板后又回到登录界面的问题，F12 查看有接口返回 401 错误，猜测可能是传递给 `ArgoCD` 服务的这两个请求没有认证信息
+
+![f12 dashboard](./kubesphere-extended-component-development-note/image3.png)
+
+查看 Pod 日志
+
+```bash
+kubectl logs argocd-server-7c8b5b9649-wgbh4 -n argocd -f
+```
+
+```log
+time="2024-05-06T06:12:04Z" level=info msg="finished unary call with code OK" grpc.code=OK grpc.method=Create grpc.service=session.SessionService grpc.start_time="2024-05-06T06:12:03Z" grpc.time_ms=881.294 span.kind=server system=grpc
+time="2024-05-06T06:12:04Z" level=info msg="received unary call /cluster.SettingsService/Get" grpc.method=Get grpc.request.content= grpc.service=cluster.SettingsService grpc.start_time="2024-05-06T06:12:04Z" span.kind=server system=grpc
+time="2024-05-06T06:12:04Z" level=info msg="finished unary call with code OK" grpc.code=OK grpc.method=Get grpc.service=cluster.SettingsService grpc.start_time="2024-05-06T06:12:04Z" grpc.time_ms=0.335 span.kind=server system=grpc
+time="2024-05-06T06:12:04Z" level=info msg="received unary call /version.VersionService/Version" grpc.method=Version grpc.request.content= grpc.service=version.VersionService grpc.start_time="2024-05-06T06:12:04Z" span.kind=server system=grpc
+time="2024-05-06T06:12:04Z" level=info msg="finished unary call with code OK" grpc.code=OK grpc.method=Version grpc.service=version.VersionService grpc.start_time="2024-05-06T06:12:04Z" grpc.time_ms=0.358 span.kind=server system=grpc
+time="2024-05-06T06:12:04Z" level=info msg="finished unary call with code Unauthenticated" error="rpc error: code = Unauthenticated desc = invalid session: SSO is not configured" grpc.code=Unauthenticated grpc.method=List grpc.service=application.ApplicationService grpc.start_time="2024-05-06T06:12:04Z" grpc.time_ms=0.116 span.kind=server system=grpc
+time="2024-05-06T06:12:04Z" level=info msg="finished unary call with code Unauthenticated" error="rpc error: code = Unauthenticated desc = invalid session: SSO is not configured" grpc.code=Unauthenticated grpc.method=List grpc.service=cluster.ClusterService grpc.start_time="2024-05-06T06:12:04Z" grpc.time_ms=0.125 span.kind=server system=grpc
+time="2024-05-06T06:12:04Z" level=info msg="received unary call /session.SessionService/GetUserInfo" grpc.method=GetUserInfo grpc.request.content= grpc.service=session.SessionService grpc.start_time="2024-05-06T06:12:04Z" span.kind=server system=grpc
+time="2024-05-06T06:12:04Z" level=info msg="finished unary call with code OK" grpc.code=OK grpc.method=GetUserInfo grpc.service=session.SessionService grpc.start_time="2024-05-06T06:12:04Z" grpc.time_ms=0.205 span.kind=server system=grpc
+time="2024-05-06T06:12:04Z" level=info msg="received unary call /session.SessionService/GetUserInfo" grpc.method=GetUserInfo grpc.request.content= grpc.service=session.SessionService grpc.start_time="2024-05-06T06:12:04Z" span.kind=server system=grpc
+time="2024-05-06T06:12:04Z" level=info msg="finished unary call with code OK" grpc.code=OK grpc.method=GetUserInfo grpc.service=session.SessionService grpc.start_time="2024-05-06T06:12:04Z" grpc.time_ms=0.244 span.kind=server system=grpc
+time="2024-05-06T06:12:04Z" level=info msg="received unary call /cluster.SettingsService/Get" grpc.method=Get grpc.request.content= grpc.service=cluster.SettingsService grpc.start_time="2024-05-06T06:12:04Z" span.kind=server system=grpc
+time="2024-05-06T06:12:04Z" level=info msg="finished unary call with code OK" grpc.code=OK grpc.method=Get grpc.service=cluster.SettingsService grpc.start_time="2024-05-06T06:12:04Z" grpc.time_ms=0.23 span.kind=server system=grpc
+time="2024-05-06T06:12:04Z" level=info msg="received unary call /cluster.SettingsService/Get" grpc.method=Get grpc.request.content= grpc.service=cluster.SettingsService grpc.start_time="2024-05-06T06:12:04Z" span.kind=server system=grpc
+time="2024-05-06T06:12:04Z" level=info msg="finished unary call with code OK" grpc.code=OK grpc.method=Get grpc.service=cluster.SettingsService grpc.start_time="2024-05-06T06:12:04Z" grpc.time_ms=0.333 span.kind=server system=grpc
+time="2024-05-06T06:12:05Z" level=info msg="received unary call /cluster.SettingsService/Get" grpc.method=Get grpc.request.content= grpc.service=cluster.SettingsService grpc.start_time="2024-05-06T06:12:05Z" span.kind=server system=grpc
+time="2024-05-06T06:12:05Z" level=info msg="finished unary call with code OK" grpc.code=OK grpc.method=Get grpc.service=cluster.SettingsService grpc.start_time="2024-05-06T06:12:05Z" grpc.time_ms=0.329 span.kind=server system=grpc
+```
+
+日志显示 `invalid session: SSO is not configured` 说明 `ArgoCD` 服务没有配置 `SSO` 认证，这里需要修改 `ArgoCD` 配置文件
+
+clone ArgoCD 代码搜索下 `no session information` 错误，
