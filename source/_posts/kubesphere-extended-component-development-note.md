@@ -106,15 +106,16 @@ kind: ReverseProxy
 metadata:
   name: argocd-scope
 spec:
-  directives:
-    headerUp:
-    - -Authorization
-    stripPathPrefix: /proxy/argocd
   matcher:
     method: '*'
-    path: /proxy/argocd/*
+    path: /proxy/argocd.works/*
   upstream:
-    url: http://argocd-server.argocd.svc
+    url: http://argocd-server.argocd.svc/proxy/argocd.works/
+    # url: http://192.168.2.128:8080/proxy/argocd.works/ # 后面调试用到的
+  directives:
+    authProxy: true
+    headerUp:
+    - '-Authorization'
 status:
   state: Available
 
@@ -124,14 +125,40 @@ status:
 
 `http://[service name].[namespace].svc`
 
-部署 `ArgoCD` 时需要修改下 `argocd-server` Deployment 的参数
+部署 `ArgoCD` 时需要修改下部署参数
+
+首先创建一个 `kustomization.yaml` 文件
 
 ```yaml
-      - args:
-        - /usr/local/bin/argocd-server
-        - --insecure # 关闭 http -> https 重定向
-        - --basehref # 添加 basehref 参数 使用 /proxy/argocd 作为基础路径
-        - /proxy/argocd
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: argocd
+resources:
+- github.com/argoproj/argo-cd/manifests/cluster-install?ref=v2.10.0 # 使用稳定版本
+
+# 配置patches来修改argocd-server的配置
+patches:
+- path: argocd-server-config-patch.yaml
+  target:
+    kind: ConfigMap
+    name: argocd-cmd-params-cm
+
+```
+
+argocd-server-config-patch.yaml:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cmd-params-cm
+  namespace: argocd
+data:
+  # 设置UI Base Path
+  server.basehref: "/proxy/argocd.works/"  # 注意结尾的斜杠
+  server.insecure: "true"      # 禁用 TLS
+  server.rootpath: "/proxy/argocd.works"
+
 ```
 
 `basehref` 配置说明
@@ -140,7 +167,13 @@ status:
 > If the Argo CD UI is available under a non-root path (e.g. /argo-cd instead of /) then the UI path should be configured in the API server. To configure the UI path add the --basehref flag into the argocd-server deployment command
 > <https://argo-cd.readthedocs.io/en/stable/operator-manual/ingress/#ui-base-path>
 
-插件设置下 `webpack.config.js`
+然后执行 `kubectl apply -k .` 重新部署 `ArgoCD`
+
+如果这个配置没有生效可以执行 `kubectl rollout restart deployment argocd-server -n argocd` 重启下服务使更改生效
+
+插件设置下 `webpack.config.js`，如果不设置的话在浏览器中访问 `ArgoCD` 面板会提示404错误
+
+`ks-console/configs/webpack.config.js`
 
 ```js
 const { merge } = require('webpack-merge');
@@ -150,7 +183,7 @@ const webpackDevConfig = merge(baseConfig, {
   devServer: {
     proxy: {
       '/proxy': {
-        target: 'http://192.168.2.150:30881', // 修改为目标 ks-apiserver 的地址
+        target: 'http://192.168.2.128:30880', // 修改为目标 ks-apiserver 的地址
         onProxyReq: (proxyReq, req, res) => {
             const username = 'admin'        // 请求代理时的用户凭证
             const password = 'P@88w0rd'
@@ -163,7 +196,10 @@ const webpackDevConfig = merge(baseConfig, {
 });
 
 module.exports = webpackDevConfig;
+
 ```
+
+设置好以后需要重启下 `yarn dev` 使更改生效
 
 全部完成后访问控制面板可以看到弹出 `ArgoCD` 登录界面
 
@@ -173,32 +209,69 @@ module.exports = webpackDevConfig;
 
 ![f12 dashboard](./kubesphere-extended-component-development-note/image3.png)
 
-查看 Pod 日志
+根据官方[调试教程](https://argo-cd.readthedocs.io/en/stable/developer-guide/debugging-remote-environment/#install-argocd)本地起了一个 `ArgoCD` 服务，然后修改 `ReverseProxy` 的 `upstream.url` 为本地 `ArgoCD` 服务地址
 
-```bash
-kubectl logs argocd-server-7c8b5b9649-wgbh4 -n argocd -f
+在 <https://github.com/argoproj/argo-cd/blob/a7637cd106f615119930439d963ec0a9618b404d/server/server.go#L1037> 添加请求头打印
+
+```go
+    gwMuxOpts := runtime.WithMarshalerOption(runtime.MIMEWildcard, new(grpc_util.JSONMarshaler))
+    gwCookieOpts := runtime.WithForwardResponseOption(a.translateGrpcCookieHeader)
+    gwmux := runtime.NewServeMux(gwMuxOpts, gwCookieOpts)
+
+    var handler http.Handler = gwmux
+    if a.EnableGZip {
+        handler = compressHandler(handler)
+    }
+    if len(a.ContentTypes) > 0 {
+        handler = enforceContentTypes(handler, a.ContentTypes)
+    } else {
+        log.WithField(common.SecurityField, common.SecurityHigh).Warnf("Content-Type enforcement is disabled, which may make your API vulnerable to CSRF attacks")
+    }
+
+    logMiddleware := func(next http.Handler) http.Handler {
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            // 打印基本请求信息
+            log.WithFields(log.Fields{
+                "method":     r.Method,
+                "url":        r.URL.String(),
+                "headers":    r.Header,
+                "remoteAddr": r.RemoteAddr,
+                "host":       r.Host,
+                "requestURI": r.RequestURI,
+            }).Info("Incoming HTTP request")
+
+            next.ServeHTTP(w, r)
+        })
+    }
+    handler = logMiddleware(handler)
+    mux.Handle("/api/", handler)
 ```
 
-```log
-time="2024-05-06T06:12:04Z" level=info msg="finished unary call with code OK" grpc.code=OK grpc.method=Create grpc.service=session.SessionService grpc.start_time="2024-05-06T06:12:03Z" grpc.time_ms=881.294 span.kind=server system=grpc
-time="2024-05-06T06:12:04Z" level=info msg="received unary call /cluster.SettingsService/Get" grpc.method=Get grpc.request.content= grpc.service=cluster.SettingsService grpc.start_time="2024-05-06T06:12:04Z" span.kind=server system=grpc
-time="2024-05-06T06:12:04Z" level=info msg="finished unary call with code OK" grpc.code=OK grpc.method=Get grpc.service=cluster.SettingsService grpc.start_time="2024-05-06T06:12:04Z" grpc.time_ms=0.335 span.kind=server system=grpc
-time="2024-05-06T06:12:04Z" level=info msg="received unary call /version.VersionService/Version" grpc.method=Version grpc.request.content= grpc.service=version.VersionService grpc.start_time="2024-05-06T06:12:04Z" span.kind=server system=grpc
-time="2024-05-06T06:12:04Z" level=info msg="finished unary call with code OK" grpc.code=OK grpc.method=Version grpc.service=version.VersionService grpc.start_time="2024-05-06T06:12:04Z" grpc.time_ms=0.358 span.kind=server system=grpc
-time="2024-05-06T06:12:04Z" level=info msg="finished unary call with code Unauthenticated" error="rpc error: code = Unauthenticated desc = invalid session: SSO is not configured" grpc.code=Unauthenticated grpc.method=List grpc.service=application.ApplicationService grpc.start_time="2024-05-06T06:12:04Z" grpc.time_ms=0.116 span.kind=server system=grpc
-time="2024-05-06T06:12:04Z" level=info msg="finished unary call with code Unauthenticated" error="rpc error: code = Unauthenticated desc = invalid session: SSO is not configured" grpc.code=Unauthenticated grpc.method=List grpc.service=cluster.ClusterService grpc.start_time="2024-05-06T06:12:04Z" grpc.time_ms=0.125 span.kind=server system=grpc
-time="2024-05-06T06:12:04Z" level=info msg="received unary call /session.SessionService/GetUserInfo" grpc.method=GetUserInfo grpc.request.content= grpc.service=session.SessionService grpc.start_time="2024-05-06T06:12:04Z" span.kind=server system=grpc
-time="2024-05-06T06:12:04Z" level=info msg="finished unary call with code OK" grpc.code=OK grpc.method=GetUserInfo grpc.service=session.SessionService grpc.start_time="2024-05-06T06:12:04Z" grpc.time_ms=0.205 span.kind=server system=grpc
-time="2024-05-06T06:12:04Z" level=info msg="received unary call /session.SessionService/GetUserInfo" grpc.method=GetUserInfo grpc.request.content= grpc.service=session.SessionService grpc.start_time="2024-05-06T06:12:04Z" span.kind=server system=grpc
-time="2024-05-06T06:12:04Z" level=info msg="finished unary call with code OK" grpc.code=OK grpc.method=GetUserInfo grpc.service=session.SessionService grpc.start_time="2024-05-06T06:12:04Z" grpc.time_ms=0.244 span.kind=server system=grpc
-time="2024-05-06T06:12:04Z" level=info msg="received unary call /cluster.SettingsService/Get" grpc.method=Get grpc.request.content= grpc.service=cluster.SettingsService grpc.start_time="2024-05-06T06:12:04Z" span.kind=server system=grpc
-time="2024-05-06T06:12:04Z" level=info msg="finished unary call with code OK" grpc.code=OK grpc.method=Get grpc.service=cluster.SettingsService grpc.start_time="2024-05-06T06:12:04Z" grpc.time_ms=0.23 span.kind=server system=grpc
-time="2024-05-06T06:12:04Z" level=info msg="received unary call /cluster.SettingsService/Get" grpc.method=Get grpc.request.content= grpc.service=cluster.SettingsService grpc.start_time="2024-05-06T06:12:04Z" span.kind=server system=grpc
-time="2024-05-06T06:12:04Z" level=info msg="finished unary call with code OK" grpc.code=OK grpc.method=Get grpc.service=cluster.SettingsService grpc.start_time="2024-05-06T06:12:04Z" grpc.time_ms=0.333 span.kind=server system=grpc
-time="2024-05-06T06:12:05Z" level=info msg="received unary call /cluster.SettingsService/Get" grpc.method=Get grpc.request.content= grpc.service=cluster.SettingsService grpc.start_time="2024-05-06T06:12:05Z" span.kind=server system=grpc
-time="2024-05-06T06:12:05Z" level=info msg="finished unary call with code OK" grpc.code=OK grpc.method=Get grpc.service=cluster.SettingsService grpc.start_time="2024-05-06T06:12:05Z" grpc.time_ms=0.329 span.kind=server system=grpc
+发起请求
+
+![request header](./kubesphere-extended-component-development-note/image4.png)
+
+可以在浏览器开发者工具中看到请求头中有 `Cookie` 信息，而 `ArgoCD` 打印的日志没有
+
+![argocd log](./kubesphere-extended-component-development-note/image5.png)
+
+如果在上面的日志代码中手动写死一个 `Cookie` 信息再请求能看到接口返回正常，确定是反向代理的问题，待联系ks技术问问，这里先写死继续后续开发
+
+刷新页面提示 `open dist/app/index.html: file does not exist` 错误，添加下启动配置
+
+进入 `ArgoCD` 代码目录下的 `ui` 目录，执行 `build` 命令生成 `dist` 目录，拷贝出来绝对地址填入下面的位置
+
+```js
+"args": [
+// ... 其它配置
+                "--staticassets",
+                "/path/to/argo-cd"
+]
 ```
 
-日志显示 `invalid session: SSO is not configured` 说明 `ArgoCD` 服务没有配置 `SSO` 认证，这里需要修改 `ArgoCD` 配置文件
+重启 `ArgoCD` 服务，刷新浏览器页面可以看到正常进入 `ArgoCD` 面板
 
-clone ArgoCD 代码搜索下 `no session information` 错误，
+![ArgoCD dashboard](./kubesphere-extended-component-development-note/image6.png)
+
+待解决 `Cookie` 问题后再对接 `OAuth` 认证
+[OAuth 对接文档](https://dev-guide.kubesphere.io/extension-dev-guide/zh/best-practice/develop-example/#oauth-对接)
