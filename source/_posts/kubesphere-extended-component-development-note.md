@@ -211,6 +211,38 @@ module.exports = webpackDevConfig;
 
 根据官方[调试教程](https://argo-cd.readthedocs.io/en/stable/developer-guide/debugging-remote-environment/#install-argocd)本地起了一个 `ArgoCD` 服务，然后修改 `ReverseProxy` 的 `upstream.url` 为本地 `ArgoCD` 服务地址
 
+对官方文档中的 `vscode` 调试配置做了下修改
+
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug ArgoCD Server",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/argo-cd/cmd/main.go",
+            "env": {
+                "ARGOCD_BINARY_NAME": "argocd-server",
+                "CGO_ENABLED": "0",
+                "KUBECONFIG": "/home/sonui/.kube/config",
+            },
+            "envFile": [
+                "${workspaceFolder}/.envrc.remote",
+            ],
+            "args": [
+                "--insecure",
+                "--rootpath",
+                "/proxy/argocd.works/",
+                "--basehref",
+                "/proxy/argocd.works/"
+            ]
+        }
+    ]
+}
+```
+
 在 <https://github.com/argoproj/argo-cd/blob/a7637cd106f615119930439d963ec0a9618b404d/server/server.go#L1037> 添加请求头打印
 
 ```go
@@ -262,11 +294,11 @@ module.exports = webpackDevConfig;
 进入 `ArgoCD` 代码目录下的 `ui` 目录，执行 `build` 命令生成 `dist` 目录，拷贝出来绝对地址填入下面的位置
 
 ```js
-"args": [
-// ... 其它配置
+          "args": [
+                // ... 其它配置
                 "--staticassets",
                 "/path/to/argo-cd"
-]
+          ]
 ```
 
 重启 `ArgoCD` 服务，刷新浏览器页面可以看到正常进入 `ArgoCD` 面板
