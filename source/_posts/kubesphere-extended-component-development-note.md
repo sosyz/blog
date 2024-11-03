@@ -8,13 +8,13 @@ date: 2024-04-12 00:21:00
 
 <!-- more -->
 
-## 说明
+## 0x00 说明
 
 资料来源:
 
 - [KubeSphere 扩展组件开发指南](https://dev-guide.kubesphere.io/extension-dev-guide/zh/)
 
-## 开发环境搭建
+## 0x01 开发环境搭建
 
 开发需要一个 ks 集群，可以使用 KubeSphere 官方提供的ks-dev环境，也可以自己搭建一个 ks 集群。
 
@@ -92,7 +92,7 @@ ks-console-54958f4674-8s225              1/1     Running   2 (6d21h ago)   15d
 ks-controller-manager-59d55bc77b-vgnl7   1/1     Running   2 (6d21h ago)   15d
 ```
 
-### 编写反向代理
+### 编写 `ks-apiserver` 反向代理
 
 参考官方示例
 
@@ -124,6 +124,8 @@ status:
 其中 `upstream.url` 为 argocd 的服务地址
 
 `http://[service name].[namespace].svc`
+
+### 部署 `ArgoCD`
 
 部署 `ArgoCD` 时需要修改下部署参数
 
@@ -171,6 +173,8 @@ data:
 
 如果这个配置没有生效可以执行 `kubectl rollout restart deployment argocd-server -n argocd` 重启下服务使更改生效
 
+### 设置前端反向代理
+
 插件设置下 `webpack.config.js`，如果不设置的话在浏览器中访问 `ArgoCD` 面板会提示404错误
 
 `ks-console/configs/webpack.config.js`
@@ -200,6 +204,8 @@ module.exports = webpackDevConfig;
 ```
 
 设置好以后需要重启下 `yarn dev` 使更改生效
+
+## 0x02 调试
 
 全部完成后访问控制面板可以看到弹出 `ArgoCD` 登录界面
 
