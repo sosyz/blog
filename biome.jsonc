@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "javascript": {
+    "globals": ["Bun"]
+  },
+  "files": {
+    "includes": ["**", "!src/**/*.astro"]
+  },
+  "linter": {
+    "includes": ["**", "!src/**/*.astro"]
+  },
+  "extends": ["ultracite"]
+}
