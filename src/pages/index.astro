@@ -1,0 +1,35 @@
+---
+import BaseHead from "../components/BaseHead.astro";
+import { SITE_DESCRIPTION, SITE_TITLE } from "../consts";
+import Avatar from "../assets/avatar.webp";
+---
+
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
+    </head>
+    <body>
+        <main>
+            <div class="flex flex-row items-center">
+                <div
+                    class="avatar rounded-full overflow-hidden flex items-center justify-center border-2 border-gray-300 mr-4"
+                >
+                    <img
+                        src={Avatar.src}
+                        alt="sonui的头像，一个戴着眼镜的可爱小狗"
+                    />
+                </div>
+                <div>
+                    <h3>Sonui's Blog</h3>
+                    <div>
+                        <p>
+                            Welcome to the official blog of Sonui. Here I will
+                            share my thoughts and experiences on programming, ld
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </body>
+</html>

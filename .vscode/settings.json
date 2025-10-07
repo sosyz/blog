@@ -1,0 +1,4 @@
+{
+    "astro-build.astro-vscode.enable": true,
+    "prettier.tabWidth": 2
+}
