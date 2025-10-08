@@ -1,31 +1,31 @@
 ---
 interface Props {
-    date: Date;
+  date: Date;
 }
 
 const { date } = Astro.props;
 let locale = "zh-CN";
 if (
-    typeof window !== "undefined" &&
-    window.navigator &&
-    window.navigator.language
+  typeof window !== "undefined" &&
+  window.navigator &&
+  window.navigator.language
 ) {
-    locale = window.navigator.language;
+  locale = window.navigator.language;
 }
 
 const options = {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
+  year: "numeric",
+  month: "short",
+  day: "numeric",
 };
 ---
 
 <time datetime={date.toISOString()}>
-    {
-        date.toLocaleDateString(locale, {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-        })
-    }
+  {
+    date.toLocaleDateString(locale, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    })
+  }
 </time>

@@ -25,8 +25,7 @@ export const generateImageAlt = async (image: Buffer | string) => {
     });
 
     return text;
-  } catch (error) {
-    console.error("AI 图片描述生成失败，使用默认描述:", error);
+  } catch (_error) {
     return "一张图片";
   }
 };
