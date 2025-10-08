@@ -51,7 +51,7 @@
     "AGENTS.md": true
   },
   "prettier.documentSelectors": ["**/*.astro"],
-  "typescript.experimental.useTsgo": true,
+  "typescript.experimental.useTsgo": false,
   "biome.enabled": true,
   "editor.defaultFormatter": "esbenp.prettier-vscode"
 }
