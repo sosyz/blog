@@ -1,0 +1,443 @@
+---
+/**
+ * Highlight comments: select text in the article to comment on it; wavy
+ * pencil underline in the text and sticky notes on the desk left of the
+ * drawer, joined by ink leader lines.
+ *
+ * Renders only a marker element; src/scripts/interact/inline.ts binds to the
+ * article body on every `drawer:rendered` (src/scripts/canvas/api.ts) and
+ * puts the margin notes in a fixed layer on <body>.
+ *
+ * For the owner (Access session) the popover also lists pending highlight
+ * comments with a review bar; the shared rv-* styles are in Comments.astro.
+ * The owner drags a popover row (by its paper) or a single-comment margin
+ * note into the trash to reject / take it down (comment-drag.ts); the lifted
+ * copy's styles (.cmt-ghost) are in Comments.astro too.
+ */
+import "./auth.css";
+
+type Props = {
+  slug: string;
+};
+
+const { slug } = Astro.props;
+---
+
+<div class="inline-comments" data-inline-comments data-slug={slug} hidden></div>
+
+<script>
+  import "@/scripts/interact/inline";
+</script>
+
+<style is:global>
+  /* Popover and selection button are positioned inside the article body. */
+  [data-post-body] {
+    position: relative;
+  }
+
+  /* ---------- highlights in the text ---------- */
+  mark.ann {
+    background: none;
+    color: inherit;
+    cursor: pointer;
+    text-decoration: underline wavy
+      color-mix(in srgb, var(--pencil) 75%, transparent);
+    text-decoration-thickness: 1.3px;
+    text-underline-offset: 5px;
+    text-decoration-skip-ink: none;
+    border-radius: 2px;
+    transition: background 0.2s var(--out);
+  }
+  mark.ann:hover,
+  mark.ann:focus-visible,
+  mark.ann.on {
+    background: rgb(250 214 92 / 0.35);
+    outline: none;
+  }
+  mark.ann.hot {
+    background: rgb(250 214 92 / 0.45);
+  }
+  mark.ann.pending {
+    text-decoration-style: dashed;
+    text-decoration-color: color-mix(in srgb, var(--pencil) 60%, transparent);
+  }
+  .ann-n {
+    display: inline-grid;
+    place-content: center;
+    min-width: 18px;
+    height: 18px;
+    margin-left: 3px;
+    padding: 0 3px;
+    vertical-align: 5px;
+    font-family: var(--hand);
+    font-size: 11.5px;
+    line-height: 1;
+    color: var(--pencil);
+    border: 1.3px solid var(--pencil);
+    border-radius: 52% 46% 55% 45% / 48% 55% 45% 52%;
+    cursor: pointer;
+  }
+  body.has-notes .ann-n {
+    display: none;
+  }
+
+  /* ---------- selection button ---------- */
+  .ann-btn {
+    position: absolute;
+    z-index: 6;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 11px;
+    border: 0;
+    border-radius: 6px;
+    background: var(--ink);
+    color: var(--doc);
+    font-family: var(--hand);
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 6px 14px -6px rgb(40 30 10 / 0.5);
+    translate: -50% 0;
+    animation: ann-pop-in 0.16s var(--out);
+  }
+  .ann-btn::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: -5px;
+    width: 10px;
+    height: 10px;
+    margin-left: -5px;
+    background: var(--ink);
+    rotate: 45deg;
+  }
+  @keyframes ann-pop-in {
+    from {
+      opacity: 0;
+      scale: 0.92;
+    }
+  }
+
+  /* ---------- popover ---------- */
+  .ann-pop {
+    position: absolute;
+    z-index: 7;
+    width: min(340px, calc(100% - 20px));
+    padding: 20px 16px 14px;
+    font-family: var(--hand);
+    rotate: -0.8deg;
+    animation: ann-pop-in 0.18s var(--out);
+    box-shadow:
+      0 1px 1px rgb(120 90 20 / 0.2),
+      0 16px 24px -12px rgb(60 40 10 / 0.45);
+  }
+  .ann-pop .note-tape {
+    position: absolute;
+    top: -10px;
+    left: 24px;
+    width: 70px;
+    height: auto;
+    rotate: -4deg;
+    pointer-events: none;
+  }
+  .ann-pop .x {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    border: 0;
+    background: none;
+    font-size: 18px;
+    line-height: 1;
+    color: var(--pencil);
+    cursor: pointer;
+  }
+  .ann-quote {
+    margin: 0 18px 8px 0;
+    font-family: var(--body);
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--pencil);
+  }
+  .ann-quote::before {
+    content: "「";
+  }
+  .ann-quote::after {
+    content: "」";
+  }
+  .ann-items {
+    display: grid;
+    gap: 8px;
+    margin: 0 0 8px;
+    padding: 0;
+    list-style: none;
+  }
+  .ann-items li {
+    padding-top: 8px;
+    border-top: 1px dashed rgb(120 90 20 / 0.3);
+    font-size: 15px;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+  }
+  .ann-items li:first-child {
+    padding-top: 0;
+    border-top: 0;
+  }
+  .ann-items b {
+    margin-right: 6px;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--pencil);
+  }
+  .ann-items .tag {
+    margin-left: 6px;
+    padding: 0 5px;
+    font-size: 12px;
+    color: var(--pencil);
+    border: 1px dashed var(--pencil);
+    border-radius: 3px;
+  }
+  /* Owner review inside the popover (rv-* base styles: Comments.astro). */
+  .ann-items .rv-tag {
+    color: var(--stamp-ink);
+    border-color: var(--stamp);
+  }
+  .ann-items .rv-item .rv-who {
+    margin: 4px 0 0;
+  }
+  .ann-items .rv-item .rv-bar {
+    margin-top: 6px;
+  }
+  .ann-items .rv-item .rv-reply {
+    background: var(--slip);
+  }
+  .ann-reply {
+    margin: 4px 0 0;
+    font-size: 13.5px;
+    color: var(--pencil);
+  }
+  .ann-items li.rv-target {
+    outline: 2px solid var(--link);
+    outline-offset: 3px;
+  }
+  .ann-pop .rv-next {
+    margin: 4px 0 8px;
+    padding: 6px 10px;
+    background: var(--slip);
+    box-shadow: none;
+    rotate: 0deg;
+  }
+  .ann-pop > .rv-msg,
+  [data-ann-items] > .rv-msg {
+    margin-bottom: 8px;
+  }
+  .ann-pop form {
+    display: grid;
+    gap: 8px;
+  }
+  .ann-pop input,
+  .ann-pop textarea {
+    width: 100%;
+    font-size: 15px;
+  }
+  .ann-pop textarea {
+    min-height: 64px;
+    resize: vertical;
+    line-height: 1.6;
+  }
+  .ann-pop .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .ann-pop .more {
+    padding: 0;
+    border: 0;
+    background: none;
+    font-family: var(--hand);
+    font-size: 14px;
+    color: var(--link);
+    cursor: pointer;
+  }
+  .ann-pop .stamp-btn {
+    padding: 4px 14px;
+    font-size: 15px;
+  }
+  .ann-pop .cmt-error {
+    margin: 0;
+    font-size: 13px;
+    color: var(--stamp-ink);
+  }
+
+  /* ---------- margin notes on the desk, left of the drawer ---------- */
+  .ann-layer {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+  }
+  .ann-layer[hidden] {
+    display: none;
+  }
+  .ann-layer svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+  .ann-layer path {
+    fill: none;
+    stroke: var(--pencil);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition:
+      opacity 0.2s var(--out),
+      stroke-width 0.2s var(--out);
+  }
+  .ann-layer .main,
+  .ann-layer .head {
+    stroke-width: 1.35;
+    opacity: 0.8;
+  }
+  .ann-layer .ghost {
+    stroke-width: 0.8;
+    opacity: 0.35;
+  }
+  .ann-layer .ring {
+    fill: var(--doc);
+    stroke: var(--pencil);
+    stroke-width: 1.2;
+    opacity: 0.9;
+  }
+  .ann-layer text {
+    font-family: var(--hand);
+    font-size: 11px;
+    fill: var(--pencil);
+    text-anchor: middle;
+    dominant-baseline: central;
+  }
+  .ann-layer g.hot .main,
+  .ann-layer g.hot .head {
+    opacity: 1;
+    stroke-width: 1.8;
+    stroke: var(--ink);
+  }
+  .ann-layer g.hot .ring {
+    stroke: var(--ink);
+  }
+  .ann-layer path.draw {
+    stroke-dasharray: var(--len);
+    stroke-dashoffset: var(--len);
+    animation: ann-ink 0.55s var(--out) forwards;
+    animation-delay: var(--d, 0ms);
+  }
+  @keyframes ann-ink {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  .ann-note {
+    position: absolute;
+    width: 196px;
+    padding: 16px 13px 13px;
+    font-family: var(--hand);
+    font-size: 14.5px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+    pointer-events: auto;
+    cursor: pointer;
+    rotate: var(--r, -1.5deg);
+    transition:
+      translate 0.2s var(--out),
+      rotate 0.2s var(--out);
+    box-shadow:
+      0 1px 1px rgb(120 90 20 / 0.2),
+      0 10px 14px -8px rgb(60 40 10 / 0.45),
+      10px 14px 18px -12px rgb(60 40 10 / 0.35);
+  }
+  .ann-note[hidden] {
+    display: none;
+  }
+  .ann-note:hover,
+  .ann-note.hot {
+    translate: 0 -3px;
+    rotate: 0deg;
+  }
+  .ann-note:focus-visible {
+    translate: 0 -3px;
+    rotate: 0deg;
+    outline: 2px solid var(--link);
+    outline-offset: 2px;
+  }
+  /* Owner only: picked up and thrown into the trash (comment-drag.ts). */
+  .ann-items li.is-throwable {
+    cursor: grab;
+    touch-action: pan-y;
+  }
+  .ann-items li.is-throwable :is(.ann-body, .ann-reply, .rv-who, .rv-bar) {
+    cursor: auto;
+  }
+  .ann-items li.is-throwable:focus-visible {
+    outline: 2px solid var(--link);
+    outline-offset: 3px;
+  }
+  .ann-note.is-throwable {
+    cursor: grab;
+    touch-action: pan-y;
+  }
+  .ann-items li.is-lifting,
+  .ann-note.is-lifting {
+    opacity: 0.35;
+  }
+  .ann-note .note-tape {
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    width: 62px;
+    height: auto;
+    margin-left: -31px;
+    rotate: var(--tr, -3deg);
+    pointer-events: none;
+  }
+  .ann-note .no {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    font-size: 12px;
+    color: var(--pencil);
+  }
+  .ann-note.pending {
+    background: rgb(251 231 161 / 0.55);
+    box-shadow: none;
+    outline: 1.5px dashed color-mix(in srgb, var(--pencil) 50%, transparent);
+  }
+  .ann-note b {
+    display: block;
+    font-size: 12.5px;
+    font-weight: 400;
+    color: var(--pencil);
+  }
+  .ann-note .more-n {
+    display: block;
+    margin-top: 4px;
+    font-size: 12.5px;
+    color: var(--link);
+  }
+  .ann-note.pop-in {
+    animation: ann-pop-in 0.25s var(--out) backwards;
+    animation-delay: var(--d, 0ms);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ann-btn,
+    .ann-pop,
+    .ann-note.pop-in {
+      animation: none;
+    }
+    .ann-layer path.draw {
+      animation: none;
+      stroke-dashoffset: 0;
+    }
+  }
+</style>

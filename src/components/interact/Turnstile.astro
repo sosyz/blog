@@ -1,0 +1,33 @@
+---
+/**
+ * Turnstile, invisible unless Cloudflare needs an interaction
+ * (`appearance: "interaction-only"`); a hand-written status line next to the
+ * submit button shows 正在确认你不是机器人…… / 已确认 / 验证没通过，点这里重试.
+ * When Cloudflare does need a click, the widget appears inside a dashed
+ * paper frame.
+ *
+ * This renders the markup only. The form's script mounts it with
+ * `mountTurnstile(wrap)` from src/scripts/interact/turnstile.ts (lazily, so
+ * the Cloudflare script loads only when a form is about to be used) and
+ * reads the token on submit. Scripts that build forms at runtime use
+ * `turnstileMarkup(action)` for the same markup.
+ */
+import "./turnstile.css";
+
+type Props = {
+  /** Turnstile action name: "comment", "inline" or "sticker". */
+  action: string;
+};
+
+const { action } = Astro.props;
+---
+
+<div class="ts-wrap" data-turnstile data-action={action}>
+  <span class="ts-live" aria-live="polite">
+    <button type="button" class="ts-status" data-state="idle" disabled>
+      <i aria-hidden="true"></i>
+      <span>寄出前会确认你不是机器人</span>
+    </button>
+  </span>
+  <div class="ts-box"></div>
+</div>

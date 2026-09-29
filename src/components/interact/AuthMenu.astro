@@ -1,0 +1,129 @@
+---
+/**
+ * Toolbar avatar for the optional GitHub login: hidden while logged out
+ * (the forms offer the login); logged in, a small avatar button that opens a
+ * note with 登录为 <login> and 退出登录. A disclosure (button +
+ * aria-expanded), not an ARIA menu: Esc or a click elsewhere closes it.
+ *
+ * Logic: src/scripts/interact/auth-menu.ts (asks GET /api/auth/me once per
+ * page load through src/scripts/interact/auth.ts).
+ */
+import "./auth.css";
+---
+
+<div class="auth-menu" data-auth-menu hidden>
+  <button
+    type="button"
+    class="auth-me"
+    aria-expanded="false"
+    aria-controls="auth-menu-pop"
+    data-auth-me
+  >
+    <img
+      class="auth-av"
+      src="data:,"
+      alt=""
+      width="26"
+      height="26"
+      referrerpolicy="no-referrer"
+      data-auth-avatar
+    />
+    <span class="sr-only" data-auth-label>
+      已登录
+    </span>
+  </button>
+  <div class="auth-pop sticky-paper" id="auth-menu-pop" data-auth-pop hidden>
+    <p>
+      登录为 <b data-auth-login></b>
+    </p>
+    <p class="auth-pop-note">
+      留言和贴纸不用人机验证，换设备也能看到自己待审的内容。
+    </p>
+    <button type="button" class="auth-out" data-auth-logout>
+      退出登录
+    </button>
+  </div>
+</div>
+
+<script>
+  import "@/scripts/interact/auth-menu";
+</script>
+
+<style is:global>
+  .auth-menu {
+    position: relative;
+    display: inline-flex;
+  }
+  .auth-menu[hidden],
+  .auth-pop[hidden] {
+    display: none;
+  }
+  .auth-me {
+    display: grid;
+    place-content: center;
+    padding: 2px;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+  }
+  .auth-me .auth-av {
+    width: 26px;
+    height: 26px;
+    transition: rotate var(--dur) var(--out);
+  }
+  .auth-me:hover .auth-av,
+  .auth-me[aria-expanded="true"] .auth-av {
+    rotate: 3deg;
+  }
+  .auth-me:focus-visible {
+    outline: 2px solid var(--link);
+    outline-offset: 2px;
+  }
+  .auth-pop {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: -6px;
+    z-index: 5;
+    display: grid;
+    gap: 6px;
+    width: max-content;
+    max-width: min(240px, calc(100vw - 32px));
+    padding: 14px 16px 12px;
+    font-family: var(--hand);
+    font-size: 14.5px;
+    color: var(--ink);
+    rotate: 1deg;
+    animation: auth-pop-in var(--dur-fast) var(--out);
+  }
+  .auth-pop p {
+    margin: 0;
+  }
+  .auth-pop b {
+    font-weight: 400;
+    color: var(--link);
+  }
+  .auth-pop .auth-pop-note {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--pencil);
+  }
+  .auth-pop .auth-out {
+    justify-self: start;
+    font-size: 14.5px;
+  }
+  @keyframes auth-pop-in {
+    from {
+      opacity: 0;
+      translate: 0 -4px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .auth-pop {
+      animation: none;
+    }
+    .auth-me .auth-av {
+      transition: none;
+    }
+  }
+</style>

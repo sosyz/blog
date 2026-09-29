@@ -1,0 +1,80 @@
+/* Turnstile status line and frame (Turnstile.astro, turnstileMarkup()). */
+.ts-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.ts-box:empty,
+.ts-box:not(.show) {
+  display: none;
+}
+.ts-box.show {
+  width: fit-content;
+  max-width: 100%;
+  padding: 6px;
+  background: var(--photo);
+  border: 1px dashed rgb(94 78 52 / 0.35);
+  border-radius: 4px;
+  rotate: -0.6deg;
+}
+.ts-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: var(--hand);
+  font-size: 13.5px;
+  color: var(--faint);
+  text-align: left;
+}
+.ts-status:disabled {
+  cursor: default;
+}
+.ts-status i {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  -webkit-mask:
+    var(--ico, url("/journal/doodle/pencil.svg")) center / contain no-repeat;
+  mask:
+    var(--ico, url("/journal/doodle/pencil.svg")) center / contain no-repeat;
+}
+.ts-status[data-state="wait"] i {
+  animation: ts-wiggle 1s ease-in-out infinite;
+}
+.ts-status[data-state="ok"] {
+  color: var(--stamp-blue);
+}
+.ts-status[data-state="ok"] i {
+  --ico: url("/journal/doodle/check-rough.svg");
+}
+.ts-status[data-state="need"] i {
+  --ico: url("/journal/doodle/arrow-down.svg");
+}
+.ts-status[data-state="fail"],
+.ts-status[data-state="off"] {
+  color: var(--stamp);
+}
+.ts-status[data-state="fail"] {
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.ts-status[data-state="fail"] i,
+.ts-status[data-state="off"] i {
+  --ico: url("/journal/doodle/question.svg");
+}
+@keyframes ts-wiggle {
+  50% {
+    rotate: -12deg;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ts-status[data-state="wait"] i {
+    animation: none;
+  }
+}

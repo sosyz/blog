@@ -1,0 +1,772 @@
+---
+/**
+ * Comment section at the bottom of the drawer: approved comments as paper
+ * slips (circled initial in a per-name ink, blue date stamp, owner reply as
+ * a sticky note with the dog sticker), inline comments with their quoted
+ * text, the visitor's own pending items (dashed, 审核中), and the red-margin
+ * form with Turnstile and the 寄出 stamp.
+ *
+ * The list is loaded client-side from /api/comments (src/scripts/interact/
+ * comments.ts); the form is static HTML so it is in place before scripts run.
+ * With the optional GitHub login (src/scripts/interact/auth.ts) the script
+ * fills [data-auth-slot], hides the name / e-mail / site fields and the
+ * Turnstile line, and shows 已登录，不用人机验证 instead. Logged-in commenters
+ * get their GitHub avatar in the circle; the owner's comments a 博主 stamp.
+ *
+ * With the owner's Access session (src/scripts/interact/review-comments.ts)
+ * the list also shows pending comments with a review bar, owner tools on
+ * approved ones, [data-rv-hidden-slot] (已撤下), [data-rv-next-slot]
+ * (下一条待审 →) and [data-rv-note] (需要先在 /admin/ 登录). The rv-* styles
+ * below are global: the highlight popover (InlineComments.astro) uses them.
+ * Rejecting / taking down is dragging a card into the trash (or Delete on
+ * the focused card, src/scripts/interact/comment-drag.ts): the lifted copy
+ * (.cmt-ghost), the dimmed card left behind (.is-lifting) and the can
+ * raised above the drawer (.vs-trash.is-raised; its look is in
+ * StickerLayer.astro) are styled here too.
+ */
+import "./auth.css";
+import Turnstile from "./Turnstile.astro";
+
+type Props = {
+  slug: string;
+};
+
+const { slug } = Astro.props;
+---
+
+<section
+  class="comments"
+  id="comments"
+  data-comments
+  data-slug={slug}
+  aria-labelledby="cmt-head"
+>
+  <h2 class="cmt-head" id="cmt-head">
+    <span class="ul">留言</span>
+    <small data-cmt-count></small>
+  </h2>
+  <ol class="cmt-list" data-cmt-list hidden></ol>
+  <div class="rv-next-slot" data-rv-next-slot hidden></div>
+  <p class="cmt-empty" data-cmt-empty>
+    <i aria-hidden="true"></i>
+    <span data-cmt-empty-text>正在翻留言……</span>
+  </p>
+  <div class="rv-hidden-slot" data-rv-hidden-slot hidden></div>
+  <p class="rv-note" data-rv-note role="status" hidden></p>
+  <noscript>
+    <p class="cmt-empty">留言需要开启 JavaScript 才能查看和提交。</p>
+  </noscript>
+  <form class="cmt-form" data-cmt-form novalidate>
+    <img
+      class="tape"
+      src="/journal/tape/washi-plain-sage.webp"
+      alt=""
+      style="--tr: 3deg; --tape-w: 96px"
+    />
+    <h3>写点什么</h3>
+    <input type="hidden" name="parentId" />
+    <div class="cmt-auth" data-auth-slot hidden></div>
+    <div class="cmt-fields" data-cmt-fields>
+      <label>
+        昵称
+        <input name="name" required maxlength="24" autocomplete="nickname" />
+      </label>
+      <label>
+        邮箱
+        <input
+          name="email"
+          type="email"
+          maxlength="254"
+          placeholder="选填，不公开"
+          autocomplete="email"
+        />
+      </label>
+      <label>
+        网址
+        <input
+          name="site"
+          type="url"
+          maxlength="200"
+          placeholder="选填"
+          autocomplete="url"
+        />
+      </label>
+    </div>
+    <p class="cmt-replying" data-cmt-replying hidden>
+      <span data-cmt-replying-text></span>
+      <button type="button" data-cmt-reply-cancel>
+        不回复了
+      </button>
+    </p>
+    <label class="cmt-text">
+      <span class="sr-only">留言内容</span>
+      <textarea
+        name="body"
+        required
+        maxlength="800"
+        placeholder="写在这里……"
+      ></textarea>
+      <span class="count" data-cmt-countdown aria-hidden="true">
+        0 / 800
+      </span>
+    </label>
+    <div class="cmt-bottom">
+      <Turnstile action="comment" />
+      <p class="auth-skip" data-auth-skip hidden>
+        已登录，不用人机验证
+      </p>
+      <button type="submit" class="stamp-btn">
+        寄出
+      </button>
+    </div>
+    <p class="cmt-error" data-cmt-error role="alert" hidden></p>
+    <p class="sr-only" data-cmt-status role="status"></p>
+    <p class="cmt-note">
+      留言审核通过后公开。邮箱选填，只用来区分同名的人，不会公开。
+      <a href="/privacy/">存了什么、怎么删除</a>
+    </p>
+  </form>
+</section>
+
+<script>
+  import "@/scripts/interact/comments";
+</script>
+
+<style is:global>
+  .comments [hidden] {
+    display: none !important;
+  }
+  .comments {
+    /* two extra ink colors for commenters' initials (from the prototype) */
+    --ink-moss: #5f7a45;
+    --ink-plum: #8a4f6b;
+
+    clear: both;
+    display: grid;
+    gap: 18px;
+    margin-top: 34px;
+    padding-top: 18px;
+    border-top: 1px dashed var(--edge);
+  }
+  .cmt-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin: 0;
+    font-family: var(--hand);
+    font-size: 22px;
+    font-weight: 400;
+  }
+  .cmt-head small {
+    font-size: 14px;
+    color: var(--faint);
+  }
+  .cmt-head .ul {
+    position: relative;
+  }
+  .cmt-head .ul::after {
+    content: "";
+    position: absolute;
+    left: -4px;
+    right: -4px;
+    bottom: -8px;
+    height: 10px;
+    background: var(--pencil);
+    opacity: 0.7;
+    -webkit-mask: url("/journal/doodle/underline-wavy.svg") center / 100% 100%
+      no-repeat;
+    mask: url("/journal/doodle/underline-wavy.svg") center / 100% 100% no-repeat;
+  }
+  .cmt-list {
+    display: grid;
+    gap: 14px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .cmt {
+    position: relative;
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 12px;
+    padding: 12px 14px 12px 12px;
+    background: var(--slip);
+    box-shadow:
+      0 1px 2px rgb(60 40 20 / 0.12),
+      0 8px 12px -10px rgb(60 40 20 / 0.35);
+    rotate: var(--r, 0deg);
+  }
+  .cmt-av {
+    display: grid;
+    place-content: center;
+    width: 36px;
+    height: 36px;
+    font-family: var(--hand);
+    font-size: 17px;
+    color: var(--c, var(--pencil));
+    border: 1.6px solid var(--c, var(--pencil));
+    border-radius: 52% 46% 55% 45% / 48% 55% 45% 52%;
+    rotate: -6deg;
+  }
+  /* GitHub avatar inside the same hand-drawn circle. */
+  .cmt-av.has-img {
+    overflow: hidden;
+    padding: 0;
+    background: var(--doc);
+  }
+  .cmt-av.has-img img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .cmt-login {
+    font-family: var(--code);
+    font-feature-settings: "calt" 0;
+    font-size: 11px;
+    color: var(--faint);
+  }
+  /* The owner's own comments: a small 博主 stamp in the slip's corner. */
+  .cmt-boss {
+    --stamp-size: 36px;
+    --stamp-font: 11.5px;
+    --stamp-border: 1.7px;
+    --stamp-rotate: 10deg;
+    position: absolute;
+    top: 6px;
+    right: 10px;
+    pointer-events: none;
+  }
+  .cmt.pending .cmt-boss {
+    right: 74px;
+  }
+  .cmt-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+    margin: 0 0 2px;
+  }
+  .cmt-name {
+    font-family: var(--hand);
+    font-size: 16px;
+    color: var(--ink);
+  }
+  .cmt-name a {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: var(--edge);
+    text-underline-offset: 3px;
+  }
+  .cmt-name a:hover {
+    text-decoration-color: var(--link);
+  }
+  .cmt .date-stamp {
+    rotate: 0deg;
+  }
+  .cmt-body {
+    margin: 0;
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.8;
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+  }
+  .cmt-actions {
+    display: flex;
+    gap: 14px;
+    margin-top: 4px;
+  }
+  .cmt-actions button,
+  .cmt-replying button {
+    padding: 0;
+    border: 0;
+    background: none;
+    font-family: var(--hand);
+    font-size: 13.5px;
+    color: var(--faint);
+    cursor: pointer;
+  }
+  .cmt-actions button:hover,
+  .cmt-replying button:hover {
+    color: var(--link);
+  }
+  .cmt.pending {
+    background: transparent;
+    box-shadow: none;
+    outline: 1.5px dashed rgb(94 78 52 / 0.35);
+    outline-offset: -1px;
+  }
+  .cmt.pending .cmt-body {
+    color: var(--pencil);
+  }
+  .cmt .pend-stamp {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    padding: 1px 8px;
+    font-family: var(--hand);
+    font-size: 13px;
+    color: var(--pencil);
+    border: 1.5px dashed color-mix(in srgb, var(--pencil) 60%, transparent);
+    border-radius: 3px;
+    rotate: 6deg;
+  }
+  .cmt-owner {
+    position: relative;
+    margin: 10px 0 2px 6px;
+    padding: 12px 14px 14px 58px;
+    font-family: var(--hand);
+    font-size: 15.5px;
+    line-height: 1.6;
+    rotate: -1deg;
+    white-space: pre-line;
+  }
+  .cmt-owner .sticker {
+    position: absolute;
+    left: -6px;
+    top: -12px;
+    --w: 56px;
+    --r: -8deg;
+  }
+  .cmt-owner b {
+    display: block;
+    font-weight: 400;
+    font-size: 13px;
+    color: var(--pencil);
+  }
+  .cmt-quote {
+    margin: 0 0 4px;
+    padding: 2px 0 2px 10px;
+    border-left: 2px solid var(--faint-mark);
+    font-family: var(--body);
+    font-size: 14px;
+    color: var(--pencil);
+  }
+  .cmt-quote button {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .cmt-quote button:hover {
+    color: var(--link);
+  }
+  .cmt-quote .gone {
+    margin-left: 6px;
+    font-family: var(--hand);
+    font-size: 12px;
+    color: var(--faint);
+  }
+  .cmt-empty {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    font-family: var(--hand);
+    font-size: 15px;
+    color: var(--faint);
+  }
+  .cmt-empty i {
+    flex: none;
+    width: 26px;
+    height: 26px;
+    background: var(--faint-mark);
+    -webkit-mask: url("/journal/doodle/pencil.svg") center / contain no-repeat;
+    mask: url("/journal/doodle/pencil.svg") center / contain no-repeat;
+  }
+  .cmt-form {
+    position: relative;
+    display: grid;
+    gap: 12px;
+    padding: 20px 18px 16px 34px;
+    background-color: var(--slip);
+    background-image: linear-gradient(
+      90deg,
+      transparent 20px,
+      var(--margin) 20px,
+      var(--margin) 21px,
+      transparent 21px
+    );
+    box-shadow:
+      0 1px 2px rgb(60 40 20 / 0.15),
+      0 10px 16px -12px rgb(60 40 20 / 0.4);
+  }
+  .cmt-form .tape {
+    top: -11px;
+    right: 30px;
+  }
+  .cmt-form h3 {
+    margin: 0;
+    font-family: var(--hand);
+    font-size: 18px;
+    font-weight: 400;
+  }
+  .cmt-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px 18px;
+  }
+  .cmt-fields label {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-family: var(--hand);
+    font-size: 15px;
+    color: var(--pencil);
+    white-space: nowrap;
+  }
+  .cmt-fields input,
+  .ann-pop input,
+  .ann-pop textarea {
+    flex: 1;
+    min-width: 0;
+    padding: 2px 2px 3px;
+    border: 0;
+    border-bottom: 1.4px solid var(--field-line);
+    border-radius: 0;
+    background: transparent;
+    font-family: var(--hand);
+    font-size: 15.5px;
+    color: var(--ink);
+    transition: border-color 0.2s var(--out);
+  }
+  .cmt-fields input::placeholder,
+  .cmt-text textarea::placeholder,
+  .ann-pop input::placeholder,
+  .ann-pop textarea::placeholder {
+    color: var(--faint);
+  }
+  .cmt-fields input:focus,
+  .ann-pop input:focus,
+  .ann-pop textarea:focus {
+    border-bottom-color: var(--link);
+    outline: none;
+  }
+  .cmt-fields input:focus-visible,
+  .ann-pop input:focus-visible,
+  .ann-pop textarea:focus-visible,
+  .cmt-text textarea:focus-visible {
+    outline: 2px solid var(--link);
+    outline-offset: 2px;
+  }
+  .cmt-replying {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    margin: 0;
+    font-family: var(--hand);
+    font-size: 14px;
+    color: var(--pencil);
+  }
+  .cmt-text {
+    position: relative;
+    display: block;
+  }
+  .cmt-text textarea {
+    display: block;
+    width: 100%;
+    min-height: 112px;
+    padding: 0 2px;
+    border: 0;
+    resize: vertical;
+    background: transparent
+      repeating-linear-gradient(
+        to bottom,
+        transparent 0 27px,
+        var(--rule) 27px 28px
+      );
+    background-attachment: local;
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 28px;
+    color: var(--ink);
+  }
+  .cmt-text .count {
+    position: absolute;
+    right: 2px;
+    bottom: -18px;
+    font-family: var(--code);
+    font-feature-settings: "calt" 0;
+    font-size: 10.5px;
+    color: var(--faint);
+  }
+  .cmt-bottom {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 10px;
+  }
+  .cmt-note {
+    margin: 0;
+    font-family: var(--hand);
+    font-size: 13px;
+    color: var(--faint);
+  }
+  .cmt-note a {
+    color: var(--link);
+    text-underline-offset: 3px;
+  }
+  .cmt-error {
+    margin: 0;
+    font-family: var(--hand);
+    font-size: 14px;
+    color: var(--stamp-ink);
+  }
+  .cmt.flash {
+    animation: cmt-in 0.35s var(--out);
+  }
+
+  /* ---------- owner review (only with the Access session) ---------- */
+  .cmt.review .cmt-body {
+    color: var(--ink);
+  }
+  .cmt .rv-stamp {
+    color: var(--stamp-ink);
+    border-color: var(--stamp);
+    rotate: -5deg;
+  }
+  .cmt.is-hidden .rv-stamp {
+    color: var(--pencil);
+    border-color: var(--pencil);
+  }
+  .cmt.is-hidden .cmt-body {
+    color: var(--pencil);
+    text-decoration: line-through;
+    text-decoration-color: var(--faint-mark);
+  }
+  .rv-who {
+    margin: 0 0 4px;
+    font-family: var(--code);
+    font-feature-settings: "calt" 0;
+    font-size: 11px;
+    color: var(--faint);
+    overflow-wrap: anywhere;
+  }
+  .rv-who code {
+    font: inherit;
+  }
+  .rv-bar {
+    display: grid;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .rv-tools {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed var(--edge);
+  }
+  .rv-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 16px;
+  }
+  .rv-label {
+    font-family: var(--hand);
+    font-size: 12.5px;
+    color: var(--faint);
+  }
+  .rv-bar .stamp-btn {
+    padding: 2px 14px;
+    font-size: 15px;
+    letter-spacing: 0.15em;
+  }
+  .rv-link,
+  .rv-next-go {
+    padding: 0;
+    border: 0;
+    background: none;
+    font-family: var(--hand);
+    font-size: 14px;
+    color: var(--pencil);
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: var(--edge);
+    text-underline-offset: 3px;
+  }
+  .rv-link:hover,
+  .rv-next-go:hover {
+    color: var(--link);
+    text-decoration-color: currentColor;
+  }
+  .rv-bar [aria-disabled="true"] {
+    opacity: 0.45;
+    cursor: progress;
+  }
+  .rv-reply {
+    display: grid;
+    gap: 6px;
+    padding: 10px 12px 8px;
+    background: var(--sticky);
+    box-shadow: var(--shadow-sticky);
+    rotate: -0.6deg;
+  }
+  .rv-draft {
+    display: block;
+    width: 100%;
+    min-height: 84px;
+    padding: 0 2px;
+    border: 0;
+    resize: vertical;
+    background: transparent
+      repeating-linear-gradient(
+        to bottom,
+        transparent 0 27px,
+        var(--rule) 27px 28px
+      );
+    background-attachment: local;
+    font-family: var(--hand);
+    font-size: 15.5px;
+    line-height: 28px;
+    color: var(--ink);
+  }
+  .rv-draft::placeholder {
+    color: var(--faint);
+  }
+  .rv-draft:focus-visible {
+    outline: 2px solid var(--link);
+    outline-offset: 2px;
+  }
+  .rv-hint {
+    margin: 0;
+    font-family: var(--hand);
+    font-size: 13px;
+    color: var(--faint);
+  }
+  .rv-msg,
+  .rv-note {
+    margin: 0;
+    font-family: var(--hand);
+    font-size: 14px;
+    color: var(--stamp-ink);
+    rotate: -0.5deg;
+  }
+  .rv-note a {
+    color: var(--link);
+    text-underline-offset: 3px;
+  }
+  /* 下一条待审 →: a sticky note that stays in view at the bottom. */
+  .rv-next-slot {
+    position: sticky;
+    bottom: 14px;
+    z-index: 2;
+    justify-self: end;
+  }
+  .rv-next {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 14px;
+    padding: 10px 16px;
+    font-family: var(--hand);
+    font-size: 15px;
+    color: var(--ink);
+    rotate: -1deg;
+    box-shadow: var(--shadow-sticky);
+  }
+  .rv-next .rv-next-go {
+    font-size: 15.5px;
+    color: var(--link);
+  }
+  .rv-hidden summary {
+    width: fit-content;
+    font-family: var(--hand);
+    font-size: 15px;
+    color: var(--pencil);
+    cursor: pointer;
+  }
+  .rv-hidden summary:hover {
+    color: var(--link);
+  }
+  .rv-hidden .cmt-list {
+    margin-top: 12px;
+  }
+  /* ---------- into the trash (comment-drag.ts, owner only) ---------- */
+  /* The paper picks the card up; its text stays selectable. */
+  .cmt.is-throwable {
+    cursor: grab;
+    touch-action: pan-y;
+  }
+  .cmt.is-throwable
+    :is(.cmt-body, .cmt-meta, .cmt-quote, .cmt-owner, .rv-who, .rv-bar) {
+    cursor: auto;
+  }
+  .cmt.is-throwable:focus-visible {
+    outline: 2px solid var(--link);
+    outline-offset: 3px;
+  }
+  /* The card stays where it was, faded, while its copy is carried. */
+  .cmt.is-lifting {
+    opacity: 0.35;
+  }
+  /* The lifted copy: the same size, tilted, casting a deeper shadow. */
+  body > .cmt-ghost {
+    z-index: 46;
+    box-sizing: border-box;
+    list-style: none;
+    background-color: var(--slip);
+    outline: 0;
+    box-shadow: var(--shadow-sticky-lift);
+    pointer-events: none;
+    transition: none;
+    animation: none;
+  }
+  body > .cmt-ghost.sticky-paper,
+  body > .cmt-ghost.is-row {
+    background-color: var(--sticky);
+  }
+  body > .cmt-ghost.is-over {
+    opacity: 0.85;
+  }
+  body.is-throwing,
+  body.is-throwing * {
+    cursor: grabbing !important;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  /* Above the drawer (30) and the margin notes (31), below the copy. */
+  .vs-trash.is-raised {
+    z-index: 45;
+  }
+  /* 撤销: the card is laid back. */
+  .rv-back {
+    animation: cmt-in 0.35s var(--out);
+  }
+  .rv-throw-hint {
+    font-size: 12.5px;
+  }
+
+  /* The deep-linked comment: blue pencil outline, pulsed twice on arrival. */
+  .cmt.rv-target {
+    outline: 2px solid var(--link);
+    outline-offset: 3px;
+  }
+  .rv-pulse {
+    animation: rv-pulse 0.7s var(--out) 2;
+  }
+  @keyframes rv-pulse {
+    50% {
+      outline-offset: 9px;
+      outline-color: color-mix(in srgb, var(--link) 30%, transparent);
+    }
+  }
+  @keyframes cmt-in {
+    from {
+      opacity: 0;
+      translate: 0 6px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cmt.flash,
+    .rv-pulse,
+    .rv-back {
+      animation: none;
+    }
+  }
+</style>

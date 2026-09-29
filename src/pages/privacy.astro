@@ -1,0 +1,339 @@
+---
+/**
+ * /privacy/ — what the visitor features store (comments, stickers, the
+ * optional GitHub login, browser storage) and how to ask for deletion.
+ * A static page on a sheet of journal paper. Keep it in step with
+ * docs/architecture.md (tables, cookies, localStorage keys) when those change.
+ */
+import Base from "@/layouts/Base.astro";
+import { stickerSrc, tapeSrc } from "@/scripts/canvas/seed";
+
+const TAPE_WIDTH = 120;
+const TAPE_RATIO = 600 / 112;
+const STICKER_WIDTH = 84;
+---
+
+<Base
+  title="隐私说明"
+  description="留言、贴纸和 GitHub 登录会存下什么、存多久，以及怎么要求删除。"
+  canonical="/privacy/"
+  bodyClass="view-privacy"
+>
+  <main class="privacy desk-paper" id="main">
+    <article class="sheet doc-paper">
+      <img
+        class="tape"
+        src={tapeSrc("washi-grid-ivory")}
+        alt=""
+        width={TAPE_WIDTH}
+        height={Math.round(TAPE_WIDTH / TAPE_RATIO)}
+        style={`--tr: -2deg; --tape-w: ${TAPE_WIDTH}px`}
+      />
+      <img
+        class="sticker"
+        src={stickerSrc("obj-coffee")}
+        alt=""
+        width={STICKER_WIDTH}
+        height={STICKER_WIDTH}
+      />
+      <p class="back">
+        <a href="/">← 回到画布</a>
+      </p>
+      <h1>隐私说明</h1>
+      <p class="updated">
+        最后更新{" "}
+        <time class="date-stamp" datetime="2026-09-29">
+          2026.09.29
+        </time>
+      </p>
+      <p class="lead">
+        看笔记不用登录，本站也不记录你读了什么：没有统计脚本，没有广告，字体都放在本站。只有留言、贴贴纸或者用
+        GitHub 登录时，才会存下下面这些东西。
+      </p>
+
+      <h2>留言和划线评论</h2>
+      <ul>
+        <li>
+          公开显示：昵称、留言内容、选填的网址，链接带 <code>nofollow</code>{" "}
+          标记。划线评论还会存被划的那段原文和它前面十来个字，用来找回位置。
+        </li>
+        <li>
+          不公开：选填的邮箱只存加盐的哈希，博主审核时用来认出同一个人，不会显示，也没法从哈希还原。
+        </li>
+        <li>
+          IP 地址只存加盐的哈希（IPv6 只取前 64
+          位），用来限制提交频率、发现刷屏。浏览器标识（User-Agent）只存前 200
+          个字符，只有博主在审核台能看到。
+        </li>
+      </ul>
+
+      <h2>贴纸</h2>
+      <ul>
+        <li>
+          贴纸工坊的抠图、白边和滤镜都在你的浏览器里完成，原图不会上传；上传的只有做好的贴纸图片（存在
+          Cloudflare R2）、它在画布上的位置、选填的署名和 IP 哈希。
+        </li>
+        <li>挪动贴纸会记一条日志：谁挪的、旧位置到新位置。</li>
+      </ul>
+
+      <h2>审核</h2>
+      <p>
+        所有留言和贴纸都先经过人工审核，通过后才公开，登录的用户和博主自己也一样。审核前只有提交的人自己能看到「审核中」。
+      </p>
+
+      <h2>用 GitHub 登录（可选）</h2>
+      <ul>
+        <li>
+          不登录也能留言和贴贴纸。登录只申请 <code>read:user</code>
+          权限，读一次你的公开资料并存下：GitHub 数字
+          id、用户名、显示名称、头像地址、主页地址。
+        </li>
+        <li>
+          登录后写的留言显示你的 GitHub
+          头像和名字（没有名字时用用户名），并链接到你的 GitHub
+          主页。你的留言和贴纸记在这个账号名下，换设备登录也能看到自己待审的内容、挪自己的贴纸。
+        </li>
+        <li>
+          登录后不用做人机验证；仍然按账号和 IP 哈希限制提交频率，IP
+          哈希照样存。
+        </li>
+      </ul>
+
+      <h2>不会存的东西</h2>
+      <ul>
+        <li>原始 IP 地址、原始邮箱。</li>
+        <li>GitHub 的访问令牌：读完资料就丢掉，不写进数据库，也不写进日志。</li>
+        <li>GitHub 账号的邮箱、仓库、关注列表等其它资料：不申请，也读不到。</li>
+      </ul>
+
+      <h2>Cookie</h2>
+      <ul>
+        <li>
+          <code>sid</code>：登录会话，只在登录后才有。HttpOnly，30
+          天有效，常来会自动延长。数据库里只存它的 SHA-256
+          哈希。点「退出登录」会删掉这个会话。
+        </li>
+        <li>
+          <code>gh_oauth</code>：登录过程中的临时 cookie，10
+          分钟有效，防止有人伪造登录请求，登录完成就清掉。
+        </li>
+        <li>
+          本站自己不设别的 cookie。人机验证时 Cloudflare Turnstile
+          可能按它自己的规则用 cookie；博主审核台的 Cloudflare Access cookie
+          只在博主自己的浏览器里。
+        </li>
+      </ul>
+
+      <h2>浏览器里存的东西</h2>
+      <p>这些只存在你自己的浏览器里（localStorage），不会发给别人：</p>
+      <ul class="keys">
+        <li>
+          <code>interact:profile</code>：填过的昵称、邮箱和网址，下次自动填好。
+        </li>
+        <li>
+          <code>interact:pending-comments</code>：自己待审留言的副本，最多留 30
+          天。
+        </li>
+        <li>
+          <code>interact:pending-stickers</code>：自己待审贴纸的图片副本，最多 3
+          张、30 天。
+        </li>
+        <li>
+          <code>interact:owned-stickers</code>：挪自己贴纸用的编辑口令。
+        </li>
+        <li>
+          <code>interact:sticker-offsets</code>：只为自己拖开的贴纸位置。
+        </li>
+        <li>
+          <code>interact:owner</code>：博主打开过审核台的标记。
+        </li>
+        <li>
+          <code>interact:hidden-builtins</code>
+          ：博主收起了哪些手账自带的贴纸（公开的名单），下次打开画布时先藏好。
+        </li>
+        <li>
+          <code>journal:view</code>：窄屏首页选的是画布还是列表。它存在
+          sessionStorage 里，关掉标签页就没了。
+        </li>
+      </ul>
+      <p>清除本站的网站数据就会全部删掉。</p>
+
+      <h2>第三方</h2>
+      <ul>
+        <li>
+          Cloudflare：整个网站、数据库（D1）和贴纸图片（R2）都在 Cloudflare
+          上。提交留言或贴纸前的人机验证用 Cloudflare Turnstile，它按 Cloudflare
+          自己的隐私政策处理验证数据。
+        </li>
+        <li>
+          GitHub：点「用 GitHub 登录」时会跳到 GitHub 的授权页，由 GitHub
+          处理你在那里的登录。登录用户的头像直接从 GitHub 的头像服务器
+          <code>avatars.githubusercontent.com</code>
+          加载，所以看到这些头像时，你的浏览器会向 GitHub 请求图片。
+        </li>
+      </ul>
+
+      <h2>存多久</h2>
+      <ul>
+        <li>
+          留言、贴纸和审核记录会一直保留，直到你要求删除。被拒绝的贴纸会删掉图片，只留一条记录。
+        </li>
+        <li>
+          登录会话 30 天不来就失效，过期的会话在你下次登录时清掉。GitHub
+          资料在你下次登录时更新，要求删除之前一直保留。
+        </li>
+        <li>浏览器里的东西按上面写的期限，或者到你清除网站数据为止。</li>
+      </ul>
+
+      <h2>想删除自己的内容</h2>
+      <p>
+        两种方式都不用留邮箱：到
+        <a href="https://github.com/sosyz/blog/issues" rel="noopener">
+          博客仓库开一个 issue
+        </a>
+        写清楚是哪篇笔记、什么昵称、大概什么时候的留言或贴纸；或者在 GitHub
+        上找博主
+        <a href="https://github.com/sosyz" rel="noopener">
+          @sosyz
+        </a>
+        说一声。登录过的账号也可以要求删掉账号记录和所有会话。
+      </p>
+    </article>
+  </main>
+</Base>
+
+<style>
+  .privacy {
+    min-height: 100dvh;
+    padding: 56px 16px 64px;
+  }
+
+  .sheet {
+    position: relative;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 34px 28px 30px 48px;
+    /* Red margin line over the paper texture from .doc-paper. */
+    background-image:
+      linear-gradient(
+        90deg,
+        transparent 30px,
+        var(--margin) 30px,
+        var(--margin) 31px,
+        transparent 31px
+      ),
+      var(--paper-doc);
+    background-size:
+      100% 100%,
+      520px auto;
+    background-repeat: no-repeat, repeat;
+    box-shadow: var(--shadow-card);
+    font-family: var(--body);
+    font-size: 16.5px;
+    line-height: 1.85;
+    color: var(--ink);
+    rotate: -0.3deg;
+  }
+
+  .tape {
+    top: -12px;
+    left: 40px;
+  }
+
+  .sticker {
+    --w: 84px;
+    --r: 9deg;
+    position: absolute;
+    top: -26px;
+    right: -14px;
+    pointer-events: none;
+  }
+
+  .back {
+    margin: 0 0 6px;
+    font-family: var(--hand);
+    font-size: 15px;
+  }
+
+  h1 {
+    margin: 0 0 10px;
+    font-family: var(--hand);
+    font-size: 30px;
+    font-weight: 400;
+  }
+
+  h2 {
+    margin: 26px 0 6px;
+    font-family: var(--hand);
+    font-size: 20px;
+    font-weight: 400;
+  }
+
+  p,
+  ul {
+    margin: 0 0 8px;
+  }
+
+  ul {
+    padding-left: 1.2em;
+  }
+
+  li + li {
+    margin-top: 4px;
+  }
+
+  li::marker {
+    color: var(--faint-mark);
+  }
+
+  .updated {
+    margin: -4px 0 12px;
+    font-family: var(--hand);
+    font-size: 14px;
+    color: var(--faint);
+  }
+
+  .updated .date-stamp {
+    margin-left: 4px;
+  }
+
+  .lead {
+    color: var(--pencil);
+  }
+
+  code {
+    font-family: var(--code);
+    font-size: 0.86em;
+    padding: 0 3px;
+    background: rgb(94 78 52 / 0.07);
+    border-radius: 3px;
+  }
+
+  a {
+    color: var(--link);
+    text-underline-offset: 3px;
+  }
+
+  @media (max-width: 480px) {
+    .sheet {
+      padding: 30px 18px 24px 38px;
+      background-image:
+        linear-gradient(
+          90deg,
+          transparent 22px,
+          var(--margin) 22px,
+          var(--margin) 23px,
+          transparent 23px
+        ),
+        var(--paper-doc);
+      font-size: 16px;
+      rotate: 0deg;
+    }
+
+    .sticker {
+      --w: 60px;
+      top: -20px;
+      right: -4px;
+    }
+  }
+</style>

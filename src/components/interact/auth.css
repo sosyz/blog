@@ -1,0 +1,96 @@
+/*
+ * Optional GitHub login in the forms (src/scripts/interact/auth.ts
+ * authBarHtml): 用 GitHub 登录 / 或者直接填昵称, or the avatar with
+ * 以 <login> 的身份留言 · 退出, and 已登录，不用人机验证 in place of the
+ * Turnstile status line.
+ */
+.auth-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 0;
+  font-family: var(--hand);
+  font-size: 14.5px;
+  color: var(--pencil);
+}
+.auth-bar a {
+  color: var(--link);
+  text-underline-offset: 3px;
+}
+.auth-in {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px dashed var(--faint-mark);
+  border-radius: 8px;
+  text-decoration: none;
+  transition:
+    border-color var(--dur) var(--out),
+    background-color var(--dur) var(--out);
+}
+.auth-bar .auth-in {
+  color: var(--ink);
+}
+.auth-in:hover {
+  border-color: var(--pencil);
+  background-color: rgb(94 78 52 / 0.05);
+}
+.auth-in:focus-visible,
+.auth-out:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: 2px;
+}
+.gh-mark {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+.auth-or {
+  font-size: 13.5px;
+  color: var(--faint);
+}
+/* Avatar in a hand-drawn circle, like the commenters' initials. */
+.auth-av {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  object-fit: cover;
+  border: 1.4px solid var(--pencil);
+  border-radius: 52% 46% 55% 45% / 48% 55% 45% 52%;
+  background: var(--doc);
+  rotate: -5deg;
+}
+.auth-out {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--faint);
+  cursor: pointer;
+  text-decoration: underline dotted var(--faint-mark);
+  text-underline-offset: 4px;
+}
+.auth-out:hover {
+  color: var(--stamp);
+}
+.auth-skip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-family: var(--hand);
+  font-size: 13.5px;
+  color: var(--stamp-blue);
+}
+.auth-skip::before {
+  content: "";
+  flex: none;
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  -webkit-mask:
+    url("/journal/doodle/check-rough.svg") center / contain no-repeat;
+  mask: url("/journal/doodle/check-rough.svg") center / contain no-repeat;
+}

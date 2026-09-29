@@ -1,0 +1,776 @@
+---
+/**
+ * /admin/ — the moderation inbox. Lists pending comments, inline comments
+ * and stickers (oldest first) and recently approved comments; each card
+ * links to the item's real place (`href` from adminQueue: the note page or
+ * the canvas with ?review=…), where the owner approves, rejects or replies
+ * with the in-place tools (src/scripts/interact/review-*.ts). Only 直接拒绝
+ * for obvious spam stays here. 「藏起来的自带贴纸」 lists the built-in
+ * stickers the owner threw into the trash on the canvas, each with 恢复
+ * (POST /api/builtins). Client: src/scripts/admin/inbox.ts.
+ *
+ * Rendered on demand behind Cloudflare Access (the page checks the Access JWT
+ * itself too; see src/lib/server/access.ts). Standalone document (no Base
+ * layout): it must not pull build-time-only pieces (content collection,
+ * image service, SEO image processing) into the Worker, and it is never
+ * indexed. Note titles are filled in on the client from /llms.txt.
+ */
+import "@fontsource/maple-mono/latin-400.css";
+import "@/styles/tokens.css";
+import "@/styles/base.css";
+import "@/styles/materials.css";
+import { FONT_FACES, FONT_REST_CSS } from "@/layouts/fonts.generated";
+import { builtinByKey } from "@/lib/builtin-stickers";
+import { checkAdmin } from "@/lib/server/access";
+import {
+  type AdminQueue,
+  adminQueue,
+  type QueueComment,
+  type QueueSticker,
+} from "@/lib/server/db";
+import { accessConfig, database } from "@/lib/server/env";
+import {
+  type HiddenBuiltinRow,
+  listHiddenBuiltinRows,
+} from "@/lib/server/hidden-builtins";
+import { stickerDisplayWidth } from "@/lib/server/image-header";
+
+export const prerender = false;
+
+const admin = await checkAdmin(Astro.request, accessConfig());
+let queue: AdminQueue | null = null;
+let hiddenRows: HiddenBuiltinRow[] = [];
+if (admin.ok) {
+  [queue, hiddenRows] = await Promise.all([
+    adminQueue(database()),
+    listHiddenBuiltinRows(database()),
+  ]);
+} else {
+  Astro.response.status = admin.status;
+}
+Astro.response.headers.set("cache-control", "private, no-store");
+Astro.response.headers.set("x-robots-tag", "noindex, nofollow");
+// Never framed by another site (clickjacking on 直接拒绝).
+Astro.response.headers.set("content-security-policy", "frame-ancestors 'none'");
+Astro.response.headers.set("x-frame-options", "DENY");
+
+type Pending =
+  | { kind: "comment"; at: number; comment: QueueComment }
+  | { kind: "sticker"; at: number; sticker: QueueSticker };
+
+/** One list, oldest first: the order 从第一条开始 walks through. */
+const pending: Pending[] = queue
+  ? [
+      ...queue.comments.map((comment) => ({
+        kind: "comment" as const,
+        at: comment.created_at,
+        comment,
+      })),
+      ...queue.stickers.map((sticker) => ({
+        kind: "sticker" as const,
+        at: sticker.created_at,
+        sticker,
+      })),
+    ].sort((a, b) => a.at - b.at)
+  : [];
+const first = pending[0];
+const firstHref =
+  first?.kind === "comment" ? first.comment.href : first?.sticker.href;
+const counts = queue?.counts ?? { comments: 0, stickers: 0 };
+
+const timeFormat = new Intl.DateTimeFormat("zh-CN", {
+  timeZone: "Asia/Shanghai",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+const relative = new Intl.RelativeTimeFormat("zh-CN", { numeric: "auto" });
+const MINUTE = 60_000;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+const MONTH = 30 * DAY;
+const now = Date.now();
+/** 3 分钟前 / 昨天 / 2 个月前; the exact time is in the title. */
+const ago = (ms: number) => {
+  const diff = ms - now;
+  const size = Math.abs(diff);
+  if (size < MINUTE) {
+    return "刚刚";
+  }
+  if (size < HOUR) {
+    return relative.format(Math.round(diff / MINUTE), "minute");
+  }
+  if (size < DAY) {
+    return relative.format(Math.round(diff / HOUR), "hour");
+  }
+  if (size < MONTH) {
+    return relative.format(Math.round(diff / DAY), "day");
+  }
+  return relative.format(Math.round(diff / MONTH), "month");
+};
+const exact = (ms: number) => timeFormat.format(new Date(ms));
+const iso = (ms: number) => new Date(ms).toISOString();
+
+const FINGERPRINT = 8;
+const EXCERPT = 120;
+const fingerprint = (hash: string | null) =>
+  hash ? hash.slice(0, FINGERPRINT) : "—";
+const excerpt = (text: string) =>
+  text.length > EXCERPT ? `${text.slice(0, EXCERPT)}…` : text;
+const builtins = builtinByKey();
+/** Hidden built-ins with their picture (a key the code no longer has: none). */
+const hiddenBuiltins = hiddenRows.map((row) => ({
+  ...row,
+  sticker: builtins.get(row.key) ?? null,
+}));
+/** 'admin:<email>' → 审核台, 'owner:github:<login>' → GitHub @login. */
+const hiddenByLabel = (by: string) =>
+  by.startsWith("owner:github:")
+    ? `GitHub @${by.slice("owner:github:".length)}`
+    : "审核台登录";
+const commentLabel = (comment: QueueComment) => {
+  if (comment.kind === "inline") {
+    return "划线评论";
+  }
+  return comment.parent_id ? "回复" : "评论";
+};
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    {/* CJK fonts as in Base.astro (scripts/build-fonts.ts); visitor text needs the rest chunks. */}
+    <style is:inline set:html={FONT_FACES} />
+    <link rel="stylesheet" href={FONT_REST_CSS} />
+    <title>审核台 · Sonui 的手账</title>
+  </head>
+  <body class="admin desk-paper" data-owner={admin.ok ? "" : undefined}>
+    <main class="sheet doc-paper">
+      <img
+        class="tape"
+        src="/journal/tape/washi-grid-ivory.webp"
+        alt=""
+        style="--tr: -2deg; --tape-w: 130px"
+      />
+      <header class="head">
+        <h1>审核台</h1>
+        {admin.ok && (
+          <p class="who">
+            {admin.bypass ? "本地开发（已跳过 Access 验证）" : admin.email}
+          </p>
+        )}
+      </header>
+
+      {!admin.ok && <p class="denied">{admin.message}</p>}
+
+      {queue && (
+        <>
+          <div class="summary">
+            <p class="counts">
+              待审评论 <b data-count="comment">{counts.comments}</b> · 待审贴纸{" "}
+              <b data-count="sticker">{counts.stickers}</b>
+            </p>
+            {firstHref && (
+              <a class="start" href={firstHref} data-start>
+                从第一条开始 <span aria-hidden="true">→</span>
+              </a>
+            )}
+            <p class="all-done" data-all-done hidden={pending.length > 0}>
+              都审完了 ✓
+            </p>
+            <p class="hint">
+              点卡片去笔记页或画布上审核，在那里通过、拒绝、回复，然后「下一条」。
+            </p>
+          </div>
+
+          <nav class="jump" aria-label="审核台分区">
+            <a href="#pending">待审 {pending.length}</a>
+            <a href="#recent">最近通过 {queue.recent.length}</a>
+            <a href="#builtins">
+              藏起来的自带贴纸{" "}
+              <span data-builtin-count>{hiddenBuiltins.length}</span>
+            </a>
+          </nav>
+
+          <section id="pending" aria-labelledby="h-pending">
+            <h2 id="h-pending">待审</h2>
+            <ol class="cards">
+              {pending.map((item) =>
+                item.kind === "comment" ? (
+                  <li
+                    class="card slip"
+                    data-card
+                    data-pending
+                    data-kind="comment"
+                    data-type="comment"
+                    data-id={item.comment.id}
+                  >
+                    <p class="meta">
+                      <span class="type">{commentLabel(item.comment)}</span>
+                      <span class="note" data-note-title={item.comment.slug}>
+                        {item.comment.slug}
+                      </span>
+                    </p>
+                    {item.comment.anchor_exact && (
+                      <p class="quote">「{item.comment.anchor_exact}」</p>
+                    )}
+                    <p class="body">{excerpt(item.comment.body)}</p>
+                    <p class="by">
+                      <b>{item.comment.name}</b>
+                      {item.comment.user_login && (
+                        <span>GitHub @{item.comment.user_login}</span>
+                      )}
+                      <span class="fp">
+                        IP {fingerprint(item.comment.ip_hash)}
+                        {item.comment.email_hash && (
+                          <> · 邮箱 {fingerprint(item.comment.email_hash)}</>
+                        )}
+                      </span>
+                      <time
+                        datetime={iso(item.comment.created_at)}
+                        title={exact(item.comment.created_at)}
+                      >
+                        {ago(item.comment.created_at)}
+                      </time>
+                    </p>
+                    <p class="foot">
+                      <a class="go" href={item.comment.href} data-go>
+                        去现场审核
+                        <span class="sr-only">
+                          ：{item.comment.name}的{commentLabel(item.comment)}
+                        </span>
+                        <span aria-hidden="true"> →</span>
+                      </a>
+                      <button type="button" class="quick" data-reject>
+                        直接拒绝
+                      </button>
+                      <span class="status" role="status" data-status />
+                    </p>
+                  </li>
+                ) : (
+                  <li
+                    class="card slip is-sticker"
+                    data-card
+                    data-pending
+                    data-kind="sticker"
+                    data-type="sticker"
+                    data-id={item.sticker.id}
+                  >
+                    <img
+                      class="thumb"
+                      src={item.sticker.src}
+                      alt={`${item.sticker.name ?? "未署名访客"}贴的贴纸`}
+                      width={Math.min(
+                        stickerDisplayWidth(
+                          item.sticker.width,
+                          item.sticker.scale,
+                        ),
+                        120,
+                      )}
+                      loading="lazy"
+                      decoding="async"
+                      style={`rotate: ${item.sticker.rotation}deg`}
+                    />
+                    <div class="text">
+                      <p class="meta">
+                        <span class="type">贴纸</span>
+                        <span class="note">画布</span>
+                      </p>
+                      <p class="by">
+                        <b>{item.sticker.name ?? "未署名"}</b>
+                        {item.sticker.user_login && (
+                          <span>GitHub @{item.sticker.user_login}</span>
+                        )}
+                        <span class="fp">
+                          IP {fingerprint(item.sticker.ip_hash)} ·{" "}
+                          {item.sticker.width}×{item.sticker.height} ·{" "}
+                          {Math.round(item.sticker.bytes / 1024)} KB
+                          {item.sticker.moves > 0 && (
+                            <> · 挪过 {item.sticker.moves} 次</>
+                          )}
+                        </span>
+                        <time
+                          datetime={iso(item.sticker.created_at)}
+                          title={exact(item.sticker.created_at)}
+                        >
+                          {ago(item.sticker.created_at)}
+                        </time>
+                      </p>
+                      <p class="foot">
+                        <a class="go" href={item.sticker.href} data-go>
+                          去现场审核
+                          <span class="sr-only">
+                            ：{item.sticker.name ?? "未署名访客"}的贴纸
+                          </span>
+                          <span aria-hidden="true"> →</span>
+                        </a>
+                        <button type="button" class="quick" data-reject>
+                          直接拒绝
+                        </button>
+                        <span class="status" role="status" data-status />
+                      </p>
+                    </div>
+                  </li>
+                ),
+              )}
+            </ol>
+            {(counts.comments > queue.comments.length ||
+              counts.stickers > queue.stickers.length) && (
+              <p class="none">只列出最早的一批，审完再刷新。</p>
+            )}
+          </section>
+
+          <section id="recent" aria-labelledby="h-recent">
+            <h2 id="h-recent">
+              最近通过 <small>在现场撤下或改回复</small>
+            </h2>
+            {queue.recent.length === 0 && (
+              <p class="none">还没有通过的评论。</p>
+            )}
+            <ol class="cards">
+              {queue.recent.map((comment) => (
+                <li class="card slip is-done" data-card>
+                  <p class="meta">
+                    <span class="type">{commentLabel(comment)}</span>
+                    <span class="note" data-note-title={comment.slug}>
+                      {comment.slug}
+                    </span>
+                    {comment.owner_reply && <span class="replied">已回复</span>}
+                  </p>
+                  {comment.anchor_exact && (
+                    <p class="quote">「{comment.anchor_exact}」</p>
+                  )}
+                  <p class="body">{excerpt(comment.body)}</p>
+                  <p class="by">
+                    <b>{comment.name}</b>
+                    {comment.user_login && (
+                      <span>GitHub @{comment.user_login}</span>
+                    )}
+                    <span class="fp">IP {fingerprint(comment.ip_hash)}</span>
+                    <time
+                      datetime={iso(comment.created_at)}
+                      title={exact(comment.created_at)}
+                    >
+                      {ago(comment.created_at)}
+                    </time>
+                  </p>
+                  <p class="foot">
+                    <a class="go" href={comment.href}>
+                      去现场处理
+                      <span class="sr-only">
+                        ：{comment.name}的{commentLabel(comment)}
+                      </span>
+                      <span aria-hidden="true"> →</span>
+                    </a>
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </section>
+
+          <section id="builtins" aria-labelledby="h-builtins">
+            <h2 id="h-builtins">
+              藏起来的自带贴纸{" "}
+              <small>在画布上把自带贴纸扔进垃圾桶就会到这里</small>
+            </h2>
+            <p
+              class="none"
+              data-builtins-empty
+              hidden={hiddenBuiltins.length > 0}
+            >
+              没有藏起来的自带贴纸，画布上的都在。
+            </p>
+            <ol class="cards builtins" data-builtins>
+              {hiddenBuiltins.map((item) => (
+                <li class="card slip is-builtin" data-builtin={item.key}>
+                  {item.sticker ? (
+                    <img
+                      class="thumb"
+                      src={item.sticker.src}
+                      alt={item.sticker.label}
+                      width="72"
+                      height="72"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  ) : (
+                    <span class="thumb missing" aria-hidden="true">
+                      ?
+                    </span>
+                  )}
+                  <div class="text">
+                    <p class="meta">
+                      <span class="type">自带贴纸</span>
+                      <span class="note">
+                        {item.sticker?.label ?? "代码里已经没有这张"}
+                      </span>
+                      {item.sticker && <span>{item.sticker.place}</span>}
+                    </p>
+                    <p class="by">
+                      <span class="fp">{item.key}</span>
+                      <span>{hiddenByLabel(item.hidden_by)}</span>
+                      <time
+                        datetime={iso(item.hidden_at)}
+                        title={exact(item.hidden_at)}
+                      >
+                        {ago(item.hidden_at)}扔掉
+                      </time>
+                    </p>
+                    <p class="foot">
+                      <button
+                        type="button"
+                        class="quick restore"
+                        data-restore={item.key}
+                      >
+                        恢复
+                        <span class="sr-only">
+                          ：{item.sticker?.label ?? item.key}
+                        </span>
+                      </button>
+                      <span class="status" role="status" data-status />
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </section>
+        </>
+      )}
+    </main>
+
+    <script>
+      import "@/scripts/admin/inbox";
+    </script>
+    <style>
+      .admin {
+        min-height: 100dvh;
+        padding: 40px 16px;
+        color: var(--ink);
+      }
+      .sheet {
+        position: relative;
+        max-width: 820px;
+        margin: 0 auto;
+        padding: 28px 28px 36px 44px;
+        border: 1px solid var(--edge);
+        box-shadow: var(--shadow-drawer);
+      }
+      .sheet::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 26px;
+        width: 1px;
+        background: var(--margin);
+      }
+      .sheet > .tape {
+        top: -12px;
+        left: 50%;
+        margin-left: -65px;
+      }
+      .head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 6px 16px;
+      }
+      h1 {
+        margin: 0;
+        font-family: var(--hand);
+        font-size: 34px;
+        font-weight: 400;
+      }
+      .who {
+        margin: 0;
+        font-family: var(--hand);
+        color: var(--pencil);
+      }
+      .denied {
+        font-family: var(--hand);
+        font-size: 18px;
+        color: var(--stamp);
+      }
+      .summary {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px 24px;
+        margin: 18px 0 0;
+      }
+      .counts {
+        margin: 0;
+        font-family: var(--hand);
+        font-size: 19px;
+        color: var(--pencil);
+      }
+      .counts b {
+        font-weight: 400;
+        font-size: 24px;
+        color: var(--ink);
+      }
+      .start {
+        display: inline-block;
+        padding: 8px 20px;
+        border: 2px solid var(--stamp-blue);
+        border-radius: 4px;
+        background: var(--sticky);
+        box-shadow: var(--shadow-slip);
+        font-family: var(--hand);
+        font-size: 20px;
+        letter-spacing: 0.08em;
+        color: var(--stamp-blue);
+        text-decoration: none;
+        rotate: -1.5deg;
+        transition:
+          rotate var(--dur) var(--out),
+          translate var(--dur-fast) var(--out);
+      }
+      .start:hover {
+        rotate: 0deg;
+      }
+      .start:active {
+        translate: 0 1px;
+      }
+      .all-done {
+        margin: 0;
+        font-family: var(--hand);
+        font-size: 22px;
+        color: var(--stamp-blue);
+      }
+      .hint {
+        flex-basis: 100%;
+        margin: 0;
+        font-family: var(--hand);
+        font-size: 14px;
+        color: var(--faint);
+      }
+      .jump {
+        display: flex;
+        gap: 18px;
+        margin: 22px 0 0;
+        padding-bottom: 6px;
+        border-bottom: 1px dashed var(--edge);
+        font-family: var(--hand);
+        font-size: 16px;
+      }
+      .jump a {
+        color: var(--link);
+      }
+      h2 {
+        margin: 26px 0 12px;
+        font-family: var(--hand);
+        font-size: 22px;
+        font-weight: 400;
+        scroll-margin-top: 16px;
+      }
+      section {
+        scroll-margin-top: 16px;
+      }
+      h2 small {
+        margin-left: 6px;
+        font-size: 14px;
+        color: var(--faint);
+      }
+      .none {
+        font-family: var(--hand);
+        color: var(--faint);
+      }
+      .cards {
+        display: grid;
+        gap: 14px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      /* The whole card opens the item's real place (stretched .go link);
+         直接拒绝 sits above that layer. */
+      .card {
+        position: relative;
+        padding: 14px 16px 12px;
+        background: var(--slip);
+        box-shadow: var(--shadow-slip);
+        transition:
+          opacity var(--dur-slow) var(--out),
+          translate var(--dur-fast) var(--out),
+          box-shadow var(--dur-fast) var(--out);
+      }
+      .card:has(.go:hover) {
+        translate: 0 -1px;
+        box-shadow: var(--shadow-float);
+      }
+      .card.is-done {
+        background: var(--doc);
+      }
+      .card.is-decided {
+        opacity: 0.45;
+      }
+      .card.is-sticker {
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+      }
+      .thumb {
+        flex: none;
+        max-width: 120px;
+        height: auto;
+        margin: 2px 0;
+        filter: drop-shadow(0 4px 5px rgb(60 40 10 / 0.2));
+      }
+      .text {
+        flex: 1;
+        min-width: 0;
+      }
+      .card.is-builtin {
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+      }
+      .card.is-builtin .thumb {
+        width: 72px;
+        max-width: 72px;
+      }
+      .thumb.missing {
+        display: grid;
+        place-items: center;
+        width: 72px;
+        height: 72px;
+        border: 1px dashed var(--faint-mark);
+        border-radius: 4px;
+        font-family: var(--hand);
+        font-size: 24px;
+        color: var(--faint);
+        filter: none;
+      }
+      .card.is-builtin .quick {
+        margin-left: 0;
+      }
+      .quick.restore:hover {
+        border-color: var(--stamp-blue);
+        color: var(--stamp-blue);
+      }
+      .meta,
+      .by {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 2px 12px;
+        margin: 0 0 6px;
+        font-family: var(--hand);
+        font-size: 15px;
+        color: var(--pencil);
+      }
+      .type {
+        padding: 0 6px;
+        border: 1px solid var(--faint-mark);
+        border-radius: 3px;
+        font-size: 13px;
+      }
+      .note {
+        font-size: 17px;
+        color: var(--ink);
+        overflow-wrap: anywhere;
+      }
+      .replied {
+        font-size: 13px;
+        color: var(--stamp-blue);
+      }
+      .by {
+        margin: 6px 0 0;
+      }
+      .by b {
+        font-weight: 400;
+        color: var(--ink);
+      }
+      .fp {
+        font-family: var(--code);
+        font-feature-settings: "calt" 0;
+        font-size: 11px;
+        color: var(--faint);
+      }
+      .quote {
+        margin: 0 0 6px;
+        padding-left: 10px;
+        border-left: 2px solid var(--faint-mark);
+        font-family: var(--body);
+        font-size: 14px;
+        color: var(--pencil);
+      }
+      .body {
+        margin: 0;
+        font-family: var(--body);
+        font-size: 16px;
+        line-height: 1.7;
+        white-space: pre-line;
+        overflow-wrap: anywhere;
+      }
+      .foot {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 14px;
+        margin: 10px 0 0;
+        font-family: var(--hand);
+      }
+      .go {
+        font-size: 16px;
+        color: var(--link);
+        text-decoration: none;
+      }
+      .go::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+      }
+      .go:hover {
+        text-decoration: underline;
+      }
+      .quick {
+        position: relative;
+        z-index: 1;
+        margin-left: auto;
+        padding: 1px 10px;
+        border: 1px dashed var(--faint-mark);
+        border-radius: 4px;
+        background: var(--slip);
+        font-family: var(--hand);
+        font-size: 14px;
+        color: var(--pencil);
+        cursor: pointer;
+      }
+      .quick:hover,
+      .quick[data-armed] {
+        border-style: solid;
+        border-color: var(--stamp);
+        color: var(--stamp);
+      }
+      .quick:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      .status {
+        position: relative;
+        z-index: 1;
+        font-size: 14px;
+        color: var(--pencil);
+      }
+      @media (max-width: 640px) {
+        .sheet {
+          padding: 24px 16px 28px 34px;
+        }
+        .sheet::before {
+          left: 18px;
+        }
+        .thumb {
+          max-width: 80px;
+        }
+      }
+    </style>
+  </body>
+</html>
