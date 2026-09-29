@@ -1,0 +1,11 @@
+# Comments only: keep every rule out of this file.
+#
+# Cloudflare treats every rule after the first splat (`*`) or `:placeholder`
+# as dynamic, and dynamic rules are capped at 100 (static: 2000). The adapter
+# appends the static redirects from src/lib/seo/redirects.ts below this file,
+# so a splat here would demote all of them and the rest would be dropped.
+#
+# The old Hexo /tags/*, /categories/* and /archives/* rules live in
+# src/lib/seo/redirect-rules.ts and are appended at the very end by
+# src/integrations/legacy-list-redirects.ts. tests/redirect-rules.test.ts
+# checks the merged file.

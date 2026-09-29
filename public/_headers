@@ -1,0 +1,87 @@
+# Headers for Workers static assets, including 404.html (Worker-rendered
+# /api/* and /admin/ get theirs from src/middleware.ts). Merged by
+# @astrojs/cloudflare with its own `/_astro/*` Cache-Control rule. Cloudflare
+# applies every matching rule and joins the values of a header set by two of
+# them, so each header name is set by one rule only for any path.
+# At most 100 rules.
+
+# Security headers for every file. Same values as SECURITY_HEADERS in
+# src/lib/server/http.ts (tests/security-headers.test.ts checks). The
+# enforced CSP only forbids framing, <base> and plugins; the full policy is
+# Report-Only (browser console, no report endpoint) until it has run clean.
+# Zone features that inject scripts (Web Analytics, Bot Fight Mode) will show
+# up there as violations. Never put Cache-Control here: it would also stop
+# the adapter from adding its `/_astro/*` immutable rule.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()
+  X-Frame-Options: DENY
+  Cross-Origin-Opener-Policy: same-origin
+  Content-Security-Policy: frame-ancestors 'none'; base-uri 'self'; object-src 'none'
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://avatars.githubusercontent.com; font-src 'self'; connect-src 'self'; worker-src 'self' blob:; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+
+# /notes/<slug>.md is a plain-text copy of the note page: point search
+# engines at the page. `:slug` in the value is replaced by the matched name.
+/notes/:slug.md
+  Link: <https://blog.sonui.cn/notes/:slug/>; rel="canonical"
+
+# Every note in one file for AI tools; the notes themselves are indexed.
+/llms-full.txt
+  X-Robots-Tag: noindex
+
+# Pages and text endpoints. Browsers revalidate every time (max-age=0);
+# shared caches (EdgeOne in front, docs/deploy.md 「EdgeOne」) keep them 10
+# minutes, so a deploy shows up there within 10 minutes unless the EdgeOne
+# cache is purged. Only these paths: assets keep their own longer rules.
+/
+  Cache-Control: public, max-age=0, must-revalidate, s-maxage=600
+
+/list/
+  Cache-Control: public, max-age=0, must-revalidate, s-maxage=600
+
+/notes/*
+  Cache-Control: public, max-age=0, must-revalidate, s-maxage=600
+
+/privacy/
+  Cache-Control: public, max-age=0, must-revalidate, s-maxage=600
+
+/rss.xml
+  Cache-Control: public, max-age=0, must-revalidate, s-maxage=600
+
+/llms.txt
+  Cache-Control: public, max-age=0, must-revalidate, s-maxage=600
+
+/llms-full.txt
+  Cache-Control: public, max-age=0, must-revalidate, s-maxage=600
+
+/robots.txt
+  Cache-Control: public, max-age=0, must-revalidate, s-maxage=600
+
+/sitemap-*
+  Cache-Control: public, max-age=0, must-revalidate, s-maxage=600
+
+# Font chunks from cn-font-split: the file name is a content hash.
+/fonts/*.woff2
+  Cache-Control: public, max-age=31536000, immutable
+
+# The second-layer font CSS (rest.<hash>.css, scripts/build-fonts.ts) is
+# named after its content, like the chunks.
+/fonts/*.css
+  Cache-Control: public, max-age=31536000, immutable
+
+# Paper textures, tapes, doodles and stickers: rarely change.
+/journal/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
+
+/stickers/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
+
+# Sticker workshop cutout, fetched only when a visitor turns 自动抠图 on.
+# ONNX Runtime Web sits in a folder named after its version: never changes.
+/ort/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# The U-2-Netp model (fixed upstream revision, see its SOURCE.md).
+/models/*
+  Cache-Control: public, max-age=2592000, stale-while-revalidate=86400
