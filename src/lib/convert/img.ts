@@ -130,6 +130,12 @@ async function ensureFfmpegAvailable(): Promise<void> {
   }
 }
 
+/** 读取子进程输出；未开启 pipe 时返回空字符串。 */
+const readStream = (stream: unknown) =>
+  stream instanceof ReadableStream
+    ? new Response(stream).text()
+    : Promise.resolve("");
+
 /**
  * 异步转换函数（推荐）
  */
@@ -164,10 +170,10 @@ export async function convertImage(
     stderr: options.captureOutput ? "pipe" : "pipe",
   });
 
-  const [{ exitCode }, stdoutStr, stderrStr] = await Promise.all([
+  const [exitCode, stdoutStr, stderrStr] = await Promise.all([
     proc.exited,
-    options.captureOutput ? proc.stdout?.text() : Promise.resolve(""),
-    proc.stderr?.text(),
+    readStream(options.captureOutput ? proc.stdout : undefined),
+    readStream(proc.stderr),
   ]);
 
   const success = exitCode === 0;

@@ -1,7 +1,12 @@
 ---
 title: "通过 Cloudflare AI Gateway 使用 LLM"
-description: "详细介绍如何通过 Cloudflare AI Gateway 使用 LLM，包括资源准备、配置方法和使用示例，帮助开发者快速集成 Cloudflare 的 AI 服务。" 
-pubDate: "Oct 08 2025"
+description: "详细介绍如何通过 Cloudflare AI Gateway 使用 LLM，包括资源准备、配置方法和使用示例，帮助开发者快速集成 Cloudflare 的 AI 服务。"
+type: 踩坑
+topic: AI
+tags: [AI, LLM, Cloudflare]
+status: 已解决
+pubDate: "2025-10-08"
+heroImage: "../assets/covers/cloudflare-ai-gateway-llama.png"
 ---
 
 ## 资源准备
@@ -13,7 +18,7 @@ pubDate: "Oct 08 2025"
 
 ## 使用方式
 
-这里搭配 Vercel AI SDK 的 [OpenAI Compatible](https://vercel.com/docs/ai-sdk/openai-compatible) 和 [generateText](https://vercel.com/docs/ai-sdk#generating-text) 使用。
+这里搭配 Vercel AI SDK 的 [OpenAI Compatible](https://ai-sdk.dev/providers/openai-compatible-providers) 和 [generateText](https://vercel.com/docs/ai-sdk#generating-text) 使用。
 
 安装依赖。
 
