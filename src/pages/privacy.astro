@@ -5,6 +5,7 @@
  * A static page on a sheet of journal paper. Keep it in step with
  * docs/architecture.md (tables, cookies, localStorage keys) when those change.
  */
+import SiteFooter from "@/components/site/SiteFooter.astro";
 import Base from "@/layouts/Base.astro";
 import { stickerSrc, tapeSrc } from "@/scripts/canvas/seed";
 
@@ -198,6 +199,7 @@ const STICKER_WIDTH = 84;
         </a>
         说一声。登录过的账号也可以要求删掉账号记录和所有会话。
       </p>
+      <SiteFooter class="privacy-foot" />
     </article>
   </main>
 </Base>
@@ -293,6 +295,11 @@ const STICKER_WIDTH = 84;
     color: var(--faint);
   }
 
+  .sheet :global(.privacy-foot) {
+    margin: 28px 0 0;
+    padding-top: 10px;
+    border-top: 1px dashed var(--edge);
+  }
   .updated .date-stamp {
     margin-left: 4px;
   }

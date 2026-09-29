@@ -1,0 +1,189 @@
+---
+/**
+ * The copyright slip at the end of every note (in the drawer, after the
+ * article and before 相关 / 同一主题): author, canonical link with a copy
+ * button, dates, licence and the reprint rule, on a small slip of paper
+ * with a 版权 stamp.
+ *
+ * Kept outside `[data-post-body]`, so inline comments never anchor to it.
+ * The copy button is handled by src/scripts/copy.ts (one document
+ * listener); 已复制 is announced through the `role="status"` span.
+ */
+import { dotDate, lastUpdated, type Post } from "@/lib/posts";
+import { COPYRIGHT_HOLDER, LICENSE, REPRINT_NOTICE } from "@/lib/seo/copyright";
+import { noteUrl } from "@/lib/seo/site";
+
+type Props = {
+  entry: Post;
+};
+
+const { entry } = Astro.props;
+const url = noteUrl(entry.id);
+const published = entry.data.pubDate;
+const updated = lastUpdated(entry);
+const showUpdated = dotDate(updated) !== dotDate(published);
+---
+
+<aside class="cslip" aria-labelledby="note-copyright">
+  <span class="stamp is-mini cslip-stamp" aria-hidden="true">
+    版权
+  </span>
+  <h2 class="sr-only" id="note-copyright">
+    版权说明
+  </h2>
+  <dl>
+    <div>
+      <dt>作者</dt>
+      <dd>
+        <a href="/">{COPYRIGHT_HOLDER}</a>
+      </dd>
+    </div>
+    <div>
+      <dt>原文链接</dt>
+      <dd class="cslip-url">
+        <a href={url}>{url}</a>
+        <button
+          type="button"
+          class="cslip-copy"
+          aria-label="复制原文链接"
+          data-copy={url}
+          data-copy-status="note-copy-status"
+        >
+          复制
+        </button>
+        <span class="cslip-said" id="note-copy-status" role="status"></span>
+      </dd>
+    </div>
+    <div>
+      <dt>发布于</dt>
+      <dd>
+        <time datetime={published.toISOString()}>{dotDate(published)}</time>
+        {showUpdated && (
+          <>
+            <span class="cslip-sep">更新于</span>
+            <time datetime={updated.toISOString()}>{dotDate(updated)}</time>
+          </>
+        )}
+      </dd>
+    </div>
+    <div>
+      <dt>协议</dt>
+      <dd>
+        <a href={LICENSE.deed} rel="license noopener" target="_blank">
+          {LICENSE.name}
+        </a>
+      </dd>
+    </div>
+  </dl>
+  <p class="cslip-note">{REPRINT_NOTICE}。</p>
+</aside>
+
+<script>
+  import "@/scripts/copy";
+</script>
+
+<style>
+  .cslip {
+    position: relative;
+    clear: both;
+    margin: 30px 0 0;
+    padding: 12px 16px 12px 14px;
+    background: var(--slip);
+    border: 1px dashed var(--edge);
+    box-shadow: var(--shadow-slip);
+    font-family: var(--hand);
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--pencil);
+    rotate: -0.4deg;
+  }
+
+  .cslip-stamp {
+    position: absolute;
+    top: -12px;
+    right: 12px;
+    background: var(--slip);
+    pointer-events: none;
+  }
+
+  dl {
+    display: grid;
+    gap: 2px;
+    margin: 0;
+    padding-right: 44px;
+  }
+
+  dl > div {
+    display: grid;
+    grid-template-columns: 4.5em minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  dt {
+    color: var(--faint);
+  }
+
+  dd {
+    margin: 0;
+    min-width: 0;
+    color: var(--ink);
+  }
+
+  a {
+    color: var(--link);
+    text-underline-offset: 3px;
+  }
+
+  .cslip-url a {
+    font-family: var(--code);
+    font-feature-settings: "calt" 0;
+    font-size: 12.5px;
+    overflow-wrap: anywhere;
+  }
+
+  .cslip-copy {
+    margin-left: 6px;
+    padding: 0 8px;
+    border: 1px solid var(--field-line);
+    border-radius: 4px;
+    background: transparent;
+    font: inherit;
+    font-size: 13px;
+    color: var(--pencil);
+    cursor: pointer;
+    transition:
+      color var(--dur-fast) var(--out),
+      border-color var(--dur-fast) var(--out);
+  }
+
+  .cslip-copy:hover {
+    color: var(--ink);
+    border-color: var(--pencil);
+  }
+
+  .cslip-said {
+    margin-left: 6px;
+    font-size: 13px;
+    color: var(--link);
+  }
+
+  .cslip-sep {
+    margin: 0 6px 0 10px;
+    color: var(--faint);
+  }
+
+  time {
+    font-family: var(--code);
+    font-feature-settings: "calt" 0;
+    font-size: 12.5px;
+    letter-spacing: 0.04em;
+  }
+
+  .cslip-note {
+    margin: 6px 0 0;
+    padding-top: 6px;
+    border-top: 1px dashed var(--edge);
+    font-size: 13.5px;
+    color: var(--pencil);
+  }
+</style>

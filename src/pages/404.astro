@@ -4,6 +4,7 @@
  *
  * Owner: SEO agent.
  */
+import SiteFooter from "@/components/site/SiteFooter.astro";
 import Base from "@/layouts/Base.astro";
 ---
 
@@ -27,10 +28,11 @@ import Base from "@/layouts/Base.astro";
         <li>
           <a href="/list/">看全部笔记</a>
         </li>
+        <li>
+          <a href="/links/">友链</a>
+        </li>
       </ul>
-      <p class="fine">
-        <a href="/privacy/">隐私说明</a>
-      </p>
+      <SiteFooter class="fine" />
     </div>
     <img
       class="sticker cloud"
@@ -97,14 +99,8 @@ import Base from "@/layouts/Base.astro";
     font-size: 19px;
   }
 
-  .fine {
-    margin-top: 14px;
-    font-size: 14px;
-  }
-
-  .fine a {
-    color: var(--faint);
-    text-underline-offset: 4px;
+  .note :global(.fine) {
+    margin: 16px 0 0;
   }
 
   .ways a {

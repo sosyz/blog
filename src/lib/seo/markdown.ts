@@ -1,14 +1,21 @@
 /**
  * Plain Markdown versions of notes, for /notes/<slug>.md and /llms-full.txt.
  *
- * The body is the post's Markdown without front matter. A short header gives
- * the title, dates, topic, tags and the canonical URL. Relative image paths
+ * The body is the post's Markdown without its source front matter. A short
+ * header gives the title, dates, topic, tags, the canonical URL and the
+ * licence. /notes/<slug>.md also starts with YAML front matter (title, url,
+ * dates, `license`); /llms-full.txt leaves it out. Relative image paths
  * (../assets/posts/…) are replaced with absolute URLs of the built files.
  *
  * Owner: SEO agent. Build-time only.
  */
 import type { ImageMetadata } from "astro";
 import { isoDate, lastUpdated, type Post } from "@/lib/posts";
+import {
+  COPYRIGHT_HOLDER,
+  LICENSE,
+  noteFrontMatter,
+} from "@/lib/seo/copyright";
 import { absoluteUrl, noteUrl } from "@/lib/seo/site";
 
 /** Every image under src/assets, keyed by "/src/assets/…". */
@@ -32,20 +39,38 @@ const metaLines = (post: Post) => {
   const updated = isoDate(lastUpdated(post));
   const kind = data.status ? `${data.type}（${data.status}）` : data.type;
   return [
-    "- 作者：Sonui",
+    `- 作者：${COPYRIGHT_HOLDER}`,
     `- 发布：${published}${updated === published ? "" : `（更新：${updated}）`}`,
     `- 类型：${kind}`,
     `- 主题：${data.topic}`,
     ...(data.tags.length > 0 ? [`- 标签：${data.tags.join("、")}`] : []),
     ...(data.source ? [`- 原文：${data.source}`] : []),
     `- 链接：${noteUrl(post.id)}`,
+    `- 协议：${LICENSE.name}（${LICENSE.url}），转载请署名并注明原文链接`,
   ];
 };
 
-/** The note as Markdown, with a small header. */
-export const noteMarkdown = (post: Post) => {
+const frontMatter = (post: Post) =>
+  noteFrontMatter({
+    title: post.data.title,
+    description: post.data.description,
+    url: noteUrl(post.id),
+    published: isoDate(post.data.pubDate),
+    updated: isoDate(lastUpdated(post)),
+    basedOn: post.data.source,
+  });
+
+/**
+ * The note as Markdown, with a small header; `frontMatter: true` (the .md
+ * route) puts YAML front matter before it.
+ */
+export const noteMarkdown = (
+  post: Post,
+  options: { frontMatter?: boolean } = {}
+) => {
   const body = resolveAssetUrls(post.body ?? "").trim();
   return [
+    ...(options.frontMatter ? [frontMatter(post), ""] : []),
     `# ${post.data.title}`,
     "",
     `> ${post.data.description}`,

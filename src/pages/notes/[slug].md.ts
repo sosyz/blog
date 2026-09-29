@@ -1,6 +1,7 @@
 /**
  * /notes/<slug>.md: the note as plain Markdown (for AI tools and plain-text
- * reading). Linked from each note's <head> as rel="alternate".
+ * reading), with YAML front matter (url, dates, license). Linked from each
+ * note's <head> as rel="alternate".
  *
  * Owner: SEO agent.
  */
@@ -16,6 +17,6 @@ export const getStaticPaths = (async () => {
 type Props = { post: Post };
 
 export const GET: APIRoute<Props> = ({ props }) =>
-  new Response(noteMarkdown(props.post), {
+  new Response(noteMarkdown(props.post, { frontMatter: true }), {
     headers: { "Content-Type": "text/markdown; charset=utf-8" },
   });

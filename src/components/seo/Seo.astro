@@ -6,8 +6,9 @@
  *
  * - On "/" it adds WebSite + Person JSON-LD.
  * - When `canonical` is a note (/notes/<slug>/) it looks the post up and adds
- *   BlogPosting + BreadcrumbList JSON-LD and a link to the Markdown version,
- *   so note pages only need to pass the usual props.
+ *   BlogPosting (with licence and copyright) + BreadcrumbList JSON-LD, a
+ *   link to the Markdown version and <link rel="license">, so note pages
+ *   only need to pass the usual props.
  * - `image` (a post's heroImage) is cropped to 1200×630 JPEG at build time
  *   (a smaller one keeps its own size);
  *   without it the default share image public/og-default.png is used. Do not
@@ -17,6 +18,7 @@
  */
 import type { ImageMetadata } from "astro";
 import { getImage } from "astro:assets";
+import { LICENSE, licenseFields } from "@/lib/seo/copyright";
 import {
   AUTHOR,
   absoluteUrl,
@@ -150,6 +152,7 @@ if (post && posts) {
       articleSection: data.topic,
       inLanguage: SITE_LANGUAGE,
       encodingFormat: "text/html",
+      ...licenseFields(data.pubDate),
       ...(data.source ? { isBasedOn: data.source } : {}),
     },
     {
@@ -210,6 +213,7 @@ const robots = noindex
     href={noteMarkdownUrl(noteSlug)}
   />
 )}
+{noteSlug && <link rel="license" href={LICENSE.url} />}
 
 <meta property="og:site_name" content={SITE_NAME} />
 <meta property="og:locale" content={OG_LOCALE} />

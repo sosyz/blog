@@ -1,15 +1,24 @@
 /**
- * /rss.xml: every note with its full rendered HTML, newest first.
+ * /rss.xml: every note with its full rendered HTML, newest first. The
+ * channel carries <copyright> (© first year–build year, CC BY-NC-SA 4.0);
+ * each item a <dc:rights> line and a short copyright footer in its HTML.
  *
  * Owner: SEO agent.
  */
 import rss from "@astrojs/rss";
 import type { APIRoute } from "astro";
 import { getPosts, lastUpdated, notePath } from "@/lib/posts";
+import {
+  copyrightYears,
+  feedCopyright,
+  feedItemFooter,
+  noteRights,
+} from "@/lib/seo/copyright";
 import { renderPostHtml } from "@/lib/seo/render";
 import {
   AUTHOR,
   absoluteUrl,
+  noteUrl,
   SITE_DESCRIPTION,
   SITE_LANGUAGE,
   SITE_NAME,
@@ -28,6 +37,10 @@ export const GET: APIRoute = async () => {
   const lastBuild = Math.max(
     ...posts.map((post) => lastUpdated(post).valueOf())
   );
+  const years = copyrightYears(
+    posts.map((post) => post.data.pubDate),
+    new Date()
+  );
   const items = await Promise.all(
     posts.map(async (post) => ({
       title: post.data.title,
@@ -35,8 +48,11 @@ export const GET: APIRoute = async () => {
       pubDate: post.data.pubDate,
       link: notePath(post.id),
       categories: [...new Set([post.data.topic, ...post.data.tags])],
-      content: await renderPostHtml(post),
-      customData: `<dc:creator>${escapeXml(AUTHOR.name)}</dc:creator>`,
+      content: `${await renderPostHtml(post)}${feedItemFooter(noteUrl(post.id))}`,
+      customData: [
+        `<dc:creator>${escapeXml(AUTHOR.name)}</dc:creator>`,
+        `<dc:rights>${escapeXml(noteRights(post.data.pubDate))}</dc:rights>`,
+      ].join(""),
     }))
   );
 
@@ -50,6 +66,7 @@ export const GET: APIRoute = async () => {
     },
     customData: [
       `<language>${SITE_LANGUAGE}</language>`,
+      `<copyright>${escapeXml(feedCopyright(years))}</copyright>`,
       `<atom:link href="${absoluteUrl("/rss.xml")}" rel="self" type="application/rss+xml"/>`,
       `<lastBuildDate>${new Date(lastBuild).toUTCString()}</lastBuildDate>`,
     ].join(""),

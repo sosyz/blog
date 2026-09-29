@@ -6,6 +6,7 @@
  */
 import type { APIRoute } from "astro";
 import { getPosts } from "@/lib/posts";
+import { llmsLicenseLine } from "@/lib/seo/copyright";
 import { noteMarkdown } from "@/lib/seo/markdown";
 import { absoluteUrl, SITE_DESCRIPTION, SITE_NAME } from "@/lib/seo/site";
 
@@ -36,6 +37,8 @@ export const GET: APIRoute = async () => {
     `> ${SITE_DESCRIPTION}`,
     "",
     `本文件收录全部 ${posts.length} 篇笔记的 Markdown 原文，按发布时间从新到旧排列。目录见 ${absoluteUrl("/llms.txt")}。`,
+    "",
+    llmsLicenseLine(),
     "",
   ].join("\n");
   // Demote each note's headings by one level so the file keeps a single H1.

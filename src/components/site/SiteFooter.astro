@@ -1,0 +1,99 @@
+---
+/**
+ * The site's small print: 「© <first note year>–<build year> Sonui · 文章采用
+ * CC BY-NC-SA 4.0」, links to 隐私说明 and RSS, and the ICP line when
+ * `ICP_RECORD.number` (src/lib/seo/copyright.ts) is filled in.
+ *
+ * Used on the canvas intro card (`links={false}`: the card already links to
+ * RSS, so only 隐私说明 is added), at the bottom of the list (/list/ and the
+ * phone list on /), /links/, /privacy/ and 404. The page sets its margin
+ * (through `class`). Build time only (reads the posts); do not use it on
+ * on-demand pages such as /admin/.
+ */
+import { getPosts } from "@/lib/posts";
+import {
+  COPYRIGHT_HOLDER,
+  copyrightYears,
+  ICP_RECORD,
+  LICENSE,
+  yearRange,
+} from "@/lib/seo/copyright";
+
+type Props = {
+  /** Show the RSS link too (the intro card has its own). */
+  rss?: boolean;
+  class?: string;
+};
+
+const { rss = true, class: className } = Astro.props;
+const posts = await getPosts();
+const years = yearRange(
+  copyrightYears(
+    posts.map((post) => post.data.pubDate),
+    new Date(),
+  ),
+);
+---
+
+<p class:list={["site-foot", className]}>
+  <span>
+    © {years}
+    {COPYRIGHT_HOLDER} · 文章采用
+    <a
+      class="site-foot-license"
+      href={LICENSE.deed}
+      rel="noopener"
+      target="_blank"
+    >
+      {LICENSE.name}
+    </a>
+  </span>
+  <span class="site-foot-links">
+    <a href="/privacy/">隐私说明</a>
+    {rss && (
+      <>
+        <span aria-hidden="true">·</span>
+        <a href="/rss.xml">RSS</a>
+      </>
+    )}
+  </span>
+  {ICP_RECORD.number && (
+    <span>
+      <a href={ICP_RECORD.url} rel="noopener" target="_blank">
+        {ICP_RECORD.number}
+      </a>
+    </span>
+  )}
+</p>
+
+<style>
+  .site-foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 12px;
+    font-family: var(--hand);
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--faint);
+  }
+
+  .site-foot-links {
+    display: inline-flex;
+    gap: 6px;
+  }
+
+  .site-foot a {
+    color: var(--faint);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+
+  .site-foot .site-foot-license {
+    white-space: nowrap;
+  }
+
+  .site-foot a:hover {
+    color: var(--link);
+  }
+</style>
