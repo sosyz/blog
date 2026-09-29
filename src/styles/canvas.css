@@ -371,6 +371,12 @@ body.drawer-open .viewport::after {
   font-size: 15px;
 }
 
+.intro .intro-foot {
+  margin: 14px 0 0;
+  padding-top: 8px;
+  border-top: 1px dashed var(--edge);
+}
+
 .intro a {
   color: var(--link);
   text-decoration: underline;
@@ -425,6 +431,8 @@ body.drawer-open .viewport::after {
 /* ---------- entrance: cards land like paper, centre first ---------- */
 
 .world.enter .card,
+.world.enter .friend,
+.world.enter .exchange,
 .world.enter .intro,
 .world.enter .sticker {
   animation: land 0.44s var(--out) backwards;
@@ -894,21 +902,46 @@ a.dnav:hover {
 }
 
 .lfoot {
-  display: flex;
-  gap: 8px;
   margin: 28px 0 0;
-  font-family: var(--hand);
-  font-size: 14px;
-  color: var(--faint);
 }
 
-.lfoot a {
-  color: var(--faint);
+/* 友链 under the years: names in a row, then the link to /links/. */
+.lfriends {
+  margin: 26px 0 0;
+  padding-top: 14px;
+  border-top: 1px dashed var(--edge);
+}
+
+.lfriends :is(h2, h3) {
+  margin: 0 0 6px;
+  font-family: var(--hand);
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--pencil);
+}
+
+.lfriends ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--body);
+  font-size: 16px;
+}
+
+.lfriends a {
+  color: var(--link);
   text-underline-offset: 3px;
 }
 
-.lfoot a:hover {
-  color: var(--link);
+.lfriends-none,
+.lfriends-more {
+  margin: 4px 0 0;
+  font-family: var(--hand);
+  font-size: 15px;
+  color: var(--faint);
 }
 
 .list-in > .tape {

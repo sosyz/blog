@@ -1,10 +1,13 @@
 ---
 /**
  * Every note in time order, grouped by year, with type and topic filters
- * (filters appear once the script runs; without it the full list shows).
+ * (filters appear once the script runs; without it the full list shows),
+ * then 友链 (every friend's name, and a link to /links/) and the © line.
  * Used by /list/ and, on narrow screens, by the home page.
  */
 import "@/styles/canvas.css";
+import SiteFooter from "@/components/site/SiteFooter.astro";
+import { getFriends } from "@/lib/friends";
 import { dotDate, getPostsByYear, getTopics, notePath } from "@/lib/posts";
 import { DOG_STICKER, stickerSrc, tapeSrc } from "@/scripts/canvas/seed";
 
@@ -19,6 +22,7 @@ const Year = titleTag === "h1" ? "h2" : "h3";
 const years = await getPostsByYear();
 const topics = await getTopics();
 const types = ["踩坑", "随想"] as const;
+const friends = getFriends();
 const TAPE_WIDTH = 130;
 const TAPE_RATIO = 600 / 112;
 const DOG_WIDTH = 96;
@@ -125,11 +129,29 @@ const q = (post: (typeof years)[number]["posts"][number]) =>
   <p class="lempty" data-list-empty hidden>
     没有符合条件的笔记。
   </p>
-  <p class="lfoot">
-    <a href="/rss.xml">RSS</a>
-    <span aria-hidden="true">·</span>
-    <a href="/privacy/">隐私说明</a>
-  </p>
+  <section class="lfriends" aria-labelledby={`${titleTag}-friends`}>
+    <Year id={`${titleTag}-friends`}>友链</Year>
+    {friends.length > 0 ? (
+      <ul>
+        {friends.map((friend) => (
+          <li>
+            <a href={friend.url} target="_blank" rel="noopener noreferrer">
+              {friend.name}
+              <span class="sr-only">（在新标签页打开）</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p class="lfriends-none">还没有友链，第一张名片等你来贴。</p>
+    )}
+    <p class="lfriends-more">
+      <a href="/links/">
+        {friends.length > 0 ? "全部友链 · 交换友链 →" : "交换友链 →"}
+      </a>
+    </p>
+  </section>
+  <SiteFooter class="lfoot" />
 </div>
 
 <noscript>

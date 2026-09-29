@@ -1,0 +1,172 @@
+---
+/**
+ * /links/ — 友链: every friend's name card taped to the desk, then the
+ * 「交换友链」 sticky note (how to ask, and this site's card to copy), then
+ * the © line. The list is src/data/links.ts (see AGENTS.md「加一条友链」).
+ *
+ * Prerendered, in the sitemap; JSON-LD CollectionPage + ItemList.
+ */
+import ExchangeCard from "@/components/links/ExchangeCard.astro";
+import FriendCard from "@/components/links/FriendCard.astro";
+import SiteFooter from "@/components/site/SiteFooter.astro";
+import Base from "@/layouts/Base.astro";
+import { getFriends } from "@/lib/friends";
+import { linksJsonLd } from "@/lib/links";
+import { stickerSrc, tapeSrc } from "@/scripts/canvas/seed";
+
+const TAPE_WIDTH = 120;
+const TAPE_RATIO = 600 / 112;
+const STICKER_WIDTH = 84;
+
+const friends = getFriends();
+---
+
+<Base
+  title="友链"
+  description="Sonui 交换的友情链接：朋友们的博客和手账，以及怎么和我交换友链。"
+  canonical="/links/"
+  jsonLd={linksJsonLd(friends)}
+  bodyClass="view-links"
+>
+  <main class="links-page desk-paper" id="main">
+    <header class="links-head doc-paper">
+      <img
+        class="tape"
+        src={tapeSrc("washi-plain-sage")}
+        alt=""
+        width={TAPE_WIDTH}
+        height={Math.round(TAPE_WIDTH / TAPE_RATIO)}
+        style={`--tr: -2deg; --tape-w: ${TAPE_WIDTH}px`}
+      />
+      <img
+        class="sticker"
+        src={stickerSrc("people-traveler")}
+        alt=""
+        width={STICKER_WIDTH}
+        height={STICKER_WIDTH}
+        style={`--w: ${STICKER_WIDTH}px; --r: 8deg`}
+      />
+      <p class="back">
+        <a href="/">← 回到画布</a>
+        <span aria-hidden="true">·</span>
+        <a href="/list/">全部笔记</a>
+      </p>
+      <h1>友链</h1>
+      <p class="lead">
+        {friends.length > 0
+          ? `朋友们的博客和手账，共 ${friends.length} 个。点名片去看看，会在新标签页打开。`
+          : "还没有友链，第一张名片等你来贴。"}
+      </p>
+    </header>
+
+    {friends.length > 0 && (
+      <ul class="wall" aria-label="友链名片">
+        {friends.map((friend) => (
+          <li>
+            <FriendCard friend={friend} />
+          </li>
+        ))}
+      </ul>
+    )}
+
+    <div class="exchange-spot">
+      <ExchangeCard id="links-exchange" />
+    </div>
+
+    <SiteFooter class="links-foot" />
+  </main>
+</Base>
+
+<style>
+  .links-page {
+    min-height: 100dvh;
+    padding: 56px 16px 40px;
+  }
+
+  .links-head {
+    position: relative;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 28px 28px 20px;
+    border: 1px solid var(--edge);
+    box-shadow: 0 14px 30px -18px rgb(80 60 30 / 0.45);
+    rotate: -0.3deg;
+  }
+
+  .links-head > .tape {
+    top: -12px;
+    left: 40px;
+  }
+
+  .links-head > .sticker {
+    position: absolute;
+    top: -26px;
+    right: -14px;
+    pointer-events: none;
+  }
+
+  .back {
+    margin: 0 0 6px;
+    font-family: var(--hand);
+    font-size: 15px;
+    color: var(--faint);
+  }
+
+  .back a,
+  .lead a {
+    color: var(--link);
+    text-underline-offset: 3px;
+  }
+
+  h1 {
+    margin: 0 0 6px;
+    font-family: var(--hand);
+    font-size: 30px;
+    font-weight: 400;
+  }
+
+  .lead {
+    margin: 0;
+    font-family: var(--body);
+    font-size: 16.5px;
+    line-height: 1.7;
+    color: var(--pencil);
+  }
+
+  .wall {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 30px 22px;
+    max-width: 760px;
+    margin: 40px auto 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .exchange-spot {
+    display: flex;
+    justify-content: center;
+    max-width: 720px;
+    margin: 40px auto 0;
+  }
+
+  .links-page :global(.links-foot) {
+    max-width: 720px;
+    margin: 36px auto 0;
+    justify-content: center;
+  }
+
+  @media (max-width: 480px) {
+    .links-head {
+      padding: 26px 18px 18px;
+      rotate: 0deg;
+    }
+
+    .links-head > .sticker {
+      --w: 60px;
+      top: -20px;
+      right: -4px;
+    }
+  }
+</style>

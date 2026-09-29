@@ -1,0 +1,91 @@
+---
+/**
+ * 「友链」 on the canvas: a small pile of name cards taped to the desk (the
+ * first six in src/data/links.ts), the title linking to /links/, and a
+ * 「全部友链 →」 slip when there are more. While the list is empty it holds
+ * the 「交换友链」 sticky note instead.
+ *
+ * Laid out by src/scripts/canvas/layout.ts as one box (`[data-friends]`),
+ * placed after the topic piles. Deliberately not `[data-pile]` / `[data-card]`:
+ * search, related lines and the drawer only deal with notes.
+ */
+import ExchangeCard from "@/components/links/ExchangeCard.astro";
+import FriendCard from "@/components/links/FriendCard.astro";
+import { getFriends } from "@/lib/friends";
+import { CANVAS_FRIENDS } from "@/lib/links";
+
+const friends = getFriends();
+const shown = friends.slice(0, CANVAS_FRIENDS);
+const more = friends.length - shown.length;
+---
+
+<section class="pile friends" aria-labelledby="friends-title" data-friends>
+  <h2 class="topic" id="friends-title">
+    <a href="/links/">友链</a>
+    {friends.length > 0 && (
+      <small>
+        <span class="sr-only">，共 </span>
+        {friends.length}
+        <span class="sr-only"> 个</span>
+      </small>
+    )}
+    <span class="ul" aria-hidden="true"></span>
+  </h2>
+  {shown.length > 0 ? (
+    <ul class:list={["friends-wall", { "is-wide": shown.length > 1 }]}>
+      {shown.map((friend) => (
+        <li>
+          <FriendCard friend={friend} />
+        </li>
+      ))}
+      <li>
+        <a class="friends-more" href="/links/" draggable="false">
+          {more > 0 ? `全部友链（还有 ${more} 个）→` : "全部友链 · 交换友链 →"}
+        </a>
+      </li>
+    </ul>
+  ) : (
+    <ExchangeCard id="canvas-exchange" headingTag="h3" />
+  )}
+</section>
+
+<style>
+  .friends {
+    padding-top: 56px;
+  }
+
+  .friends .topic a {
+    color: inherit;
+    text-decoration: none;
+    pointer-events: auto;
+  }
+
+  .friends .topic a:hover {
+    color: var(--link);
+  }
+
+  .friends-wall {
+    display: grid;
+    grid-template-columns: 216px;
+    gap: 22px 18px;
+    align-items: start;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .friends-wall.is-wide {
+    grid-template-columns: repeat(2, 216px);
+  }
+
+  .friends-more {
+    display: inline-block;
+    margin: 4px 0 0 6px;
+    font-family: var(--hand);
+    font-size: 16px;
+    color: var(--link);
+    text-underline-offset: 4px;
+    text-decoration-style: wavy;
+    text-decoration-thickness: 1px;
+  }
+</style>

@@ -5,8 +5,9 @@
  *
  * Frame: washi tape on top; 上一篇 / 下一篇 within the topic and 关闭 as real
  * links (work without JavaScript); journal header (No., date and weekday,
- * topic, tags, source); topic sticker; status stamp; <PostBody>; related and
- * same-topic kraft tags; comments and inline comments.
+ * topic, tags, source); topic sticker; status stamp; <PostBody>; the
+ * copyright slip; related and same-topic kraft tags; comments and inline
+ * comments.
  *
  * Hooks for scripts: `[data-drawer][data-slug]` (the panel),
  * `[data-drawer-scroll]` (scrolls), `[data-drawer-page]` (fades between
@@ -16,6 +17,7 @@
 import "@/styles/canvas.css";
 import Comments from "@/components/interact/Comments.astro";
 import InlineComments from "@/components/interact/InlineComments.astro";
+import CopyrightSlip from "@/components/post/CopyrightSlip.astro";
 import PostBody from "@/components/post/PostBody.astro";
 import {
   dotDate,
@@ -155,6 +157,7 @@ const groups = [
       </h1>
 
       <PostBody entry={entry} />
+      <CopyrightSlip entry={entry} />
 
       <footer class="dfoot">
         {groups.map((group) => (

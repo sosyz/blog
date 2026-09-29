@@ -1,0 +1,184 @@
+---
+/**
+ * One friend link as a hand-written name card taped down: avatar (or a
+ * hand-drawn initial in a stationery ink), name, site, one-line description
+ * and, when set, a small date stamp for when we exchanged links.
+ *
+ * The whole card is an external link (new tab, `noopener noreferrer`).
+ * Used by the canvas pile (links/FriendsPile.astro) and /links/.
+ * Tape, tilt and ink are seeded by the name, so they never change.
+ */
+import { Image } from "astro:assets";
+import type { Friend } from "@/lib/friends";
+import { displayHost, friendInitial, friendInk, sinceLabel } from "@/lib/links";
+import { pick, rot, TAPES, tapeSrc } from "@/scripts/canvas/seed";
+
+type Props = {
+  friend: Friend;
+};
+
+const TAPE_WIDTH = 72;
+const TAPE_RATIO = 600 / 112;
+const TILT = 4;
+const TAPE_TILT = 10;
+/** Shown at 44px; 2x for sharp screens. */
+const AVATAR_PX = 88;
+
+const { friend } = Astro.props;
+const tape = pick(`${friend.name}t`, TAPES);
+---
+
+<a
+  class="friend doc-paper"
+  href={friend.url}
+  target="_blank"
+  rel="noopener noreferrer"
+  draggable="false"
+  style={`--r: ${rot(friend.name, TILT)}deg`}
+>
+  <img
+    class="tape"
+    src={tapeSrc(tape)}
+    alt=""
+    width={TAPE_WIDTH}
+    height={Math.round(TAPE_WIDTH / TAPE_RATIO)}
+    loading="lazy"
+    decoding="async"
+    draggable="false"
+    style={`--tr: ${rot(`${friend.name}tr`, TAPE_TILT)}deg; --tape-w: ${TAPE_WIDTH}px`}
+  />
+  <span
+    class:list={["friend-av", { "has-img": friend.image }]}
+    style={`--c: ${friendInk(friend.name)}`}
+    aria-hidden="true"
+  >
+    {friend.image ? (
+      <Image
+        src={friend.image}
+        alt=""
+        width={AVATAR_PX}
+        height={AVATAR_PX}
+        fit="cover"
+        loading="lazy"
+        draggable="false"
+      />
+    ) : (
+      friendInitial(friend.name)
+    )}
+  </span>
+  <span class="friend-name">{friend.name}</span>
+  <span class="friend-host">{displayHost(friend.url)}</span>
+  <span class="friend-desc">{friend.description}</span>
+  {friend.since && (
+    <span class="date-stamp friend-since">
+      <span class="sr-only">交换于 </span>
+      {sinceLabel(friend.since)}
+    </span>
+  )}
+  <span class="sr-only">（在新标签页打开）</span>
+</a>
+
+<style>
+  .friend {
+    position: relative;
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-areas:
+      "av name"
+      "av host"
+      "desc desc"
+      "since since";
+    column-gap: 10px;
+    align-items: center;
+    width: 216px;
+    padding: 16px 14px 12px;
+    border: 1px solid var(--edge);
+    box-shadow: var(--shadow-card);
+    color: var(--ink);
+    text-decoration: none;
+    rotate: var(--r, 0deg);
+    transition:
+      rotate var(--dur) var(--out),
+      translate var(--dur) var(--out),
+      box-shadow var(--dur) var(--out);
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  .friend:hover,
+  .friend:focus-visible {
+    rotate: calc(var(--r, 0deg) * 0.25);
+    translate: 0 -3px;
+    box-shadow: var(--shadow-card-lift);
+  }
+
+  .friend > .tape {
+    top: -9px;
+    left: 50%;
+    margin-left: -36px;
+  }
+
+  /* Same hand-drawn circle as a commenter's initial. */
+  .friend-av {
+    grid-area: av;
+    display: grid;
+    place-content: center;
+    width: 42px;
+    height: 42px;
+    font-family: var(--hand);
+    font-size: 20px;
+    color: var(--c, var(--pencil));
+    border: 1.6px solid var(--c, var(--pencil));
+    border-radius: 52% 46% 55% 45% / 48% 55% 45% 52%;
+    rotate: -6deg;
+  }
+
+  .friend-av.has-img {
+    overflow: hidden;
+    padding: 0;
+    border-color: var(--edge);
+    background: var(--slip);
+  }
+
+  .friend-av :global(img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .friend-name {
+    grid-area: name;
+    font-family: var(--hand);
+    font-size: 18px;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  .friend-host {
+    grid-area: host;
+    font-family: var(--code);
+    font-feature-settings: "calt" 0;
+    font-size: 11px;
+    color: var(--faint);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .friend-desc {
+    grid-area: desc;
+    margin-top: 8px;
+    font-family: var(--body);
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--pencil);
+    overflow-wrap: anywhere;
+  }
+
+  .friend-since {
+    grid-area: since;
+    justify-self: end;
+    margin-top: 6px;
+  }
+</style>

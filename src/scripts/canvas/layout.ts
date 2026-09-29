@@ -251,6 +251,17 @@ export const onRendered = (world: HTMLElement, onShow: () => void) => {
   return () => observer.disconnect();
 };
 
+/** The 友链 pile: placed as a whole, after (outside) the topic piles. */
+const layoutFriends = (world: HTMLElement, taken: Box[]) => {
+  const el = world.querySelector<HTMLElement>("[data-friends]");
+  if (!el) {
+    return;
+  }
+  const box = findSpot(taken, el.offsetWidth, el.offsetHeight);
+  taken.push(box);
+  place(el, box.x, box.y);
+};
+
 /** Measure and place everything. Safe to call again after fonts load. */
 export const layoutWorld = (world: HTMLElement): Layout => {
   const introEl = world.querySelector<HTMLElement>("[data-intro]");
@@ -282,6 +293,7 @@ export const layoutWorld = (world: HTMLElement): Layout => {
       pointArrow(world, box, intro);
     }
   }
+  layoutFriends(world, taken);
   placeRing(world, taken);
   return { cards, intro };
 };
@@ -338,7 +350,7 @@ export const setStagger = (
   cam: { x: number; y: number; s: number }
 ) => {
   const items = world.querySelectorAll<HTMLElement>(
-    ".card, .intro, .topic, .sticker, .arrow, .scribble"
+    ".card, .friend, .exchange, .intro, .topic, .sticker, .arrow, .scribble"
   );
   for (const el of items) {
     const r = el.getBoundingClientRect();

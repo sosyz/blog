@@ -1,0 +1,171 @@
+---
+/**
+ * 「交换友链」: a sticky note saying how to ask (a comment under any note,
+ * or GitHub) and this site's own card to copy: name, address, one-liner and
+ * avatar URL, each with a copy button (src/scripts/copy.ts announces 已复制
+ * through the status line).
+ *
+ * On the canvas it stands in for the name cards while the list is empty; on
+ * /links/ it always sits after the wall. `id` keeps the heading and status
+ * ids unique on the page.
+ */
+import { PROFILE } from "@/consts";
+import { SELF_CARD } from "@/lib/links";
+
+type Props = {
+  /** Prefix for the ids inside (heading, status line). */
+  id: string;
+  /** Heading level: h3 inside the canvas pile, h2 on /links/. */
+  headingTag?: "h2" | "h3";
+};
+
+const { id, headingTag = "h2" } = Astro.props;
+const Heading = headingTag;
+const github = PROFILE.links.find((link) => link.label === "GitHub");
+const statusId = `${id}-status`;
+const fields = [
+  { label: "名称", value: SELF_CARD.name, code: false },
+  { label: "地址", value: SELF_CARD.url, code: true },
+  { label: "简介", value: SELF_CARD.description, code: false },
+  { label: "头像", value: SELF_CARD.avatar, code: true },
+] as const;
+---
+
+<section class="exchange sticky-paper" aria-labelledby={`${id}-title`}>
+  <Heading class="exchange-title" id={`${id}-title`}>
+    交换友链
+  </Heading>
+  <p class="exchange-how">
+    在任意笔记下留言，或到{" "}
+    {github ? (
+      <a href={github.href} rel="noopener" target="_blank">
+        GitHub
+      </a>
+    ) : (
+      "GitHub"
+    )}{" "}
+    找我。写上你的名称、地址和一句话介绍就好。
+  </p>
+  <p class="exchange-sub">我的名片：</p>
+  <dl class="exchange-card">
+    {fields.map((field) => (
+      <div>
+        <dt>{field.label}</dt>
+        <dd>
+          <span class:list={{ "is-code": field.code }}>{field.value}</span>
+          <button
+            type="button"
+            class="exchange-copy"
+            aria-label={`复制${field.label}`}
+            data-copy={field.value}
+            data-copy-status={statusId}
+          >
+            复制
+          </button>
+        </dd>
+      </div>
+    ))}
+  </dl>
+  <p class="exchange-said" id={statusId} role="status"></p>
+</section>
+
+<script>
+  import "@/scripts/copy";
+</script>
+
+<style>
+  .exchange {
+    position: relative;
+    width: 320px;
+    max-width: 100%;
+    padding: 18px 18px 14px;
+    font-family: var(--hand);
+    color: var(--ink);
+    rotate: 1.2deg;
+  }
+
+  .exchange-title {
+    margin: 0 0 6px;
+    font-size: 21px;
+    font-weight: 400;
+  }
+
+  .exchange-how {
+    margin: 0;
+    font-size: 15.5px;
+    line-height: 1.55;
+  }
+
+  .exchange-sub {
+    margin: 10px 0 2px;
+    font-size: 14px;
+    color: var(--pencil);
+  }
+
+  .exchange a {
+    color: var(--link);
+    text-underline-offset: 3px;
+  }
+
+  .exchange-card {
+    display: grid;
+    gap: 3px;
+    margin: 0;
+    font-size: 14px;
+  }
+
+  .exchange-card > div {
+    display: grid;
+    grid-template-columns: 2.6em minmax(0, 1fr);
+    gap: 6px;
+    align-items: baseline;
+  }
+
+  dt {
+    color: var(--pencil);
+  }
+
+  dd {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 6px;
+    margin: 0;
+    min-width: 0;
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
+  .is-code {
+    font-family: var(--code);
+    font-feature-settings: "calt" 0;
+    font-size: 11.5px;
+    overflow-wrap: anywhere;
+  }
+
+  .exchange-copy {
+    padding: 0 6px;
+    border: 1px solid var(--field-line);
+    border-radius: 4px;
+    background: transparent;
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--pencil);
+    cursor: pointer;
+    transition:
+      color var(--dur-fast) var(--out),
+      border-color var(--dur-fast) var(--out);
+  }
+
+  .exchange-copy:hover {
+    color: var(--ink);
+    border-color: var(--pencil);
+  }
+
+  .exchange-said {
+    min-height: 1.4em;
+    margin: 4px 0 0;
+    font-size: 13.5px;
+    color: var(--link);
+  }
+</style>

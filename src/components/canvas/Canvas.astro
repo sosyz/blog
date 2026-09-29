@@ -1,7 +1,8 @@
 ---
 /**
- * The infinite canvas: the intro card in the centre, topic piles spiralling
- * around it, stickers and doodles, lines between related notes.
+ * The infinite canvas: the intro card in the centre (with the © line), topic
+ * piles spiralling around it, the 友链 pile after them, stickers and
+ * doodles, lines between related notes.
  *
  * Every card is server-rendered as a real link inside the world element, so
  * the canvas is crawlable and usable without JavaScript (a <noscript> style
@@ -15,6 +16,8 @@
 import "@/styles/canvas.css";
 import Card from "@/components/canvas/Card.astro";
 import StickerLayer from "@/components/interact/StickerLayer.astro";
+import FriendsPile from "@/components/links/FriendsPile.astro";
+import SiteFooter from "@/components/site/SiteFooter.astro";
 import { PROFILE } from "@/consts";
 import { dogKey, outerKey, pileKey } from "@/lib/builtin-stickers";
 import { getRelated, getTopics } from "@/lib/posts";
@@ -81,7 +84,9 @@ const externalLinks = PROFILE.links.filter((link) => link.href !== "/list/");
           {externalLinks.map((link) => (
             <a href={link.href}>{link.label}</a>
           ))}
+          <a href="/links/">友链</a>
         </p>
+        <SiteFooter rss={false} class="intro-foot" />
       </div>
       <img
         class="sticker"
@@ -132,6 +137,8 @@ const externalLinks = PROFILE.links.filter((link) => link.href !== "/list/");
           ))}
         </section>
       ))}
+
+      <FriendsPile />
 
       {OUTER_STICKERS.map((name) => (
         <img
@@ -206,6 +213,10 @@ const externalLinks = PROFILE.links.filter((link) => link.href !== "/list/");
     }
     .world .topic {
       margin-bottom: 8px;
+    }
+    .world .pile.friends {
+      width: auto;
+      padding-top: 0;
     }
     .world .sticker,
     .world .arrow,
