@@ -33,6 +33,7 @@ Sonui 的博客 2.0：一本灵感手账。首页是一块无限画布，中央�
 | 内容 | `src/posts/`、`src/assets/posts/<slug>/`、`src/assets/covers/`、`src/content.config.ts` |
 | 文章查询 | `src/lib/posts.ts`（所有页面都经过它读文章） |
 | 画布与抽屉 | `src/components/canvas/`、`src/components/drawer/`、`src/scripts/canvas/`、`src/styles/canvas.css`、`src/pages/{index,list}.astro`、`src/pages/notes/[slug].astro` |
+| 友链与版权 | `src/data/links.ts`（友链数据）、`src/lib/{links,friends}.ts`、`src/assets/links/`、`src/components/links/`、`src/pages/links.astro`、`src/lib/seo/copyright.ts`、`src/components/post/CopyrightSlip.astro`、`src/components/site/SiteFooter.astro`、`src/scripts/copy.ts` |
 | 正文排版 | `src/components/post/`、`src/lib/markdown/`、`src/styles/prose.css` |
 | 访客互动 / 后端 | `src/components/interact/`、`src/scripts/interact/`、`src/lib/server/`、`src/pages/api/`、`src/pages/admin/`、`src/pages/privacy.astro`、`migrations/`、`tests/` |
 | SEO / GEO | `src/components/seo/`、`src/lib/seo/`、`src/pages/{rss.xml,llms.txt,llms-full.txt,robots.txt}.ts`、`src/pages/notes/[slug].md.ts`、`src/pages/404.astro`、`src/integrations/legacy-list-redirects.ts`、`public/_redirects`（只放注释） |
@@ -113,6 +114,24 @@ Sonui 的博客 2.0：一本灵感手账。首页是一块无限画布，中央�
 - 在笔记里写一个新的 `topic` 值即可。画布、列表筛选、`llms.txt` 的分组都会自动出现这个主题。
 - 可选：在 `src/scripts/canvas/seed.ts` 的 `TOPIC_STICKERS` 里给它配一两张贴纸（第一张贴在主题名旁边，也用在抽屉页眉；第二张贴在这堆的右下角）。没有配置的主题不贴贴纸。
 - 同步更新 [docs/design.md](docs/design.md) 和本文件里的主题列表。
+
+## 加一条友链
+
+友链只在 `src/data/links.ts` 里手写维护，画布的「友链」一角（前 6 张名片）、`/links/`、列表页底部的「友链」都从这里读。
+
+1. 在 `FRIEND_LINKS` 末尾加一条：`{ name, url, description, avatar?, since? }`。`url` 必须是 `https://`；`name` 和网站都不能重复；`description` 一句话，最多 40 字；`since` 写 `"YYYY-MM-DD"` 或 `"YYYY-MM"`（名片上盖日期戳）。顺序就是显示顺序。
+2. 头像（可选）：把方形图片（≥ 96×96，png / jpg / webp / avif，文件名小写短横线）放进 `src/assets/links/`，`avatar` 写文件名。构建时由 Astro 缩小并放在本站。头像一律存进仓库：CSP 的 `img-src` 只允许本站（和 GitHub 头像），外链图片会被拦。没有头像时显示手写首字圆圈。
+3. `bun run build`：`src/lib/links.ts` 的 `checkedLinks` 检查每一条，头像文件不存在也会失败，错误里写明是第几条。然后 `bun run fonts`（名字和介绍里的新字进字体文件）、部署。
+
+友链的规则有单元测试（`tests/links.test.ts`）；改规则时一起改。
+
+## 版权
+
+文章署名 Sonui，采用 CC BY-NC-SA 4.0。协议、转载说明、年份、备案号都在 `src/lib/seo/copyright.ts`（纯函数，`tests/copyright.test.ts`）：
+
+- 每篇笔记末尾的版权纸条（`CopyrightSlip.astro`，在抽屉里 `<PostBody>` 之后、`[data-post-body]` 外面，划线评论不会落到它上面）；站点页脚一行（`SiteFooter.astro`：画布自我介绍卡、列表、`/links/`、`/privacy/`、404）。年份从最早一篇笔记的发布年到构建那年，每次构建自动更新。
+- 给机器读的：`BlogPosting` 的 `license`、`copyrightHolder`、`copyrightYear`，笔记页 `<link rel="license">`，RSS 的 `<copyright>` 和每条的 `<dc:rights>` 加正文末尾一段版权说明，`llms.txt` / `llms-full.txt` 的协议一行，`/notes/<slug>.md` 的 YAML front matter（`url`、`license`、`license_url`）。机器读的地方用协议的规范地址 `LICENSE.url`，给人点的链接用中文版 `LICENSE.deed`。
+- 备案号：`ICP_RECORD.number` 现在是空的，页脚不显示；填上（如 `"京ICP备12345678号-1"`）后所有页脚都出现一行链接到 `beian.miit.gov.cn`，再 `bun run fonts`、构建。
 
 ## 加一张手账贴纸
 

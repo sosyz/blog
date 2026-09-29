@@ -43,9 +43,11 @@ public/
 src/
   content.config.ts       `blog` 集合的 schema
   consts.ts               自我介绍卡上的主人信息；站点名称等在 lib/seo/site.ts
+  data/links.ts           友链（手写维护的 FRIEND_LINKS，见 AGENTS.md「加一条友链」）
   posts/                  笔记（.md / .mdx）
   assets/posts/<slug>/    正文配图
   assets/covers/          封面图（卡片上的拍立得、分享图）
+  assets/links/           友链头像（data/links.ts 的 avatar 写文件名，构建时缩小）
   layouts/Base.astro      页面外壳
   layouts/fonts.generated.ts  全站用字的 @font-face、preload 列表、rest.<hash>.css 地址（bun run fonts 生成；Base.astro 和 /admin/ 引用）
   middleware.ts           给 Worker 渲染的响应（/api/*、/admin/）补安全头，已有的同名头不覆盖
@@ -55,17 +57,23 @@ src/
     post/PostBody.astro   文章 HTML；post/marks.ts 画 Rough Notation （正文）
     canvas/*              画布、工具条、卡片、列表              （画布）
     drawer/Drawer.astro   包住 PostBody 的抽屉                  （画布）
+    post/CopyrightSlip.astro  笔记末尾的版权纸条（作者、原文链接和复制、日期、协议）
+    links/*               友链名片 FriendCard、交换友链便利贴 ExchangeCard、画布上的友链堆 FriendsPile
+    site/SiteFooter.astro © 年份 · 协议 · 隐私说明 · RSS（· 备案号）
     interact/*            评论、划线评论、贴纸、Turnstile        （互动）
   scripts/
     canvas/api.ts         客户端约定：CanvasApi 和抽屉事件
     canvas/*              布局、镜头、输入、抽屉动效、列表、工具条
     interact/*            评论、划线评论、贴纸上传、Turnstile、在现场审核的客户端逻辑
     admin/inbox.ts        /admin/ 审核台：记住博主、填笔记标题、直接拒绝
+    copy.ts               复制按钮（button[data-copy]，document 上一个监听，结果写进 role="status"）
   lib/
     posts.ts              所有页面共用的文章查询
+    links.ts              友链类型、构建时检查（https、不重复、一句话介绍、头像文件名、since）、JSON-LD，纯函数
+    friends.ts            页面用的友链：检查后把头像文件名换成图片（import.meta.glob，只在构建时）
     build/modulepreload.ts  构建后给预渲染页面加 <link rel="modulepreload">（只含静态 import 的 chunk）
     markdown/             Markdown 管线（Sätteri 插件、代码墨水主题）
-    seo/                  站点信息、跳转、sitemap、.md 输出、RSS 渲染、分享图脚本
+    seo/                  站点信息、版权与协议（copyright.ts）、跳转、sitemap、.md 输出、RSS 渲染、分享图脚本
     server/               API 和后台用的服务端模块（env.ts 以外都是纯函数）
     ai/, config.ts        AI 提供方和替代文字图片服务
     convert/img.ts        Bun/ffmpeg 图片转换工具（没有接入任何路由或脚本）
@@ -90,6 +98,7 @@ src/
 | `/sitemap-index.xml` | @astrojs/sitemap + `lib/seo/sitemap.ts` | 静态 | SEO |
 | `/robots.txt`、`/llms.txt`、`/llms-full.txt` | `pages/robots.txt.ts`、`pages/llms.txt.ts`、`pages/llms-full.txt.ts` | 静态 | SEO |
 | 404 | `pages/404.astro` | 静态 | SEO |
+| `/links/` | `pages/links.astro` | 静态 | 友链（全部名片 + 交换友链；JSON-LD `CollectionPage` + `ItemList`；在 sitemap 里） |
 | `/privacy/` | `pages/privacy.astro` | 静态 | 互动（存了什么、怎么删除；改表、cookie、localStorage 键时同步） |
 | `/admin/` | `pages/admin/index.astro` | 按需，Access 之后 | 互动（审核台：收件箱，链接到现场审核） |
 | `/api/*` | `pages/api/**`（见「访客内容接口」「GitHub 登录」） | 按需 | 互动 |
@@ -103,6 +112,7 @@ src/
 - **正文**：`src/components/post/**`、`src/lib/markdown/**`、`src/styles/prose.css`
 - **互动 / 后端**：`src/components/interact/**`、`src/scripts/interact/**`、`src/lib/server/**`、`src/pages/api/**`、`src/pages/admin/**`、`src/pages/privacy.astro`、`migrations/**`、`wrangler.jsonc` 的绑定和 `vars`、`tests/**`
 - **SEO**：`src/components/seo/**`、`src/lib/seo/**`、`src/pages/rss.xml.ts`、`src/pages/llms*.ts`、`src/pages/notes/[slug].md.ts`、`src/pages/404.astro`、`src/pages/robots.txt.ts`、`public/og-default.png`、`public/_redirects`、`public/_headers`
+- **友链与版权**：`src/data/links.ts`、`src/lib/{links,friends}.ts`、`src/assets/links/**`、`src/components/links/**`、`src/components/site/**`、`src/components/post/CopyrightSlip.astro`、`src/pages/links.astro`、`src/lib/seo/copyright.ts`、`src/scripts/copy.ts`
 - **共用基础（小心改）**：`astro.config.mjs`、`package.json`、`tsconfig.json`、`src/layouts/Base.astro`、`src/lib/posts.ts`、`src/styles/{tokens,base,materials}.css`、`src/scripts/canvas/api.ts`（约定本身）、`src/scripts/canvas/seed.ts`、`src/content.config.ts`、`public/journal/**`、`public/stickers/**`、`public/fonts/**`
 
 ## 数据流
@@ -147,6 +157,17 @@ src/
 | `isoDate`、`dotDate`、`weekdayZh` | `2025-10-08`、`2025.10.08`、`周三`（固定按 Asia/Shanghai 时区） |
 
 slug 就是集合 id（文件名去掉扩展名）。
+
+### 友链与版权
+
+- **友链数据**：`src/data/links.ts` 的 `FRIEND_LINKS: FriendLink[]`（`{name, url, description, avatar?, since?}`）。页面只通过 `src/lib/friends.ts` 的 `getFriends()` 读：先 `checkedLinks()`（`lib/links.ts`，有问题就让构建失败并列出每一条），再把 `avatar` 文件名换成 `src/assets/links/` 里的 `ImageMetadata`（`Friend.image`），名片用 `<Image>` 缩到 88px。头像不能用外链（CSP `img-src` 只有本站和 GitHub 头像）。
+- **画布上的友链堆**（`components/links/FriendsPile.astro`，放在 `Canvas.astro` 的主题堆之后）：`section.pile.friends[data-friends]`，里面是前 `CANVAS_FRIENDS`（6）张名片（两列 CSS grid）和「全部友链 →」；没有友链时是「交换友链」便利贴。`layout.ts` 的 `layoutFriends` 把它当成一个盒子，在所有主题堆之后用同一条螺旋找空位，放进 `taken`，所以外圈贴纸绕开它、主题堆顺序不变。它**不带** `data-pile` / `data-card`：搜索、连线、抽屉、焦点回到卡片都只认笔记。标题「友链」是去 `/links/` 的普通链接（不进抽屉：抽屉和评论都按笔记 slug 工作）。入场动画和 `setStagger` 包括 `.friend`、`.exchange`。
+- **名片**（`FriendCard.astro`）：整张是外链 `target="_blank" rel="noopener noreferrer"`，末尾有 sr-only「（在新标签页打开）」；胶带、倾斜、首字墨水色（`--link` / `--str` / `--stamp-ink` / `--pencil`）按名字取种子。
+- **交换友链**（`ExchangeCard.astro`，props `id`、`headingTag`）：怎么申请（任意笔记下留言或 GitHub），本站名片（`lib/links.ts` 的 `SELF_CARD`：名称、地址、`PROFILE.title`、小狗头像绝对地址），每项一个复制按钮。
+- **复制按钮**（`src/scripts/copy.ts`）：`<button type="button" data-copy="文字" data-copy-status="<id>">`，`<id>` 是页面里已有的 `role="status"` 元素；成功写「已复制」，失败写「没复制成功，请手动选中复制」，约 2.4 秒后清空。document 上只挂一次监听，抽屉换页后照样有效。
+- **版权**：协议、转载说明、备案号、年份和各种输出格式在 `src/lib/seo/copyright.ts`（纯函数，只用相对导入）。`LICENSE.url` 是规范地址（JSON-LD `license`、`<link rel="license">`、RSS、`.md`），`LICENSE.deed` 是中文说明页（页面上的链接）。`copyrightYears(dates, now)` 按上海时区取年：最早一篇笔记的年份到构建时的年份；`SiteFooter` 和 RSS 的 `<copyright>` 用它。`ICP_RECORD.number` 为空时页脚不显示备案行。
+- **版权纸条**（`CopyrightSlip.astro`）在 `Drawer.astro` 里 `<PostBody>` 之后、`.dfoot` 之前，不在 `[data-post-body]` 里。原文链接是 `noteUrl(slug)`；「更新于」只在 `updatedDate` 和发布日不同时显示；状态行 id 是 `note-copy-status`。
+- **机器可读**：`Seo.astro` 的 `BlogPosting` 展开 `licenseFields(pubDate)`（`license`、`copyrightHolder: {"@id": PERSON_ID}`、`copyrightYear`）并在笔记页输出 `<link rel="license">`；`rss.xml.ts` 频道 `<copyright>`、每条 `<dc:rights>` 和正文末尾的 `feedItemFooter`；`llms.txt` / `llms-full.txt` 开头的 `llmsLicenseLine()`（不以 `- [` 开头，`/admin/` 按那个格式解析笔记标题）；`/notes/<slug>.md` 用 `noteMarkdown(post, { frontMatter: true })` 在开头加 YAML front matter（`title`、`description`、`author`、`url`、`published`、`updated?`、`license`、`license_url`、`based_on?`），`llms-full.txt` 不加 front matter，只在每篇的头部列表里多一行「协议」。
 
 ### 访客内容接口（互动）
 

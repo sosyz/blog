@@ -46,6 +46,7 @@ Schema 定义在 `src/content.config.ts`。当前主题：AI、Web、后端、Go
 | `/list` | 按时间排列的列表 |
 | `/notes/[slug]/` | 画布，并在抽屉中打开这篇 |
 | `/notes/[slug].md` | 文章的 Markdown 原文，给 AI 和纯文本阅读用 |
+| `/links/` | 友链：全部名片和「交换友链」 |
 | `/rss.xml` | RSS |
 | `/llms.txt`、`/llms-full.txt` | 给 AI 读的站点说明和全文 |
 | `/admin/` | 审核台：待审评论和贴纸的收件箱，点一条跳到它所在的笔记页或画布上审核；由 Cloudflare Access 保护 |
@@ -96,6 +97,22 @@ Schema 定义在 `src/content.config.ts`。当前主题：AI、Web、后端、Go
 - 每行：类型图标、标题、主题、日期。
 - 顶部可以按类型和主题筛选。
 - 手机上默认显示这一视图，画布作为可选。
+
+## 友链
+
+- 博主手写维护一份列表（`src/data/links.ts`），每条是名称、网址、一句话介绍，可选头像和交换日期。
+- **画布上**：主题堆之后自动排出一个「友链」角落，像一叠贴在桌上的手写名片：最多 6 张，两列，每张用纸胶带贴住、微微歪着；左边是头像（放在手绘圆圈里），没有头像就是手写的名字首字，墨水色按名字取；下面是网站地址和一句话介绍，交换日期盖成蓝色日期戳。点名片在新标签页打开对方的网站。标题「友链」和末尾的「全部友链 →」去 `/links/`（普通页面，不开抽屉）。
+- **还没有友链时**：这个角落只有一张便利贴「交换友链」：在任意笔记下留言，或到 GitHub 找我；下面是本站的名片（名称 Sonui 的手账、地址、一句话介绍、头像地址），每项有「复制」按钮，复制后旁边写「已复制」（屏幕阅读器也会读出来）。
+- **`/links/`**：桌面上一张写着「友链」的纸，下面是全部名片，最后是「交换友链」便利贴和页脚。列表视图（`/list/` 和手机上的列表）在年份之后有「友链」一节：所有名字，加一个去 `/links/` 的链接。
+- 动效只有名片悬停时被拿起一点（和卡片一样），入场和其它卡片一起落下；减弱动效时都没有。头像存在本站，不外链。
+
+## 版权
+
+- 文章署名 Sonui，采用 CC BY-NC-SA 4.0（署名-非商业性使用-相同方式共享）。
+- **版权纸条**：每篇笔记正文之后、「相关」之前，一张虚线边的小纸条，右上角盖一个朱红「版权」小戳：作者、原文链接（带「复制」按钮，复制后写「已复制」）、发布于 / 更新于、协议（链接到中文协议说明），最后一行「转载请署名并注明原文链接，非商业使用，改编后以相同协议发布」。
+- **页脚**：一行淡铅笔小字「© 最早一篇笔记的年份–今年 Sonui · 文章采用 CC BY-NC-SA 4.0」，加「隐私说明」和「RSS」。放在画布的自我介绍卡底部（卡上已经有 RSS，只加隐私说明）、列表底部、`/links/`、`/privacy/`、404。年份在构建时算。
+- 备案号暂不显示；配置里留了一个空字段，以后填上就会出现在页脚。
+- 机器也能读到：文章的结构化数据写明协议和版权人，RSS 有版权声明，`llms.txt` 和每篇的 `.md` 版本写明协议。
 
 ## 视觉
 
@@ -250,7 +267,7 @@ Schema 定义在 `src/content.config.ts`。当前主题：AI、Web、后端、Go
 
 ## 实现状态
 
-2026-09-29 更新。代码怎么组织、各部分的约定见 [architecture.md](architecture.md)，部署见 [deploy.md](deploy.md)。
+2026-09-30 更新。代码怎么组织、各部分的约定见 [architecture.md](architecture.md)，部署见 [deploy.md](deploy.md)。
 
 | 设计 | 代码位置 | 状态 |
 | --- | --- | --- |
@@ -274,6 +291,8 @@ Schema 定义在 `src/content.config.ts`。当前主题：AI、Web、后端、Go
 | 人机验证（隐藏的 Turnstile + 手写状态行） | `src/components/interact/Turnstile.astro`、`src/scripts/interact/turnstile.ts`、`src/lib/server/turnstile.ts` | 已完成 |
 | 审核插口、审核台和在现场审核 | `src/lib/server/moderation.ts`、`src/pages/admin/index.astro`、`src/scripts/admin/inbox.ts`、`src/scripts/interact/{owner,review-comments,review-stickers,trash,comment-drag,sticker-trash}.ts`、`src/pages/api/admin/`、`src/lib/server/access.ts` | 人工审核已完成（拒绝 / 撤下是拖进垃圾桶；博主扔掉自带贴纸、在审核台恢复也已完成：`builtin-hidden.ts`、`src/pages/api/builtins.ts`）；AI 审核只有桩（`AiModerator`），`src/lib/server/env.ts` 还没有接入模型 |
 | SEO 与 GEO | `src/components/seo/Seo.astro`、`src/lib/seo/`、`src/integrations/legacy-list-redirects.ts` | 代码已完成；Cloudflare 上的 AI 爬虫设置要在上线时按 deploy.md 操作 |
+| 友链：画布上的名片堆、`/links/`、列表里的「友链」、交换友链和复制 | `src/data/links.ts`、`src/lib/{links,friends}.ts`、`src/components/links/`、`src/pages/links.astro`、`src/scripts/canvas/layout.ts`（`layoutFriends`）、`src/scripts/copy.ts` | 已完成；列表还是空的，等博主添加 |
+| 版权：笔记末尾的版权纸条、页脚、结构化数据 / RSS / llms.txt / `.md` 里的协议 | `src/lib/seo/copyright.ts`、`src/components/post/CopyrightSlip.astro`、`src/components/site/SiteFooter.astro`、`Seo.astro`、`src/pages/{rss.xml,llms.txt,llms-full.txt}.ts`、`src/lib/seo/markdown.ts` | 已完成；备案号字段留空，不显示 |
 
 还没做或待确认：
 
