@@ -1,12 +1,21 @@
 /**
  * Client side of Turnstile: invisible unless Cloudflare needs an
  * interaction (`appearance: "interaction-only"`); a hand-written status line
- * shows 正在确认你不是机器人…… → 已确认, or 验证没通过，点这里重试.
+ * shows 正在确认你不是机器人…… → 已确认, or 验证没通过，点这里手动验证, which
+ * renders the widget again always visible so the checkbox can be clicked
+ * (rules in turnstile-state.ts).
  *
  * Markup comes from Turnstile.astro (static forms) or `turnstileMarkup()`
  * (forms built by scripts); both use the same classes.
  */
 import { TURNSTILE_SITE_KEY } from "astro:env/client";
+import {
+  appearanceFor,
+  boxShown,
+  failText,
+  type State,
+  TEXT,
+} from "./turnstile-state";
 import { esc } from "./util";
 
 type RenderOptions = {
@@ -17,7 +26,7 @@ type RenderOptions = {
   language: string;
   size: "normal" | "flexible" | "compact";
   callback: (token: string) => void;
-  "error-callback": () => boolean;
+  "error-callback": (code?: string) => boolean;
   "expired-callback": () => void;
   "timeout-callback": () => void;
   "before-interactive-callback": () => void;
@@ -72,17 +81,6 @@ const resolveSiteKey = () => {
     return import.meta.env.DEV ? TEST_SITE_KEY : "";
   })();
   return siteKeyPromise;
-};
-
-type State = "idle" | "wait" | "ok" | "need" | "fail" | "off";
-
-const TEXT: Record<State, string> = {
-  idle: "寄出前会确认你不是机器人",
-  wait: "正在确认你不是机器人……",
-  ok: "已确认",
-  need: "请点一下下面的验证",
-  fail: "验证没通过，点这里重试",
-  off: "人机验证暂时不可用，没法提交",
 };
 
 let loading: Promise<TurnstileApi> | undefined;
@@ -146,16 +144,19 @@ export const mountTurnstile = (wrap: HTMLElement): TurnstileHandle => {
   const action = wrap.dataset.action ?? "comment";
   let widgetId: string | undefined;
   let api: TurnstileApi | undefined;
+  let siteKey = "";
+  /** After a failure: the widget is always visible, for a manual click. */
+  let manual = false;
 
-  const set = (state: State) => {
+  const set = (state: State, text = TEXT[state]) => {
     if (status) {
       status.dataset.state = state;
       status.disabled = state !== "fail";
     }
     if (label) {
-      label.textContent = TEXT[state];
+      label.textContent = text;
     }
-    box?.classList.toggle("show", state === "need");
+    box?.classList.toggle("show", boxShown(state, manual));
   };
 
   const handle: TurnstileHandle = {
@@ -181,38 +182,60 @@ export const mountTurnstile = (wrap: HTMLElement): TurnstileHandle => {
     set("off");
     return handle;
   }
+  const render = (loaded: TurnstileApi) => {
+    widgetId = loaded.render(box, {
+      sitekey: siteKey,
+      action,
+      appearance: appearanceFor(manual),
+      theme: "light",
+      language: "zh-cn",
+      size: "flexible",
+      callback: () => set("ok"),
+      "error-callback": (code) => {
+        set("fail", failText(code));
+        return true;
+      },
+      "expired-callback": () => set("wait"),
+      "timeout-callback": () => set("fail"),
+      "before-interactive-callback": () => set("need"),
+      // Passed or failed, `callback` / `error-callback` says which.
+      "after-interactive-callback": () => set("wait"),
+    });
+  };
+
+  const start = async () => {
+    siteKey = await resolveSiteKey();
+    if (!siteKey) {
+      handle.available = false;
+      set("off");
+      return;
+    }
+    const loaded = await loadTurnstile();
+    api = loaded;
+    if (wrap.isConnected) {
+      render(loaded);
+    }
+  };
+
+  /** 点这里手动验证: render it again, always visible, for a click. */
+  const retryManually = () => {
+    manual = true;
+    if (api && siteKey) {
+      if (widgetId) {
+        api.remove(widgetId);
+        widgetId = undefined;
+      }
+      set("need");
+      render(api);
+      return;
+    }
+    // The script never loaded (blocked or offline): try loading it again.
+    set("wait");
+    start().catch(() => set("fail"));
+  };
+
   set("wait");
-  status?.addEventListener("click", () => handle.reset());
-  resolveSiteKey()
-    .then(async (siteKey) => {
-      if (!siteKey) {
-        handle.available = false;
-        set("off");
-        return;
-      }
-      const loaded = await loadTurnstile();
-      api = loaded;
-      if (!wrap.isConnected) {
-        return;
-      }
-      widgetId = loaded.render(box, {
-        sitekey: siteKey,
-        action,
-        appearance: "interaction-only",
-        theme: "light",
-        language: "zh-cn",
-        size: "flexible",
-        callback: () => set("ok"),
-        "error-callback": () => {
-          set("fail");
-          return true;
-        },
-        "expired-callback": () => set("wait"),
-        "timeout-callback": () => set("fail"),
-        "before-interactive-callback": () => set("need"),
-        "after-interactive-callback": () => box.classList.remove("show"),
-      });
-    })
-    .catch(() => set("fail"));
+  status?.addEventListener("click", retryManually);
+  start().catch(() => set("fail"));
   return handle;
 };
