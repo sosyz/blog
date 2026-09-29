@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 19.389351 20.40167" version="1.1">
+  <title>looped arrow</title><defs />
+  <g transform="translate(-81.775561,-139.47774)">
+    <g transform="matrix(0.2822222,0,0,0.2822222,-297.41808,-259.25752)">
+      <path style="fill:none;fill-rule:evenodd;stroke:currentColor;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" d="m 1400.9206,1440.3106 c 6.4116,-7.1887 9.4977,-15.9609 8.8388,-26.5165 -1.4954,-0.3244 -2.9073,-0.7741 -5.0508,-0.1263 0.1532,9.4434 -3.2698,16.4111 -7.4498,22.8547" />
+      <path style="fill:none;fill-rule:evenodd;stroke:currentColor;stroke-width:1px;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1" d="m 1397.1325,1444.73 c -3.7425,6.5697 -10.6101,10.0978 -19.8243,10.6066 -10.73,0.7529 -13.8907,-6.4035 -13.637,-12.7532 0.2229,-5.2249 6.708,-12.174 17.8039,-12.1218 10.7741,0.6396 21.0072,8.691 21.7183,16.7938 0.2102,15.9815 -26.4135,26.2716 -39.901,30.5571 2.2563,2.5774 5.9669,4.2822 9.3439,6.1872 -8.8709,-1.7052 -18.4715,-1.2309 -28.5368,0.6313 8.4306,-7.3557 15.299,-15.2972 21.8445,-23.3598 -1.1979,3.9144 -2.9234,7.8287 -3.0304,11.7431 27.7655,-9.8611 42.1534,-23.038 31.2828,-32.0993 -1.9677,7.1268 -25.1023,15.3944 -25.2219,2.9311 0.6148,-4.7916 6.2264,-15.7033 25.3801,-2.9042" />
+      <path style="fill:none;fill-rule:evenodd;stroke:currentColor;stroke-width:1px;stroke-linecap:round;stroke-linejoin:miter;stroke-opacity:1" d="m 1374.3856,1465.8786 c 8.2705,-4.3502 16.6691,-8.6524 19.375,-15.0893" />
+      <path style="fill:none;fill-rule:evenodd;stroke:currentColor;stroke-width:1px;stroke-linecap:round;stroke-linejoin:miter;stroke-opacity:1" d="m 1404.8344,1439.6962 c 5.9204,-8.0231 7.3298,-13.5828 6.8966,-20.9167" />
+    </g>
+  </g>
+</svg>
