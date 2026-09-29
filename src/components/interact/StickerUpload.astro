@@ -1,0 +1,482 @@
+---
+/**
+ * Visitor sticker upload: a toolbar button 贴一张贴纸 → pick an image →
+ * 贴纸工坊 (cutout, white die-cut border, journal filter; a modal dialog) →
+ * drag it onto the canvas (rotate, resize) → Turnstile → 贴上. The sticker
+ * waits for review; until then only the uploader sees it (dashed, 审核中).
+ *
+ * Hidden unless the page has a canvas. Logic: src/scripts/interact/
+ * sticker-upload.ts and sticker-workshop.ts; placement uses the canvas contract
+ * (src/scripts/canvas/api.ts).
+ *
+ * Two more buttons, hidden until they apply (src/scripts/interact/
+ * sticker-edit.ts): 贴纸放回原位 when this visitor has dragged stickers
+ * around locally, and 整理贴纸 for the owner (moves visitor stickers for
+ * everyone).
+ *
+ * With a Cloudflare Access session only (src/scripts/interact/
+ * review-stickers.ts): 待审 N, the pending comments + stickers, linking to
+ * /admin/, and a note when the session is gone.
+ */
+import "./auth.css";
+import "./turnstile.css";
+---
+
+<div class="vs-upload" data-sticker-upload>
+  <button type="button" class="vs-open" data-vs-open hidden>
+    <span
+      class="doodle"
+      style="--doodle: url('/journal/doodle/star-rough.svg')"
+      aria-hidden="true"
+    ></span>
+    贴一张贴纸
+  </button>
+  <input
+    type="file"
+    accept="image/png,image/webp,image/gif,image/jpeg"
+    aria-label="选择一张图片做贴纸（PNG、WebP、GIF 或 JPEG，最大 10 MB）"
+    data-vs-file
+    hidden
+  />
+  <button
+    type="button"
+    class="vs-tool"
+    data-vs-reset
+    title="把你拖动过的贴纸都放回原来的位置（只影响你自己的浏览器）"
+    hidden
+  >
+    贴纸放回原位
+  </button>
+  <a
+    class="vs-tool vs-review-badge"
+    href="/admin/"
+    data-astro-reload
+    data-vs-review-badge
+    hidden
+  >
+    待审 <span data-vs-review-count></span>
+  </a>
+  <button
+    type="button"
+    class="vs-tool"
+    aria-pressed="false"
+    data-vs-tidy
+    title="打开后拖动访客贴纸会替所有人挪动；内置贴纸不会保存"
+    hidden
+  >
+    整理贴纸
+  </button>
+  <p class="vs-message" role="alert" data-vs-message hidden></p>
+  <p
+    class="vs-message vs-review-msg"
+    role="status"
+    data-vs-review-msg
+    hidden
+  ></p>
+</div>
+
+<script>
+  import "@/scripts/interact/sticker-upload";
+  import "@/scripts/interact/review-stickers-lazy";
+</script>
+
+<style is:global>
+  .vs-upload {
+    position: relative;
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+  }
+  .vs-tool {
+    padding: 4px 6px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    font-family: var(--hand);
+    font-size: 15px;
+    color: var(--pencil);
+    white-space: nowrap;
+    cursor: pointer;
+    text-decoration: underline dotted rgb(94 78 52 / 0.45);
+    text-underline-offset: 4px;
+    transition: color 0.2s var(--out);
+  }
+  .vs-tool:hover {
+    color: var(--ink);
+  }
+  .vs-review-badge {
+    color: var(--stamp);
+    text-decoration-color: rgb(191 63 54 / 0.45);
+  }
+  .vs-review-badge:hover {
+    color: var(--stamp);
+  }
+  .vs-review-msg {
+    color: var(--ink);
+  }
+  .vs-review-msg a {
+    color: var(--link);
+  }
+  .vs-tool[aria-pressed="true"] {
+    color: var(--stamp);
+    text-decoration: underline solid var(--stamp);
+  }
+  .vs-upload [hidden],
+  .vs-panel [hidden],
+  .vs-shop [hidden] {
+    display: none !important;
+  }
+  .vs-open {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border: 1px dashed var(--edge);
+    border-radius: 8px;
+    background: transparent;
+    font-family: var(--hand);
+    font-size: 15px;
+    color: var(--pencil);
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      color 0.2s var(--out),
+      border-color 0.2s var(--out);
+  }
+  .vs-open:hover {
+    color: var(--ink);
+    border-color: var(--pencil);
+  }
+  .vs-open .doodle {
+    width: 16px;
+    height: 16px;
+  }
+  .vs-message {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 5;
+    width: max-content;
+    max-width: 260px;
+    margin: 0;
+    padding: 6px 10px;
+    font-family: var(--hand);
+    font-size: 14px;
+    color: var(--stamp);
+    background: var(--slip);
+    box-shadow: var(--shadow-float);
+  }
+
+  /* the sticker being placed (inside the canvas world) */
+  .vs-place {
+    z-index: 6;
+    padding: 0;
+    border: 0;
+    background: none;
+    outline: 1.5px dashed var(--pencil);
+    outline-offset: 6px;
+    border-radius: 4px;
+    cursor: grab;
+    touch-action: none;
+  }
+  .vs-place.dragging {
+    cursor: grabbing;
+  }
+  .vs-place:focus-visible {
+    outline: 2px solid var(--link);
+  }
+  .vs-rot {
+    position: absolute;
+    top: -16px;
+    right: -16px;
+    width: 18px;
+    height: 18px;
+    border: 1.6px solid var(--pencil);
+    border-radius: 50%;
+    background: var(--doc);
+    cursor: alias;
+  }
+  .vs-rot::after {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    border-radius: 50%;
+    background: var(--pencil);
+  }
+  .vs-scale {
+    position: absolute;
+    right: -14px;
+    bottom: -14px;
+    width: 16px;
+    height: 16px;
+    border: 1.6px solid var(--pencil);
+    border-radius: 3px;
+    background: var(--doc);
+    cursor: nwse-resize;
+  }
+  .vs-scale::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-right: 1.6px solid var(--pencil);
+    border-bottom: 1.6px solid var(--pencil);
+  }
+
+  /* the floating panel */
+  .vs-panel {
+    position: fixed;
+    z-index: 40;
+    left: 50%;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+    width: min(360px, calc(100% - 32px));
+    padding: 20px 16px 14px;
+    font-family: var(--hand);
+    translate: -50% 0;
+    rotate: -0.6deg;
+    animation: vs-in 0.22s var(--out);
+  }
+  .vs-panel .tape {
+    top: -11px;
+    left: 26px;
+  }
+  .vs-hint,
+  .vs-note {
+    margin: 0 0 8px;
+    font-size: 14.5px;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+  .vs-note {
+    margin: 6px 0 0;
+    font-size: 12.5px;
+    color: var(--pencil);
+  }
+  .vs-tools {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .vs-panel .vs-tools button {
+    font-family: var(--ui);
+  }
+  .vs-tools button,
+  .vs-cancel {
+    min-width: 34px;
+    padding: 2px 8px;
+    border: 1px solid rgb(94 78 52 / 0.3);
+    border-radius: 6px;
+    background: transparent;
+    font-family: var(--hand);
+    font-size: 15px;
+    color: var(--pencil);
+    cursor: pointer;
+  }
+  .vs-tools button:hover,
+  .vs-cancel:hover {
+    color: var(--ink);
+    border-color: var(--pencil);
+  }
+  .vs-panel form {
+    display: grid;
+    gap: 10px;
+  }
+  .vs-panel label {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 15px;
+    color: var(--pencil);
+  }
+  .vs-panel input {
+    flex: 1;
+    min-width: 0;
+    padding: 2px 2px 3px;
+    border: 0;
+    border-bottom: 1.4px solid var(--field-line);
+    border-radius: 0;
+    background: transparent;
+    font-family: var(--hand);
+    font-size: 15.5px;
+    color: var(--ink);
+  }
+  .vs-panel input::placeholder {
+    color: var(--faint);
+  }
+  .vs-panel input:focus {
+    border-bottom-color: var(--link);
+    outline: none;
+  }
+  .vs-panel input:focus-visible {
+    outline: 2px solid var(--link);
+    outline-offset: 2px;
+  }
+  .vs-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .vs-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .vs-panel .stamp-btn {
+    padding: 4px 14px;
+    font-size: 15px;
+  }
+  .vs-panel .cmt-error {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--stamp);
+  }
+  /* 贴纸工坊: a modal sticky note over the desk */
+  .vs-shop {
+    width: min(440px, calc(100% - 32px));
+    max-width: none;
+    max-height: calc(100dvh - 32px);
+    margin: auto;
+    padding: 22px 18px 14px;
+    overflow: visible;
+    border: 0;
+    color: var(--ink);
+    font-family: var(--hand);
+    rotate: -0.4deg;
+    animation: vs-shop-in var(--dur) var(--out);
+  }
+  .vs-shop[open] {
+    display: flex;
+    flex-direction: column;
+  }
+  .vs-shop::backdrop {
+    background: rgb(46 36 22 / 0.35);
+  }
+  .vs-shop .tape {
+    top: -12px;
+    left: 50%;
+    translate: -50% 0;
+  }
+  .vs-shop-title {
+    margin: 0 0 2px;
+    font-size: 21px;
+    font-weight: 400;
+    line-height: 1.3;
+  }
+  .vs-stage {
+    position: relative;
+    flex: none;
+    height: clamp(170px, 34dvh, 270px);
+    margin: 4px 0 6px;
+    border-radius: 6px;
+    box-shadow: inset 0 1px 3px rgb(80 60 30 / 0.18);
+  }
+  .vs-preview {
+    position: absolute;
+    inset: 14px;
+    width: calc(100% - 28px);
+    height: calc(100% - 28px);
+    object-fit: contain;
+    rotate: -2deg;
+    filter: drop-shadow(0 1px 1px rgb(60 40 10 / 0.22))
+      drop-shadow(0 4px 5px rgb(60 40 10 / 0.14));
+    transition: opacity var(--dur) var(--out);
+    user-select: none;
+  }
+  .vs-stage[aria-busy="true"] .vs-preview {
+    opacity: 0.55;
+  }
+  .vs-status {
+    min-height: 1.5em;
+    margin: 0 0 6px;
+    font-size: 14.5px;
+    line-height: 1.5;
+    color: var(--link);
+  }
+  .vs-opts {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  .vs-shop .vs-note {
+    margin: -4px 0 2px 26px;
+  }
+  .vs-check,
+  .vs-range {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .vs-check input {
+    width: 17px;
+    height: 17px;
+    margin: 0;
+    accent-color: var(--stamp);
+  }
+  .vs-range input {
+    flex: 1;
+    min-width: 0;
+    max-width: 180px;
+    accent-color: var(--stamp);
+  }
+  .vs-range-value {
+    min-width: 1.5em;
+    color: var(--pencil);
+  }
+  .vs-size {
+    margin: 0 0 10px;
+    font-family: var(--ui);
+    font-size: 12.5px;
+    color: var(--faint);
+  }
+  .vs-shop .stamp-btn {
+    padding: 4px 14px;
+    font-size: 15px;
+  }
+  @keyframes vs-shop-in {
+    from {
+      opacity: 0;
+      translate: 0 12px;
+    }
+  }
+  @media (max-width: 480px) {
+    .vs-shop {
+      padding: 20px 14px 12px;
+    }
+    .vs-stage {
+      height: clamp(150px, 30dvh, 220px);
+    }
+  }
+  /* Short screens (landscape phones): let the panel scroll. */
+  @media (max-height: 600px) {
+    .vs-shop {
+      overflow-y: auto;
+    }
+    .vs-shop .tape {
+      display: none;
+    }
+    .vs-stage {
+      height: 140px;
+    }
+  }
+
+  @keyframes vs-in {
+    from {
+      opacity: 0;
+      translate: -50% 10px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .vs-panel,
+    .vs-shop {
+      animation: none;
+    }
+    .vs-preview {
+      transition: none;
+    }
+  }
+</style>

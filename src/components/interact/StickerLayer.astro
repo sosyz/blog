@@ -1,0 +1,508 @@
+---
+/**
+ * Approved visitor stickers, placed on the canvas at their world position
+ * (plus the visitor's own pending ones, dashed, with 审核中).
+ *
+ * Filled by src/scripts/interact/stickers.ts after `whenCanvasReady()`.
+ * The sticker being placed by StickerUpload is added here too.
+ *
+ * Moving placed stickers (your own ones, the owner's 整理贴纸, and everyone's
+ * local-only drags of any sticker incl. the built-in ones marked with
+ * `data-sticker-key` in Canvas.astro): src/scripts/interact/sticker-edit.ts;
+ * the paper curl while one is dragged: sticker-peel.ts (WebGL, peel-gl.ts).
+ * Local offsets are the `--dx` / `--dy` custom properties used in `translate`,
+ * so the canvas layout (which sets left / top) never loses them; built-ins
+ * the owner threw away get `.is-thrown-away` (builtin-hidden.ts);
+ * `--peel-lag-x` / `--peel-lag-y` there are sticker-peel.ts's short glide
+ * from where a sticker was stuck into the hand (without WebGL).
+ *
+ * Reviewing in place (only with a Cloudflare Access session): pending
+ * stickers dashed with 待审, and a small sticky note next to the selected one
+ * with 通过 (pending only) and 「不要就拖进垃圾桶」: rejecting and taking down
+ * are a throw into the trash (sticker-trash.ts / trash.ts), not a button:
+ * src/scripts/interact/review-stickers.ts, imported on demand by
+ * review-stickers-lazy.ts only in a browser that may moderate.
+ */
+---
+
+<div class="sticker-layer" data-sticker-layer hidden></div>
+
+<script>
+  import "@/scripts/interact/stickers";
+  import "@/scripts/interact/sticker-edit";
+  import "@/scripts/interact/review-stickers-lazy";
+</script>
+
+<style is:global>
+  .sticker-layer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 0;
+    height: 0;
+  }
+  .vs,
+  .vs-place {
+    position: absolute;
+    z-index: 2;
+    width: var(--w, 120px);
+    translate: -50% -50%;
+    rotate: var(--r, 0deg);
+    user-select: none;
+  }
+  .vs img,
+  .vs-place img {
+    display: block;
+    width: 100%;
+    height: auto;
+    filter: drop-shadow(0 1px 1px rgb(60 40 10 / 0.22))
+      drop-shadow(0 4px 5px rgb(60 40 10 / 0.14));
+    -webkit-user-drag: none;
+    pointer-events: none;
+  }
+  .vs {
+    translate: calc(-50% + var(--dx, 0px) + var(--peel-lag-x, 0px))
+      calc(-50% + var(--dy, 0px) + var(--peel-lag-y, 0px));
+    cursor: grab;
+    touch-action: none;
+    transition: scale 0.3s var(--out);
+  }
+  .vs:hover {
+    scale: 1.05;
+  }
+  /* Built-in stickers: anyone can drag them (only in their own browser). */
+  .world [data-sticker-key] {
+    translate: calc(var(--dx, 0px) + var(--peel-lag-x, 0px))
+      calc(var(--dy, 0px) + var(--peel-lag-y, 0px));
+    cursor: grab;
+    touch-action: none;
+  }
+  /* Thrown away by the owner (builtin-hidden.ts): gone for everyone, but its
+     box stays so nothing else on the canvas moves. */
+  .world .sticker[data-sticker-key].is-thrown-away {
+    visibility: hidden;
+  }
+  /* Only the owner can focus a built-in (to throw it away with Delete). */
+  .world .sticker[data-sticker-key]:focus-visible {
+    outline: 2px solid var(--link);
+    outline-offset: 6px;
+    border-radius: 4px;
+  }
+  /* 撕下来 without WebGL (or before its canvas is ready): once it is pulled
+     off it lifts above the cards, the corner under the pointer tilts up
+     (--peel-ax / --peel-ay from sticker-edit.ts), its shadow falls further
+     away, and it glides from where it was stuck into the hand (--peel-lag-x
+     / --peel-lag-y, driven frame by frame by sticker-peel.ts). */
+  .world .vs {
+    transition:
+      scale 0.3s var(--out),
+      transform 0.2s var(--out),
+      filter 0.2s var(--out);
+  }
+  /* Built-in ones keep canvas.css's hover (which also straightens them). */
+  .world .sticker[data-sticker-key] {
+    transition:
+      rotate 0.3s var(--out),
+      scale 0.3s var(--out),
+      transform 0.2s var(--out),
+      filter 0.3s var(--out);
+  }
+  .world .sticker[data-sticker-key].is-lifted,
+  .world .vs.is-lifted {
+    z-index: 30;
+    cursor: grabbing;
+    scale: 1.06;
+    transform: perspective(700px)
+      rotate3d(var(--peel-ax, 1), var(--peel-ay, -1), 0, 12deg);
+    filter: drop-shadow(2px 5px 3px rgb(60 40 10 / 0.2))
+      drop-shadow(8px 18px 14px rgb(60 40 10 / 0.2));
+    transition:
+      scale 0.15s var(--out),
+      transform 0.15s var(--out),
+      filter 0.15s var(--out);
+  }
+  /* Being peeled without WebGL, not off yet: the corner under the pointer
+     only tilts a little; it stays where it is until it comes off
+     (.is-lifted). */
+  .world .sticker[data-sticker-key].is-tugged,
+  .world .vs.is-tugged {
+    cursor: grabbing;
+    transform: perspective(700px)
+      rotate3d(var(--peel-ax, 1), var(--peel-ay, -1), 0, 5deg);
+    filter: drop-shadow(1px 3px 2px rgb(60 40 10 / 0.18));
+  }
+  /* 撕下来 with WebGL (sticker-peel.ts): a canvas draws the sticker curling
+     up while it is peeled and carried; the element stays in place,
+     invisible, so it keeps its layout, focus and the pointer. */
+  .world .sticker[data-sticker-key].is-peeling,
+  .world .vs.is-peeling {
+    opacity: 0;
+    cursor: grabbing;
+  }
+  /* 贴回去: pressed back down onto the desk where it was let go. */
+  .world .sticker[data-sticker-key].is-sticking,
+  .world .vs.is-sticking {
+    animation: vs-stick 0.26s var(--out);
+  }
+  @keyframes vs-stick {
+    from {
+      scale: 1.06;
+    }
+    45% {
+      scale: 0.98;
+    }
+    to {
+      scale: 1;
+    }
+  }
+  .world .sticker[data-sticker-key].vs-gliding,
+  .world .vs.vs-gliding {
+    transition:
+      translate 0.45s var(--out),
+      rotate 0.3s var(--out),
+      scale 0.3s var(--out),
+      filter 0.3s var(--out);
+  }
+  /* Your own sticker (or any visitor sticker in 整理贴纸): a real button. */
+  button.vs {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: inherit;
+  }
+  .vs.is-editable:hover {
+    outline: 1.5px dashed rgb(94 78 52 / 0.4);
+    outline-offset: 5px;
+    border-radius: 4px;
+  }
+  .vs.is-selected {
+    z-index: 6;
+    outline: 1.5px dashed var(--pencil);
+    outline-offset: 6px;
+    border-radius: 4px;
+  }
+  .vs.is-editable:focus-visible {
+    outline: 2px solid var(--link);
+    outline-offset: 6px;
+  }
+  .vs.is-selected:focus-visible {
+    outline: 2px dashed var(--link);
+  }
+  /* Keep the rotate handle clear of the 审核中 tag. */
+  .vs.is-selected .vs-tag {
+    right: auto;
+    left: -10px;
+  }
+  .vs .vs-rot,
+  .vs .vs-scale {
+    display: none;
+  }
+  .vs.is-selected .vs-rot,
+  .vs.is-selected .vs-scale {
+    display: block;
+  }
+  /* 已挪好 / 没挪成功: a hand-written note under the sticker. */
+  .vs-moved {
+    position: absolute;
+    z-index: 7;
+    margin: 0;
+    padding: 0 6px;
+    font-family: var(--hand);
+    font-size: 14px;
+    color: var(--link);
+    white-space: nowrap;
+    translate: -50% 0;
+    rotate: -2deg;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s var(--out);
+  }
+  .vs-moved.is-shown {
+    opacity: 1;
+  }
+  .vs-moved.is-error {
+    color: var(--stamp);
+  }
+  .vs.pending {
+    outline: 1.5px dashed rgb(94 78 52 / 0.5);
+    outline-offset: 4px;
+    border-radius: 4px;
+  }
+  .vs.pending img {
+    opacity: 0.85;
+  }
+  .vs-tag {
+    position: absolute;
+    right: -10px;
+    top: -14px;
+    padding: 0 6px;
+    font-family: var(--hand);
+    font-size: 13px;
+    color: var(--pencil);
+    background: var(--doc);
+    border: 1.5px dashed var(--pencil);
+    border-radius: 3px;
+    rotate: 8deg;
+    white-space: nowrap;
+  }
+  /* Pending, shown to the owner for review: a red 待审 tag. */
+  .vs.is-review .vs-tag {
+    color: var(--stamp);
+    border-color: var(--stamp);
+  }
+  /* The review note: a small sticky note next to the selected sticker. It
+     lives in the world (so Tab goes sticker → note) and is scaled back by
+     1 / camera scale (--inv) to stay the same size on screen. */
+  .vsr {
+    position: absolute;
+    z-index: 8;
+    width: 212px;
+    margin: 0;
+    padding: 10px 14px 12px;
+    font-family: var(--hand);
+    font-size: 15px;
+    line-height: 1.45;
+    color: var(--ink);
+    text-align: left;
+    translate: -50% 0;
+    rotate: -1.2deg;
+    scale: var(--inv, 1);
+    transform-origin: 50% 0;
+    cursor: auto;
+    animation: vsr-in var(--dur) var(--out);
+  }
+  .vsr.is-above {
+    translate: -50% -100%;
+    transform-origin: 50% 100%;
+  }
+  .vsr p {
+    margin: 0;
+  }
+  .vsr-title {
+    font-size: 16.5px;
+  }
+  .vsr .vsr-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 10px;
+    margin: 2px 0 8px;
+    font-family: var(--ui);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--faint);
+  }
+  .vsr-meta code {
+    font-family: var(--code);
+    font-size: 11.5px;
+  }
+  .vsr .vsr-hint {
+    margin-top: 6px;
+    font-family: var(--ui);
+    font-size: 11.5px;
+    color: var(--faint);
+  }
+  .vsr-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+  }
+  .vsr .stamp-btn {
+    padding: 3px 14px;
+    font-size: 15px;
+  }
+  .vsr-btn {
+    padding: 2px 4px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    font-family: var(--hand);
+    font-size: 15px;
+    color: var(--pencil);
+    cursor: pointer;
+    text-decoration: underline dotted rgb(94 78 52 / 0.45);
+    text-underline-offset: 4px;
+  }
+  .vsr-btn:hover {
+    color: var(--ink);
+  }
+  .vsr button:disabled {
+    cursor: wait;
+    opacity: 0.6;
+  }
+  .vsr button:focus-visible,
+  .vsr a:focus-visible {
+    outline: 2px solid var(--link);
+    outline-offset: 2px;
+  }
+  .vsr-status,
+  .vsr-all {
+    color: var(--pencil);
+  }
+  .vsr .vsr-status,
+  .vsr .vsr-error {
+    margin-top: 6px;
+    font-size: 14px;
+  }
+  .vsr-error {
+    color: var(--stamp);
+  }
+  .vsr .vsr-done {
+    margin-bottom: 6px;
+    color: var(--link);
+  }
+  .vsr-next {
+    color: var(--link);
+  }
+  /* 垃圾桶: a hand-drawn can above the zoom buttons, only while a sticker
+     this viewer may delete is peeled off (sticker-trash.ts). */
+  .vs-trash {
+    position: fixed;
+    z-index: 21;
+    right: 14px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 64px);
+    display: grid;
+    place-items: center;
+    width: 68px;
+    height: 68px;
+    border: 1.5px dashed var(--faint-mark);
+    border-radius: 50%;
+    background: var(--doc);
+    box-shadow: var(--shadow-float);
+    color: var(--pencil);
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    translate: 0 10px;
+    transition:
+      opacity var(--dur) var(--out),
+      translate var(--dur) var(--out),
+      scale var(--dur-fast) var(--out),
+      color var(--dur-fast) var(--out),
+      visibility 0s linear var(--dur);
+  }
+  .vs-trash.is-shown {
+    opacity: 1;
+    visibility: visible;
+    translate: 0 0;
+    transition:
+      opacity var(--dur) var(--out),
+      translate var(--dur) var(--out),
+      scale var(--dur-fast) var(--out),
+      color var(--dur-fast) var(--out);
+  }
+  .vs-trash.is-open {
+    scale: 1.12;
+    color: var(--stamp);
+    border-color: var(--stamp);
+  }
+  .vs-trash svg {
+    overflow: visible;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .vs-trash .vs-trash-body {
+    fill: var(--slip);
+  }
+  .vs-trash-lid {
+    transform-box: view-box;
+    transform-origin: 6px 17.5px;
+    transition: rotate var(--dur-fast) var(--out);
+  }
+  .vs-trash.is-open .vs-trash-lid {
+    rotate: -26deg;
+  }
+  /* 已扔掉 · 撤销: a hand-written slip at the bottom. */
+  .vs-toast {
+    position: fixed;
+    z-index: 40;
+    left: 50%;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+    max-width: calc(100% - 32px);
+    margin: 0;
+    padding: 6px 14px;
+    font-family: var(--hand);
+    font-size: 15.5px;
+    color: var(--ink);
+    background: var(--slip);
+    box-shadow: var(--shadow-float);
+    translate: -50% 0;
+    rotate: -0.8deg;
+    animation: vs-toast-in var(--dur) var(--out);
+  }
+  .vs-toast[hidden] {
+    display: none;
+  }
+  .vs-toast.is-error {
+    color: var(--stamp);
+  }
+  .vs-toast a,
+  .vs-undo {
+    color: var(--link);
+  }
+  .vs-undo {
+    padding: 0 2px;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .vs-toast a:focus-visible,
+  .vs-undo:focus-visible {
+    outline: 2px solid var(--link);
+    outline-offset: 2px;
+  }
+  @media (max-width: 560px) {
+    /* Keep clear of the zoom buttons at the bottom right. */
+    .vs-toast {
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 64px);
+    }
+  }
+  @keyframes vs-toast-in {
+    from {
+      opacity: 0;
+      translate: -50% 8px;
+    }
+  }
+  @keyframes vsr-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .vsr,
+    .vs-toast,
+    .world .sticker[data-sticker-key].is-sticking,
+    .world .vs.is-sticking {
+      animation: none;
+    }
+    /* No curl: it just lifts and comes back. */
+    .world .sticker[data-sticker-key].is-tugged,
+    .world .vs.is-tugged,
+    .world .sticker[data-sticker-key].is-lifted,
+    .world .vs.is-lifted {
+      transform: none;
+    }
+    .world .sticker[data-sticker-key],
+    .world .vs,
+    .world .sticker[data-sticker-key].is-lifted,
+    .world .vs.is-lifted,
+    .vs-trash,
+    .vs-trash.is-shown,
+    .vs-trash-lid {
+      transition: none;
+    }
+    .vs,
+    .vs-moved,
+    .world .sticker[data-sticker-key].vs-gliding,
+    .world .vs.vs-gliding {
+      transition: none;
+    }
+  }
+</style>
