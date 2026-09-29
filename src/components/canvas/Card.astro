@@ -1,0 +1,128 @@
+---
+/**
+ * One note on the canvas, as a real link to its page (crawlable, works
+ * without JavaScript).
+ *
+ * - 随想: a sticky note, no tape.
+ * - 踩坑: a ruled index card held by tape or a paperclip (seeded by slug),
+ *   a status stamp when `status` is set, a blue date stamp, and a polaroid
+ *   when the note has a hero image.
+ *
+ * The client layout (src/scripts/canvas/layout.ts) positions it with
+ * left/top; `data-*` attributes feed search and the related-note lines.
+ */
+import { Image } from "astro:assets";
+import { dotDate, notePath, type Post } from "@/lib/posts";
+import { cardFixing, cardTilt, tapeSrc } from "@/scripts/canvas/seed";
+
+type Props = {
+  post: Post;
+  /** Bidirectional related slugs (lines on the canvas). */
+  related: string[];
+};
+
+const MAX_TAGS = 3;
+/** Tapes are rendered at 2x; this is the on-card width. */
+const TAPE_WIDTH = 108;
+const TAPE_RATIO = 600 / 112;
+/** Cover is shown ~212px wide on the card; 2x for sharp screens. */
+const COVER_WIDTH = 440;
+
+const { post, related } = Astro.props;
+const { data } = post;
+const slug = post.id;
+const isSticky = data.type === "随想";
+const fixing = cardFixing(slug);
+const date = dotDate(data.pubDate);
+const photoCaption = `${date.slice(0, 4)} · ${date.slice(5)}`;
+/** What the toolbar search looks in: title, summary, topic and tags. */
+const searchText = [data.title, data.description, data.topic, ...data.tags]
+  .join(" ")
+  .toLowerCase();
+---
+
+<a
+  class:list={["card", isSticky ? "sticky sticky-paper" : "note doc-paper"]}
+  href={notePath(slug)}
+  draggable="false"
+  data-card
+  data-slug={slug}
+  data-topic={data.topic}
+  data-tags={data.tags.join(" ")}
+  data-related={related.join(" ")}
+  data-q={searchText}
+  style={`--r: ${cardTilt(slug)}deg`}
+>
+  {isSticky ? (
+    <>
+      <h3>{data.title}</h3>
+      <p>{data.description}</p>
+    </>
+  ) : (
+    <>
+      <span class="lines" aria-hidden="true" />
+      {fixing.kind === "clip" ? (
+        <img
+          class="clip"
+          src="/journal/paperclip.svg"
+          alt=""
+          width="20"
+          height="52"
+          loading="lazy"
+          decoding="async"
+          draggable="false"
+        />
+      ) : (
+        <img
+          class="tape"
+          src={tapeSrc(fixing.tape)}
+          alt=""
+          width={TAPE_WIDTH}
+          height={Math.round(TAPE_WIDTH / TAPE_RATIO)}
+          loading="lazy"
+          decoding="async"
+          draggable="false"
+          style={`--tr: ${fixing.tilt}deg`}
+        />
+      )}
+      {data.heroImage && (
+        <div class="photo polaroid">
+          <Image
+            src={data.heroImage}
+            alt=""
+            width={COVER_WIDTH}
+            draggable="false"
+          />
+          <span class="cap" aria-hidden="true">
+            {photoCaption}
+          </span>
+        </div>
+      )}
+      {data.status && (
+        <span
+          class:list={[
+            "stamp is-mini",
+            { "is-open": data.status === "未解决" },
+          ]}
+        >
+          <span aria-hidden="true">
+            {data.status.slice(0, 2)}
+            <br />
+            {data.status.slice(2)}
+          </span>
+          <span class="sr-only">{data.status}</span>
+        </span>
+      )}
+      <h3>{data.title}</h3>
+      <p>{data.description}</p>
+      <div class="foot">
+        <span class="tags">
+          {data.tags.slice(0, MAX_TAGS).map((tag) => (
+            <span>#{tag}</span>
+          ))}
+        </span>
+        <span class="date-stamp">{date}</span>
+      </div>
+    </>
+  )}
+</a>

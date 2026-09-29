@@ -1,0 +1,85 @@
+/*
+ * Design tokens. Values come from docs/design.md and the approved motion
+ * prototype. Every other stylesheet reads these; do not hard-code colors.
+ *
+ * Light only: the journal is paper, there is no dark theme (design.md).
+ */
+:root {
+  color-scheme: light;
+
+  /* paper */
+  --desk: #eee2c6; /* canvas background, dotted */
+  --doc: #f6edd6; /* documents: index cards, drawer, list */
+  --sticky: #fbe7a1; /* one sticky-note yellow for every note */
+  --slip: #fdfaf2; /* code slips, comment slips, forms */
+  --photo: #fbfaf5; /* polaroid border */
+  --kraft-ink: #2a1f12; /* text on kraft paper: ≥ 4.5:1 on the kraft texture */
+
+  /*
+   * ink. Contrast is measured against the paper as rendered (token colour
+   * multiplied by its texture, and under the 6% shade the desk gets while a
+   * note is open), not against the flat tokens: see docs/design.md 对比度.
+   */
+  --ink: #2d2822; /* body text */
+  --pencil: #524a3e; /* secondary text, notes; ≥ 4.5:1 on the shaded desk */
+  --faint: #574f43; /* meta text, placeholders; ≥ 4.5:1 on every document */
+  --faint-mark: #9d917a; /* non-text marks only: bullets, icons, decoration */
+  --edge: rgb(94 78 52 / 0.18); /* paper edges, dashed rules */
+  /* input underlines, field borders: ≥ 3:1 on every paper */
+  --field-line: rgb(94 78 52 / 0.75);
+  --link: #3d5f8f; /* blue-black ink */
+  --stamp: #bf3f36; /* vermilion stamp pad: borders and marks */
+  --stamp-ink: #9e3129; /* vermilion text (status stamps, errors): ≥ 4.5:1 */
+  --stamp-blue: #3d5f8f; /* date stamp */
+  --rule: rgb(84 112 150 / 0.2); /* ruled lines on index cards */
+  --margin: rgb(196 84 72 / 0.38); /* red margin line */
+  --highlight: rgb(250 214 92 / 0.55); /* marker pen */
+
+  /* code inks */
+  --kw: #3d5f8f;
+  --str: #9a4d2c;
+  --com: #736b59;
+
+  /* type */
+  --hand:
+    "Xiaolai", "Xiaolai Fallback", "PingFang SC", "Hiragino Sans GB", cursive;
+  --body:
+    "Zhuque Fangsong", "Zhuque Fangsong Fallback", "Songti SC", "STSong", serif;
+  --code: "Maple Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --ui:
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+
+  /* motion */
+  --out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --spring: cubic-bezier(0.22, 1.06, 0.36, 1);
+  --dur-fast: 150ms;
+  --dur: 250ms;
+  --dur-slow: 350ms;
+  --dur-drawer: 400ms;
+
+  /* real paper textures (public/journal/, see ATTRIBUTIONS.md) */
+  --paper-canvas: url("/journal/paper/canvas-beige-fine.jpg");
+  --paper-doc: url("/journal/paper/document-ivory.jpg");
+  --grain: url("/journal/paper/grain-overlay-gray.jpg");
+  --kraft: url("/journal/paper/kraft-smooth.jpg");
+  --speckle: url("/journal/stamp-speckle.png");
+
+  /* shadows */
+  --shadow-card:
+    0 1px 2px rgb(80 60 30 / 0.1), 0 10px 18px -12px rgb(80 60 30 / 0.4);
+  --shadow-card-lift:
+    0 2px 3px rgb(80 60 30 / 0.1), 0 20px 30px -14px rgb(80 60 30 / 0.5);
+  --shadow-sticky:
+    0 1px 1px rgb(120 90 20 / 0.16), 0 8px 10px -8px rgb(90 60 10 / 0.38), 10px
+    12px 14px -12px rgb(90 60 10 / 0.32);
+  --shadow-sticky-lift:
+    0 1px 1px rgb(120 90 20 / 0.16), 0 14px 16px -12px rgb(90 60 10 / 0.45),
+    14px 18px 20px -16px rgb(90 60 10 / 0.4);
+  --shadow-slip:
+    0 1px 2px rgb(60 40 20 / 0.15), 0 8px 14px -10px rgb(60 40 20 / 0.35);
+  --shadow-photo:
+    0 1px 2px rgb(60 40 20 / 0.2), 0 6px 10px -6px rgb(60 40 20 / 0.35);
+  --shadow-float: 0 8px 20px -12px rgb(80 60 30 / 0.45);
+  --shadow-drawer:
+    0 2px 4px rgb(80 60 30 / 0.1), 0 30px 60px -24px rgb(80 60 30 / 0.55);
+}

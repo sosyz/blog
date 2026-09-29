@@ -1,32 +1,24 @@
 ---
-import BaseHead from "@/components/BaseHead.astro";
-import { SITE_DESCRIPTION, SITE_TITLE } from "@/consts";
-import Avatar from "@/assets/avatar.webp";
+/**
+ * Home: the canvas. On narrow screens (<640px) the same page shows the list
+ * first (CSS switch, so `/` stays fully crawlable); the toolbar's 画布 / 列表
+ * flips between them and remembers the choice for the tab.
+ */
+import Canvas from "@/components/canvas/Canvas.astro";
+import NoteList from "@/components/canvas/NoteList.astro";
+import Toolbar from "@/components/canvas/Toolbar.astro";
+import StickerUpload from "@/components/interact/StickerUpload.astro";
+import Base from "@/layouts/Base.astro";
 ---
 
-<!doctype html>
-<html lang="zh-CN">
-  <head>
-    <BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
-  </head>
-  <body>
-    <main>
-      <div class="flex flex-row items-center">
-        <div
-          class="avatar mr-4 flex items-center justify-center overflow-hidden rounded-full border-2 border-gray-300"
-        >
-          <img src={Avatar.src} alt="sonui的头像，一个戴着眼镜的可爱小狗" />
-        </div>
-        <div>
-          <h3>Sonui's Blog</h3>
-          <div>
-            <p>
-              Welcome to the official blog of Sonui. Here I will share my
-              thoughts and experiences on programming, ld
-            </p>
-          </div>
-        </div>
-      </div>
-    </main>
-  </body>
-</html>
+<Base canonical="/" bodyClass="view-canvas">
+  <Toolbar view="canvas" home>
+    <StickerUpload />
+  </Toolbar>
+  <main class="home" id="main" data-home data-view="auto">
+    <Canvas />
+    <div class="home-list list desk-paper">
+      <NoteList titleTag="h2" />
+    </div>
+  </main>
+</Base>

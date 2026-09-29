@@ -1,0 +1,223 @@
+---
+/**
+ * The infinite canvas: the intro card in the centre, topic piles spiralling
+ * around it, stickers and doodles, lines between related notes.
+ *
+ * Every card is server-rendered as a real link inside the world element, so
+ * the canvas is crawlable and usable without JavaScript (a <noscript> style
+ * lays the piles out as a plain page). The client script
+ * (src/scripts/canvas/canvas.ts) measures and places everything, then runs
+ * the camera, search and drawer motion.
+ *
+ * `transition:persist="canvas"`: the same element (and camera) survives
+ * navigation between `/` and `/notes/<slug>/`.
+ */
+import "@/styles/canvas.css";
+import Card from "@/components/canvas/Card.astro";
+import StickerLayer from "@/components/interact/StickerLayer.astro";
+import { PROFILE } from "@/consts";
+import { dogKey, outerKey, pileKey } from "@/lib/builtin-stickers";
+import { getRelated, getTopics } from "@/lib/posts";
+import {
+  DOG_STICKER,
+  OUTER_STICKERS,
+  rot,
+  stickerSrc,
+  TOPIC_STICKERS,
+  tapeSrc,
+} from "@/scripts/canvas/seed";
+
+const TOPIC_STICKER_WIDTHS = [92, 80] as const;
+const TOPIC_STICKER_TILT = 16;
+const OUTER_STICKER_WIDTH = 108;
+const OUTER_STICKER_TILT = 14;
+const DOG_WIDTH = 118;
+const TAPE_RATIO = 600 / 112;
+const INTRO_TAPE_WIDTH = 120;
+
+const topics = await getTopics();
+const piles = await Promise.all(
+  topics.map(async (topic, index) => ({
+    ...topic,
+    id: `pile-${index + 1}`,
+    stickers: (TOPIC_STICKERS[topic.name] ?? []).map((name, i) => ({
+      name,
+      width: TOPIC_STICKER_WIDTHS[i] ?? TOPIC_STICKER_WIDTHS[1],
+      tilt: rot(`${topic.name}${name}`, TOPIC_STICKER_TILT),
+    })),
+    cards: await Promise.all(
+      topic.posts.map(async (post) => ({
+        post,
+        related: (await getRelated(post.id)).map((p) => p.id),
+      })),
+    ),
+  })),
+);
+const externalLinks = PROFILE.links.filter((link) => link.href !== "/list/");
+---
+
+<div class="canvas" data-canvas transition:persist="canvas">
+  <section class="viewport" aria-label="笔记画布" data-viewport>
+    <div class="world" data-world>
+      <svg class="links" aria-hidden="true" data-links></svg>
+
+      <div class="intro doc-paper" style="--r: -0.6deg" data-intro>
+        <img
+          class="tape"
+          src={tapeSrc("washi-dots-mustard")}
+          alt=""
+          width={INTRO_TAPE_WIDTH}
+          height={Math.round(INTRO_TAPE_WIDTH / TAPE_RATIO)}
+          loading="lazy"
+          decoding="async"
+          draggable="false"
+          style={`--tr: -4deg; --tape-w: ${INTRO_TAPE_WIDTH}px`}
+        />
+        <p class="owner">这本手账属于</p>
+        <p class="name">{PROFILE.name}</p>
+        <p class="role">{PROFILE.title}</p>
+        <p class="bio">{PROFILE.bio}</p>
+        <p class="links-row">
+          {externalLinks.map((link) => (
+            <a href={link.href}>{link.label}</a>
+          ))}
+        </p>
+      </div>
+      <img
+        class="sticker"
+        src={stickerSrc(DOG_STICKER)}
+        alt=""
+        width={DOG_WIDTH}
+        height={DOG_WIDTH}
+        loading="lazy"
+        decoding="async"
+        draggable="false"
+        style={`--w: ${DOG_WIDTH}px; --r: 8deg`}
+        data-dog
+        data-sticker-key={dogKey(DOG_STICKER)}
+      />
+      <span class="doodle arrow" aria-hidden="true" data-arrow></span>
+      <p class="scribble" aria-hidden="true" data-arrow-text>
+        最近在折腾
+      </p>
+
+      {piles.map((pile) => (
+        <section class="pile" aria-labelledby={pile.id} data-pile>
+          <h2 class="topic" id={pile.id} data-topic-label>
+            {pile.name}
+            <small>
+              <span class="sr-only">，共 </span>
+              {pile.posts.length}
+              <span class="sr-only"> 篇</span>
+            </small>
+            <span class="ul" aria-hidden="true" />
+          </h2>
+          {pile.stickers.map((sticker) => (
+            <img
+              class="sticker"
+              src={stickerSrc(sticker.name)}
+              alt=""
+              width={sticker.width}
+              height={sticker.width}
+              loading="lazy"
+              decoding="async"
+              draggable="false"
+              style={`--w: ${sticker.width}px; --r: ${sticker.tilt}deg`}
+              data-pile-sticker
+              data-sticker-key={pileKey(pile.name, sticker.name)}
+            />
+          ))}
+          {pile.cards.map(({ post, related }) => (
+            <Card post={post} related={related} />
+          ))}
+        </section>
+      ))}
+
+      {OUTER_STICKERS.map((name) => (
+        <img
+          class="sticker"
+          src={stickerSrc(name)}
+          alt=""
+          width={OUTER_STICKER_WIDTH}
+          height={OUTER_STICKER_WIDTH}
+          loading="lazy"
+          decoding="async"
+          draggable="false"
+          style={`--w: ${OUTER_STICKER_WIDTH}px; --r: ${rot(name, OUTER_STICKER_TILT)}deg`}
+          data-outer
+          data-sticker-key={outerKey(name)}
+        />
+      ))}
+
+      <StickerLayer />
+    </div>
+  </section>
+
+  <div class="zoom doc-paper" role="group" aria-label="缩放">
+    <button type="button" aria-label="缩小" data-zoom-out>
+      −
+    </button>
+    <span class="pct" data-zoom-pct>
+      100%
+    </span>
+    <button type="button" aria-label="放大" data-zoom-in>
+      ＋
+    </button>
+    <button type="button" aria-label="回到中心" data-zoom-home>
+      ⌂
+    </button>
+  </div>
+</div>
+
+<noscript>
+  <style is:inline>
+    /* Without JavaScript: the piles as a plain, scrollable page. */
+    .viewport {
+      position: static;
+      overflow: visible;
+      touch-action: auto;
+      cursor: auto;
+      min-height: 100dvh;
+      padding: 96px 16px 48px;
+    }
+    .viewport:not(.is-laid-out) .world {
+      position: static;
+      visibility: visible;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: flex-start;
+      gap: 56px 40px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .world .intro,
+    .world .pile,
+    .world .topic,
+    .world .card {
+      position: relative;
+    }
+    .world .pile {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 22px;
+      width: 260px;
+    }
+    .world .topic {
+      margin-bottom: 8px;
+    }
+    .world .sticker,
+    .world .arrow,
+    .world .scribble,
+    .world .links,
+    .zoom,
+    .search {
+      display: none;
+    }
+  </style>
+</noscript>
+
+<script>
+  import "@/scripts/canvas/canvas";
+</script>

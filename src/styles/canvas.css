@@ -1,0 +1,1139 @@
+/*
+ * Canvas, toolbar, drawer shell and list. Ported from the approved motion
+ * prototype; values are the prototype's. Materials (paper, tape, stamps,
+ * stickers) come from materials.css, colours and fonts from tokens.css.
+ *
+ * The article inside the drawer is styled by the Prose agent (prose.css);
+ * this file only styles the drawer frame around it.
+ */
+
+/* ======================================================================
+ * Canvas
+ * ==================================================================== */
+
+.viewport {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+  background-color: var(--desk);
+  background-image:
+    radial-gradient(circle, rgb(110 95 70 / 0.3) 1px, transparent 1.4px),
+    var(--paper-canvas);
+  background-size:
+    var(--dot, 20px) var(--dot, 20px),
+    var(--tex, 480px) auto;
+  background-position:
+    var(--bx, 0) var(--by, 0),
+    var(--bx, 0) var(--by, 0);
+  background-blend-mode: normal, multiply;
+  transition:
+    opacity 0.2s var(--out),
+    visibility 0s;
+}
+
+/* The desk darkens a little while a note is open. Kept light: text on the
+ * shaded desk and cards still needs 4.5:1 (docs/design.md 对比度). */
+.viewport::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgb(70 50 20 / 0.06);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s var(--out);
+}
+
+body.drawer-open .viewport::after {
+  opacity: 1;
+}
+
+.world {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+}
+
+/* The world has no width; images size themselves, not to 100% of 0. */
+.world img {
+  max-width: none;
+}
+
+/* Hidden until the client has measured and placed everything. */
+.viewport:not(.is-laid-out) .world {
+  visibility: hidden;
+}
+
+.links {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.links path {
+  fill: none;
+  stroke: var(--pencil);
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  stroke-dasharray: 1 5;
+  opacity: 0.45;
+  transition:
+    opacity 0.25s var(--out),
+    stroke-width 0.25s var(--out);
+}
+
+.links path.hot {
+  opacity: 0.9;
+  stroke-width: 1.8;
+  stroke-dasharray: none;
+}
+
+/* ---------- piles ---------- */
+
+.pile {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.topic {
+  position: absolute;
+  left: 0;
+  top: 0;
+  margin: 0;
+  font-family: var(--hand);
+  font-size: 27px;
+  font-weight: 400;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.topic .ul {
+  position: absolute;
+  left: -6px;
+  right: -6px;
+  bottom: -12px;
+  height: 14px;
+  background: var(--pencil);
+  -webkit-mask:
+    url("/journal/doodle/underline-swoosh.svg") center / 100% 100% no-repeat;
+  mask:
+    url("/journal/doodle/underline-swoosh.svg") center / 100% 100% no-repeat;
+}
+
+.topic small {
+  display: inline-grid;
+  place-content: center;
+  width: 24px;
+  height: 24px;
+  margin-left: 8px;
+  vertical-align: 4px;
+  font-size: 13px;
+  color: var(--pencil);
+  border: 1.4px solid var(--pencil);
+  border-radius: 50%;
+}
+
+/* ---------- cards ---------- */
+
+.card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  color: var(--ink);
+  text-decoration: none;
+  cursor: pointer;
+  rotate: var(--r, 0deg);
+  translate: 0 0;
+  transition:
+    rotate 0.3s var(--out),
+    translate 0.25s var(--out),
+    box-shadow 0.25s var(--out),
+    opacity 0.25s var(--out);
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+}
+
+.card:hover,
+.card:focus-visible,
+.card.current {
+  rotate: calc(var(--r, 0deg) * 0.25);
+  translate: 0 -3px;
+  z-index: 3;
+}
+
+/* Search misses: faded and out of the Tab order (canvas.ts applySearch). */
+.card.dim {
+  opacity: 0.4;
+}
+
+.viewport.grabbing,
+.viewport.grabbing .card {
+  cursor: grabbing;
+}
+
+.card h3,
+.card p {
+  overflow-wrap: anywhere;
+}
+
+/* Sticky note (随想): no tape, curled corner shadow from .sticky-paper. */
+.sticky {
+  width: 210px;
+  padding: 18px 16px 20px;
+  font-family: var(--hand);
+}
+
+.sticky:hover,
+.sticky:focus-visible,
+.sticky.current {
+  box-shadow: var(--shadow-sticky-lift);
+}
+
+.sticky h3 {
+  margin: 0 0 6px;
+  font-size: 19px;
+  line-height: 1.35;
+  font-weight: 400;
+}
+
+.sticky p {
+  display: -webkit-box;
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Ruled index card (踩坑). */
+.note {
+  width: 250px;
+  padding: 16px 16px 14px 30px;
+  border: 1px solid var(--edge);
+  box-shadow: var(--shadow-card);
+}
+
+.note:hover,
+.note:focus-visible,
+.note.current {
+  box-shadow: var(--shadow-card-lift);
+}
+
+.note .lines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      90deg,
+      transparent 20px,
+      var(--margin) 20px,
+      var(--margin) 21px,
+      transparent 21px
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0 23px,
+      var(--rule) 23px 24px
+    );
+  background-position: 0 6px;
+}
+
+.note h3 {
+  position: relative;
+  margin: 0 0 6px;
+  padding-right: 44px;
+  font-family: var(--hand);
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 400;
+}
+
+.note p {
+  position: relative;
+  display: -webkit-box;
+  margin: 0;
+  font-family: var(--body);
+  font-size: 14.5px;
+  line-height: 24px;
+  color: var(--pencil);
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.note .foot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.note .tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 10px;
+  min-width: 0;
+  font-family: var(--hand);
+  font-size: 13px;
+  color: var(--faint);
+}
+
+.note > .tape {
+  top: -11px;
+  left: 50%;
+  margin-left: -54px;
+}
+
+.note > .clip {
+  top: -20px;
+  left: 2px;
+}
+
+.note > .stamp {
+  position: absolute;
+  top: 12px;
+  right: 10px;
+}
+
+.note .photo {
+  margin: -2px -4px 12px -18px;
+}
+
+/* ---------- intro: the first page of the journal ---------- */
+
+.intro {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 360px;
+  padding: 26px 26px 22px;
+  border: 1px solid var(--edge);
+  box-shadow:
+    0 1px 2px rgb(80 60 30 / 0.1),
+    0 14px 26px -14px rgb(80 60 30 / 0.45);
+  rotate: var(--r, 0deg);
+  cursor: default;
+}
+
+.intro > .tape {
+  top: -12px;
+  left: 24px;
+}
+
+.intro .owner {
+  margin: 0 0 4px;
+  font-family: var(--hand);
+  font-size: 14px;
+  color: var(--faint);
+}
+
+.intro .name {
+  margin: 0;
+  font-family: var(--hand);
+  font-size: 42px;
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+.intro .role {
+  margin: 6px 0 12px;
+  font-family: var(--hand);
+  font-size: 17px;
+  color: var(--pencil);
+}
+
+.intro .bio {
+  margin: 0 0 12px;
+  font-family: var(--body);
+  font-size: 15.5px;
+  line-height: 1.75;
+}
+
+.intro .links-row {
+  display: flex;
+  gap: 16px;
+  margin: 0;
+  font-family: var(--hand);
+  font-size: 15px;
+}
+
+.intro a {
+  color: var(--link);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+/* ---------- stickers and doodles on the desk ---------- */
+
+.world .sticker {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  transition:
+    rotate 0.3s var(--out),
+    scale 0.3s var(--out),
+    filter 0.3s var(--out);
+}
+
+.world .sticker:hover {
+  rotate: calc(var(--r, 0deg) * 0.4);
+  scale: 1.06;
+  filter: drop-shadow(0 2px 2px rgb(60 40 10 / 0.2))
+    drop-shadow(0 10px 10px rgb(60 40 10 / 0.18));
+}
+
+.world .arrow {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  top: 0;
+  width: 120px;
+  height: 70px;
+  pointer-events: none;
+  --doodle: url("/journal/doodle/arrow-curved-brush.svg");
+}
+
+.scribble {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  top: 0;
+  margin: 0;
+  font-family: var(--hand);
+  font-size: 17px;
+  color: var(--pencil);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ---------- entrance: cards land like paper, centre first ---------- */
+
+.world.enter .card,
+.world.enter .intro,
+.world.enter .sticker {
+  animation: land 0.44s var(--out) backwards;
+  animation-delay: var(--d, 0ms);
+}
+
+.world.enter .topic,
+.world.enter .scribble,
+.world.enter .arrow {
+  animation: fade 0.4s var(--out) backwards;
+  animation-delay: var(--d, 0ms);
+}
+
+.world.enter .topic .ul {
+  animation: draw 0.6s var(--out) backwards;
+  animation-delay: calc(var(--d, 0ms) + 160ms);
+}
+
+.world.enter .links {
+  animation: fade 0.5s var(--out) backwards;
+  animation-delay: 520ms;
+}
+
+@keyframes land {
+  from {
+    opacity: 0;
+    translate: 0 -14px;
+    scale: 1.04;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes draw {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* ---------- zoom controls ---------- */
+
+.zoom {
+  position: fixed;
+  z-index: 20;
+  right: 14px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
+  display: flex;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  box-shadow: var(--shadow-float);
+  overflow: hidden;
+  transition:
+    opacity 0.2s var(--out),
+    right var(--dur-drawer) var(--spring);
+}
+
+.zoom button {
+  display: grid;
+  place-content: center;
+  width: 38px;
+  height: 36px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 17px;
+  color: var(--pencil);
+}
+
+.zoom button:hover {
+  background: rgb(0 0 0 / 0.04);
+  color: var(--ink);
+}
+
+.zoom button:focus-visible {
+  outline-offset: -2px;
+}
+
+.zoom .pct {
+  display: grid;
+  place-content: center;
+  min-width: 48px;
+  font-size: 12px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+  border-inline: 1px solid var(--edge);
+}
+
+/* ======================================================================
+ * Toolbar
+ * ==================================================================== */
+
+.toolbar {
+  position: fixed;
+  z-index: 20;
+  top: calc(env(safe-area-inset-top, 0px) + 14px);
+  left: 14px;
+  right: 14px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+body.drawer-open .toolbar {
+  justify-content: flex-start;
+}
+
+.toolbar-in {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  max-width: 100%;
+  padding: 7px 8px 7px 16px;
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  box-shadow: var(--shadow-float);
+  pointer-events: auto;
+}
+
+.brand {
+  margin: 0;
+  font-family: var(--hand);
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.brand a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px solid var(--field-line);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.35);
+  transition:
+    border-color 0.2s var(--out),
+    box-shadow 0.2s var(--out);
+}
+
+.search:focus-within {
+  border-color: var(--pencil);
+  box-shadow: 0 0 0 3px rgb(107 98 84 / 0.12);
+}
+
+.search svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  stroke: var(--faint-mark);
+  fill: none;
+  stroke-width: 2;
+}
+
+.search input {
+  width: min(200px, 40vw);
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-family: var(--hand);
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.search input::placeholder {
+  color: var(--faint);
+}
+
+.search input::-webkit-search-cancel-button {
+  cursor: pointer;
+}
+
+.search .count {
+  font-size: 12px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+.seg {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+}
+
+.seg a {
+  padding: 3px 12px;
+  border-radius: 6px;
+  font-family: var(--hand);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--pencil);
+  text-decoration: none;
+  transition:
+    background 0.2s var(--out),
+    color 0.2s var(--out);
+}
+
+.seg a:hover {
+  color: var(--ink);
+}
+
+.seg a.is-active {
+  background: var(--ink);
+  color: var(--doc);
+}
+
+/*
+ * Wide screens: the drawer sits on the right of the desk. Nothing that can
+ * take focus may hide under it (WCAG 2.4.11), so while a note is open the
+ * zoom controls move to the desk's bottom-right corner and the toolbar keeps
+ * to the desk (it wraps when the desk is narrow). The breakpoint matches
+ * WIDE_ENOUGH_FOR_SIDE_BY_SIDE in canvas.ts; below it the drawer covers the
+ * desk and canvas.ts makes the canvas and toolbar inert instead.
+ */
+@media (min-width: 821px) {
+  body.drawer-open .zoom {
+    right: calc(min(600px, 100% - 24px) + 26px);
+  }
+
+  body.drawer-open .toolbar {
+    right: calc(min(600px, 100% - 24px) + 24px);
+  }
+}
+
+/* ======================================================================
+ * Drawer (frame only; the article inside is prose.css)
+ * ==================================================================== */
+
+.drawer {
+  position: fixed;
+  z-index: 30;
+  top: 18px;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  width: min(600px, calc(100% - 24px));
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  box-shadow: var(--shadow-drawer);
+}
+
+.drawer[data-leaving] {
+  pointer-events: none;
+}
+
+.drawer > .tape {
+  top: -12px;
+  left: 50%;
+  margin-left: -65px;
+  z-index: 2;
+}
+
+.dtop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 12px 10px 20px;
+  border-bottom: 1px dashed var(--edge);
+  font-family: var(--hand);
+  font-size: 14px;
+  color: var(--pencil);
+}
+
+.dtop .sp {
+  flex: 1;
+}
+
+.dnav {
+  padding: 2px 10px;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: transparent;
+  font-family: var(--hand);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--pencil);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+a.dnav:hover {
+  color: var(--ink);
+  border-color: var(--pencil);
+}
+
+.dnav[aria-disabled="true"] {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.dscroll {
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.dbody {
+  position: relative;
+  padding: 20px 32px 40px 44px;
+  font-family: var(--body);
+}
+
+/* Red margin line down the left of the page. */
+.dbody::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 26px;
+  width: 1px;
+  background: var(--margin);
+}
+
+.dhead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 18px;
+  margin: 0 0 14px;
+  padding-right: 76px;
+  font-family: var(--hand);
+  font-size: 14px;
+  color: var(--pencil);
+}
+
+.dhead > span {
+  padding: 0 4px 1px;
+  border-bottom: 1px solid var(--edge);
+}
+
+.dhead b {
+  margin-right: 4px;
+  font-weight: 400;
+  color: var(--faint);
+}
+
+.dhead a {
+  color: var(--link);
+}
+
+.dsticker {
+  position: absolute;
+  top: 8px;
+  right: 18px;
+}
+
+.dbody > .stamp {
+  position: absolute;
+  top: 40px;
+  right: 88px;
+}
+
+.dtitle {
+  margin: 0 0 18px;
+  padding-right: 60px;
+  font-family: var(--body);
+  font-size: 27px;
+  font-weight: 400;
+  line-height: 1.4;
+  text-wrap: balance;
+}
+
+.dfoot {
+  clear: both;
+  display: grid;
+  gap: 16px;
+  margin-top: 30px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--edge);
+}
+
+.dfoot h2 {
+  margin: 0 0 8px;
+  font-family: var(--hand);
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--faint);
+}
+
+.dfoot .none {
+  margin: 0;
+  font-family: var(--hand);
+  font-size: 14px;
+  color: var(--faint);
+}
+
+.tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Kraft luggage tag linking to another note. */
+.ktag {
+  position: relative;
+  display: inline-block;
+  padding: 4px 12px 4px 22px;
+  font-family: var(--hand);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--kraft-ink);
+  text-decoration: none;
+  background: var(--kraft) center / 300px auto;
+  clip-path: polygon(10px 0, 100% 0, 100% 100%, 10px 100%, 0 50%);
+  rotate: var(--tr, -1deg);
+  transition: translate 0.2s var(--out);
+}
+
+.ktag::before {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  margin-top: -2.5px;
+  border-radius: 50%;
+  background: var(--doc);
+}
+
+.ktag:hover {
+  translate: 0 -2px;
+}
+
+.ktag:focus-visible {
+  outline-offset: 3px;
+}
+
+/* ======================================================================
+ * List
+ * ==================================================================== */
+
+.list {
+  min-height: 100dvh;
+  padding: 90px 16px 40px;
+}
+
+.list-in {
+  position: relative;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 26px;
+  border: 1px solid var(--edge);
+  box-shadow: 0 14px 30px -18px rgb(80 60 30 / 0.45);
+}
+
+.lfoot {
+  display: flex;
+  gap: 8px;
+  margin: 28px 0 0;
+  font-family: var(--hand);
+  font-size: 14px;
+  color: var(--faint);
+}
+
+.lfoot a {
+  color: var(--faint);
+  text-underline-offset: 3px;
+}
+
+.lfoot a:hover {
+  color: var(--link);
+}
+
+.list-in > .tape {
+  top: -12px;
+  left: 40px;
+}
+
+.list-in > .sticker {
+  position: absolute;
+  right: -26px;
+  top: -30px;
+}
+
+.list-title {
+  margin: 0 0 14px;
+  padding-right: 60px;
+  font-family: var(--hand);
+  font-size: 28px;
+  font-weight: 400;
+}
+
+.lfilters {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding: 0 0 14px;
+  border-bottom: 1px dashed var(--edge);
+}
+
+.lfilter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.lfilter legend {
+  float: left;
+  margin-right: 6px;
+  padding: 0;
+  font-family: var(--hand);
+  font-size: 14px;
+  color: var(--faint);
+}
+
+.chip {
+  padding: 1px 10px;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: transparent;
+  font-family: var(--hand);
+  font-size: 14.5px;
+  color: var(--pencil);
+  cursor: pointer;
+  transition:
+    background 0.2s var(--out),
+    color 0.2s var(--out);
+}
+
+.chip:hover {
+  color: var(--ink);
+  border-color: var(--pencil);
+}
+
+.chip[aria-pressed="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--doc);
+}
+
+.lyear :is(h2, h3) {
+  margin: 18px 0 6px;
+  font-family: var(--hand);
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--pencil);
+}
+
+.lyear:first-of-type :is(h2, h3) {
+  margin-top: 0;
+}
+
+.lyear ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lrow {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  gap: 12px;
+  align-items: baseline;
+  padding: 10px 6px;
+  border-top: 1px dashed var(--edge);
+  color: var(--ink);
+  text-decoration: none;
+  transition:
+    background 0.2s var(--out),
+    opacity 0.2s var(--out);
+}
+
+.lrow:hover {
+  background: rgb(255 255 255 / 0.35);
+}
+
+.lrow .k {
+  font-family: var(--hand);
+  font-size: 14px;
+  color: var(--faint);
+}
+
+.lrow .t {
+  font-family: var(--body);
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+.lrow .m {
+  font-family: var(--hand);
+  font-size: 14px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+.lrow.dim {
+  opacity: 0.4;
+}
+
+.lempty {
+  margin: 12px 0 0;
+  font-family: var(--hand);
+  font-size: 15px;
+  color: var(--faint);
+}
+
+/* ======================================================================
+ * Home on small screens: the list first, the canvas one tap away
+ * ==================================================================== */
+
+.home-list {
+  display: none;
+}
+
+@media (max-width: 639px) {
+  .home:not([data-view="canvas"]) .home-list {
+    display: block;
+  }
+
+  /*
+   * Out of rendering, not just out of sight: nothing inside is laid out,
+   * and its images and fonts are not fetched until the canvas is shown
+   * (canvas.ts lays it out then). The cards stay in the HTML as links.
+   */
+  .home:not([data-view="canvas"]) .viewport,
+  .home:not([data-view="canvas"]) .zoom {
+    display: none;
+  }
+
+  /* The drawer covers the desk: keep the desk, skip what lies on it. */
+  body.drawer-open .world {
+    display: none;
+  }
+
+  /* Stickers go on the canvas: no upload button over the list view. */
+  body:has(.home:not([data-view="canvas"])) .toolbar .vs-upload {
+    display: none;
+  }
+
+  /* Hidden to the eye only: on `/` the brand is the page's <h1>. */
+  .brand {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .dbody {
+    padding: 18px 20px 30px 34px;
+  }
+
+  .dbody::before {
+    left: 18px;
+  }
+
+  .dhead {
+    padding-right: 60px;
+  }
+
+  .dsticker {
+    --w: 64px;
+  }
+
+  .dbody > .stamp {
+    right: 70px;
+  }
+
+  /* Type as a narrow first column; title over topic · date beside it. */
+  .lrow {
+    grid-template-columns: 30px 1fr;
+    gap: 2px 10px;
+  }
+
+  .lrow .k {
+    grid-row: span 2;
+    font-size: 13px;
+  }
+
+  .lrow .m {
+    grid-column: 2;
+  }
+
+  .list-in {
+    padding: 22px 16px;
+  }
+
+  .list-in > .sticker {
+    right: -8px;
+    --w: 72px;
+  }
+}

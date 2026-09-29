@@ -1,0 +1,146 @@
+---
+/**
+ * Every note in time order, grouped by year, with type and topic filters
+ * (filters appear once the script runs; without it the full list shows).
+ * Used by /list/ and, on narrow screens, by the home page.
+ */
+import "@/styles/canvas.css";
+import { dotDate, getPostsByYear, getTopics, notePath } from "@/lib/posts";
+import { DOG_STICKER, stickerSrc, tapeSrc } from "@/scripts/canvas/seed";
+
+type Props = {
+  /** Heading level of the list title: h1 on /list/, h2 inside the home page. */
+  titleTag?: "h1" | "h2";
+};
+
+const { titleTag = "h1" } = Astro.props;
+const Title = titleTag;
+const Year = titleTag === "h1" ? "h2" : "h3";
+const years = await getPostsByYear();
+const topics = await getTopics();
+const types = ["踩坑", "随想"] as const;
+const TAPE_WIDTH = 130;
+const TAPE_RATIO = 600 / 112;
+const DOG_WIDTH = 96;
+const q = (post: (typeof years)[number]["posts"][number]) =>
+  [post.data.title, post.data.description, post.data.topic, ...post.data.tags]
+    .join(" ")
+    .toLowerCase();
+---
+
+<div class="list-in doc-paper" data-note-list>
+  <img
+    class="tape"
+    src={tapeSrc("washi-stripes-pink")}
+    alt=""
+    width={TAPE_WIDTH}
+    height={Math.round(TAPE_WIDTH / TAPE_RATIO)}
+    style={`--tr: -3deg; --tape-w: ${TAPE_WIDTH}px`}
+  />
+  <img
+    class="sticker"
+    src={stickerSrc(DOG_STICKER)}
+    alt=""
+    width={DOG_WIDTH}
+    height={DOG_WIDTH}
+    style={`--w: ${DOG_WIDTH}px; --r: 10deg`}
+  />
+  <Title class="list-title">全部笔记</Title>
+
+  <div class="lfilters" data-list-filters>
+    <fieldset class="lfilter">
+      <legend>类型</legend>
+      <button
+        type="button"
+        class="chip"
+        data-filter="type"
+        data-value=""
+        aria-pressed="true"
+      >
+        全部
+      </button>
+      {types.map((type) => (
+        <button
+          type="button"
+          class="chip"
+          data-filter="type"
+          data-value={type}
+          aria-pressed="false"
+        >
+          {type}
+        </button>
+      ))}
+    </fieldset>
+    <fieldset class="lfilter">
+      <legend>主题</legend>
+      <button
+        type="button"
+        class="chip"
+        data-filter="topic"
+        data-value=""
+        aria-pressed="true"
+      >
+        全部
+      </button>
+      {topics.map((topic) => (
+        <button
+          type="button"
+          class="chip"
+          data-filter="topic"
+          data-value={topic.name}
+          aria-pressed="false"
+        >
+          {topic.name}
+        </button>
+      ))}
+    </fieldset>
+  </div>
+
+  {years.map(({ year, posts }) => (
+    <section class="lyear" aria-labelledby={`${titleTag}-y${year}`} data-year>
+      <Year id={`${titleTag}-y${year}`}>{year} 年</Year>
+      <ul>
+        {posts.map((post) => (
+          <li>
+            <a
+              class="lrow"
+              href={notePath(post.id)}
+              data-row
+              data-slug={post.id}
+              data-type={post.data.type}
+              data-topic={post.data.topic}
+              data-q={q(post)}
+            >
+              <span class="k">{post.data.type}</span>
+              <span class="t">{post.data.title}</span>
+              <span class="m">
+                {post.data.topic} · {dotDate(post.data.pubDate).slice(5)}
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))}
+  <p class="lempty" data-list-empty hidden>
+    没有符合条件的笔记。
+  </p>
+  <p class="lfoot">
+    <a href="/rss.xml">RSS</a>
+    <span aria-hidden="true">·</span>
+    <a href="/privacy/">隐私说明</a>
+  </p>
+</div>
+
+<noscript>
+  <style is:inline>
+    /* The filters need JavaScript; the list itself does not. */
+    .lfilters {
+      display: none;
+    }
+  </style>
+</noscript>
+
+<script>
+  import "@/scripts/canvas/list";
+</script>

@@ -1,0 +1,221 @@
+/*
+ * Journal materials shared by the canvas, drawer, list and interaction
+ * components. Placement (top/left of a tape, which corner a stamp sits in)
+ * belongs to the component that uses the material.
+ */
+
+/* ---------- paper ---------- */
+
+/* Documents: index cards, the drawer, the list page, the toolbar. */
+.doc-paper {
+  background-color: var(--doc);
+  background-image: var(--paper-doc);
+  background-size: 520px auto;
+  background-blend-mode: multiply;
+}
+
+/* Sticky note: no tape, bottom-right corner curls up (approved shadow). */
+.sticky-paper {
+  background-color: var(--sticky);
+  background-image:
+    linear-gradient(to top, rgb(150 110 20 / 0.1), transparent 26%),
+    linear-gradient(to bottom, rgb(150 110 20 / 0.06), transparent 16%),
+    var(--grain);
+  background-size:
+    auto,
+    auto,
+    420px auto;
+  background-blend-mode: normal, normal, soft-light;
+  border-bottom-right-radius: 70px 8px;
+  box-shadow: var(--shadow-sticky);
+}
+
+/* Kraft paper: file-name labels on code slips, related/same-topic tags. */
+.kraft-paper {
+  background: var(--kraft) center / 300px auto;
+  color: var(--kraft-ink);
+}
+
+/* Desk: the dotted canvas background (20px dot pitch). */
+.desk-paper {
+  background-color: var(--desk);
+  background-image:
+    radial-gradient(circle, rgb(110 95 70 / 0.3) 1px, transparent 1.4px),
+    var(--paper-canvas);
+  background-size:
+    20px 20px,
+    480px auto;
+  background-blend-mode: normal, multiply;
+}
+
+/* ---------- fixings ---------- */
+
+/*
+ * Washi / masking tape: <img class="tape" src="/journal/tape/<name>.webp" alt="">.
+ * Images are 280px wide (2x the widest use); set the display width via --tape-w.
+ * Sources and the resize script: scripts/assets/tape/, scripts/build-tapes.ts.
+ * Names: washi-grid-ivory, washi-stripes-pink, washi-dots-mustard,
+ * washi-plain-sage, masking-cream, kraft-brown.
+ */
+.tape {
+  position: absolute;
+  width: var(--tape-w, 108px);
+  height: auto;
+  rotate: var(--tr, 2deg);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Paperclip: <img class="clip" src="/journal/paperclip.svg" alt="">. */
+.clip {
+  position: absolute;
+  width: 20px;
+  height: auto;
+  rotate: -8deg;
+  pointer-events: none;
+  filter: drop-shadow(1px 2px 1px rgb(40 30 10 / 0.3));
+}
+
+/* ---------- stamps ---------- */
+
+/*
+ * Round status stamp with a speckled (not fully inked) texture.
+ * <span class="stamp">已解<br>决</span>; add .is-open for 未解决 (pencil,
+ * dashed, looks like it did not take). Size with --stamp-size / --stamp-font.
+ * The ink is opaque so the text keeps 4.5:1; the speckle mask alone makes it
+ * look hand-stamped (docs/design.md 对比度).
+ */
+.stamp {
+  display: grid;
+  place-content: center;
+  width: var(--stamp-size, 58px);
+  height: var(--stamp-size, 58px);
+  border: var(--stamp-border, 2.2px) solid var(--stamp-ink);
+  border-radius: 50%;
+  font-family: var(--hand);
+  font-size: var(--stamp-font, 15px);
+  line-height: 1.05;
+  text-align: center;
+  color: var(--stamp-ink);
+  rotate: var(--stamp-rotate, -12deg);
+  -webkit-mask:
+    var(--speckle) center / 130% auto,
+    linear-gradient(#000, #000);
+  -webkit-mask-composite: xor;
+  mask:
+    var(--speckle) center / 130% auto exclude,
+    linear-gradient(#000, #000);
+}
+
+.stamp.is-open {
+  border-color: color-mix(in srgb, var(--pencil) 60%, transparent);
+  border-style: dashed;
+  color: var(--pencil);
+}
+
+/* Small stamp on index cards. */
+.stamp.is-mini {
+  --stamp-size: 40px;
+  --stamp-font: 11.5px;
+  --stamp-border: 1.8px;
+  --stamp-rotate: -14deg;
+}
+
+/* Blue rubber date stamp: 2025.10.08. Only the frame is faded; the digits
+ * stay opaque for contrast. */
+.date-stamp {
+  display: inline-block;
+  padding: 0 5px;
+  border: 1.3px solid color-mix(in srgb, currentColor 60%, transparent);
+  border-radius: 2px;
+  font-family: var(--code);
+  font-feature-settings: "calt" 0;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  color: var(--stamp-blue);
+  white-space: nowrap;
+  rotate: -3deg;
+}
+
+/* Red "寄出" stamp button. */
+.stamp-btn {
+  position: relative;
+  padding: 6px 18px;
+  border: 2px solid var(--stamp);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--stamp-ink);
+  font-family: var(--hand);
+  font-size: 17px;
+  letter-spacing: 0.2em;
+  cursor: pointer;
+  rotate: -3deg;
+  transition:
+    rotate 0.2s var(--out),
+    background 0.2s var(--out),
+    translate 0.15s var(--out);
+}
+
+.stamp-btn:hover {
+  rotate: 0deg;
+  background: rgb(191 63 54 / 0.06);
+}
+
+.stamp-btn:active {
+  translate: 0 1px;
+}
+
+.stamp-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---------- photos and stickers ---------- */
+
+/* Polaroid: wrap an <img>; optional .cap for a hand-written caption. */
+.polaroid {
+  position: relative;
+  padding: 7px 7px 20px;
+  background: var(--photo);
+  box-shadow: var(--shadow-photo);
+  rotate: var(--pr, -1.8deg);
+}
+
+.polaroid img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.polaroid .cap {
+  position: absolute;
+  left: 10px;
+  bottom: 1px;
+  font-family: var(--hand);
+  font-size: 12px;
+  color: var(--pencil);
+}
+
+/* Die-cut sticker: <img class="sticker" src="/stickers/<name>.webp" alt="">. */
+.sticker {
+  width: var(--w, 96px);
+  height: auto;
+  rotate: var(--r, 0deg);
+  filter: drop-shadow(0 1px 1px rgb(60 40 10 / 0.22))
+    drop-shadow(0 4px 5px rgb(60 40 10 / 0.14));
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* ---------- doodles ---------- */
+
+/*
+ * Doodles are single-color SVGs used as masks so they take the ink color:
+ * <span class="doodle" style="--doodle: url('/journal/doodle/pencil.svg')"></span>
+ */
+.doodle {
+  display: inline-block;
+  background: var(--doodle-color, var(--pencil));
+  -webkit-mask: var(--doodle) center / contain no-repeat;
+  mask: var(--doodle) center / contain no-repeat;
+}

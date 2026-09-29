@@ -1,0 +1,31 @@
+---
+/**
+ * The article itself, as static HTML (readable without JavaScript).
+ *
+ * Markup comes from the Markdown pipeline in src/lib/markdown/ (code slips,
+ * polaroid paragraphs, <mark>); typography is src/styles/prose.css.
+ *
+ * `<Content />` must stay a direct child of the `[data-post-body]` element:
+ * inline comments and margin notes select `:scope > p`, `:scope > ul > li`,
+ * … inside it (see src/scripts/canvas/api.ts, DrawerRenderedDetail.bodyEl).
+ */
+import { render } from "astro:content";
+import type { Post } from "@/lib/posts";
+import "@/styles/prose.css";
+
+type Props = {
+  entry: Post;
+};
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+---
+
+<div class="post-body" data-post-body data-slug={entry.id}>
+  <Content />
+</div>
+
+<script>
+  import "./marks.ts";
+  import "./lightbox.ts";
+</script>

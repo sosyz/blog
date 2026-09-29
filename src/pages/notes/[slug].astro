@@ -1,0 +1,46 @@
+---
+/**
+ * One note: the canvas with the drawer open on this note. The full article
+ * is static HTML inside the drawer; the canvas behind it is the same
+ * persisted element as on `/`, so switching notes keeps the camera.
+ */
+import Canvas from "@/components/canvas/Canvas.astro";
+import Toolbar from "@/components/canvas/Toolbar.astro";
+import Drawer from "@/components/drawer/Drawer.astro";
+import StickerUpload from "@/components/interact/StickerUpload.astro";
+import Base from "@/layouts/Base.astro";
+import { getPosts, notePath, type Post } from "@/lib/posts";
+
+export const getStaticPaths = async () => {
+  const posts = await getPosts();
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
+};
+
+type Props = {
+  post: Post;
+};
+
+const { post } = Astro.props;
+const { data } = post;
+---
+
+<Base
+  title={data.title}
+  description={data.description}
+  canonical={notePath(post.id)}
+  type="article"
+  image={data.heroImage}
+  publishedTime={data.pubDate}
+  modifiedTime={data.updatedDate}
+  tags={data.tags}
+  bodyClass="view-canvas drawer-open"
+>
+  <a class="skip-link" href="#note-title">
+    跳到正文
+  </a>
+  <Toolbar view="canvas">
+    <StickerUpload />
+  </Toolbar>
+  <Drawer entry={post} />
+  <Canvas />
+</Base>

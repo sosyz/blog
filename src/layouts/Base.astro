@@ -1,0 +1,77 @@
+---
+/**
+ * Page shell for every HTML page: fonts, tokens, materials, SEO head and the
+ * client router. Page-specific styles live in the page or its components.
+ *
+ * Slots: default → <body>; "head" → extra <head> content.
+ */
+import "@fontsource/maple-mono/latin-400.css";
+import "@/styles/tokens.css";
+import "@/styles/base.css";
+import "@/styles/materials.css";
+import { ClientRouter } from "astro:transitions";
+import Seo, { type Props as SeoProps } from "@/components/seo/Seo.astro";
+import { FONT_FACES, FONT_PRELOADS, FONT_REST_CSS } from "./fonts.generated";
+
+type Props = SeoProps & {
+  /** Classes on <body>, e.g. "view-canvas" or "drawer-open". */
+  bodyClass?: string;
+};
+
+const { bodyClass, ...seo } = Astro.props;
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    {/*
+     * CJK fonts (scripts/build-fonts.ts). The site's own characters are in
+     * one or two files per family, declared inline (kept across router
+     * navigations); everything else is in small chunks from a stylesheet
+     * that does not block rendering (media flipped to "all" once loaded).
+     */}
+    {FONT_PRELOADS.map((href) => (
+      <link
+        rel="preload"
+        href={href}
+        as="font"
+        type="font/woff2"
+        crossorigin="anonymous"
+      />
+    ))}
+    <link rel="stylesheet" href={FONT_REST_CSS} media="print" data-font-rest />
+    <noscript>
+      <link rel="stylesheet" href={FONT_REST_CSS} />
+    </noscript>
+    <style
+      is:inline
+      data-astro-transition-persist="fonts"
+      set:html={FONT_FACES}
+    />
+    <Seo {...seo} />
+    <ClientRouter />
+    <slot name="head" />
+  </head>
+  <body class={bodyClass}>
+    <slot />
+  </body>
+</html>
+
+<script>
+  // Second-layer font chunks: apply the stylesheet once it has loaded.
+  const rest = document.querySelector<HTMLLinkElement>("link[data-font-rest]");
+  if (rest && rest.media !== "all") {
+    const apply = () => {
+      rest.media = "all";
+    };
+    if (rest.sheet) {
+      apply();
+    } else {
+      rest.addEventListener("load", apply, { once: true });
+    }
+  }
+</script>

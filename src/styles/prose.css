@@ -1,0 +1,541 @@
+/*
+ * Article typography inside the drawer: the element with [data-post-body]
+ * (src/components/post/PostBody.astro). Values come from the approved motion
+ * prototype (.dbody rules). Markup comes from src/lib/markdown/plugins.ts:
+ *   figure.slip > pre.astro-code + figcaption.fname   code slips
+ *   p.pic > img                                        polaroid photos
+ *   mark                                               ==marker pen==
+ * Class names match the prototype (.slip, .fname, .pic) because the drawer
+ * and inline-comment code select on them.
+ */
+
+.post-body {
+  counter-reset: section;
+  font-family: var(--body);
+  font-size: 17px;
+  line-height: 1.9;
+  color: var(--ink);
+  overflow-wrap: break-word;
+}
+
+/* ---------- text ---------- */
+
+.post-body p,
+.post-body li {
+  font-family: var(--body);
+  font-size: 17px;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+
+.post-body p {
+  margin: 0 0 12px;
+}
+
+.post-body strong {
+  font-weight: 700;
+}
+
+.post-body a {
+  color: var(--link);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition: text-decoration-color var(--dur-fast) var(--out);
+}
+
+.post-body a:hover {
+  text-decoration-thickness: 1.6px;
+}
+
+/* ---------- headings ---------- */
+
+/* Section headings with a hand-drawn circled number (CSS counter, so the
+ * number is never part of the selectable text). Inline, not flex: headings
+ * can hold <code>, links or <font>. */
+.post-body > h1,
+.post-body > h2 {
+  margin: 28px 0 10px;
+  font-family: var(--body);
+  font-size: 21px;
+  font-weight: 400;
+  line-height: 1.5;
+  text-wrap: balance;
+}
+
+.post-body > h1:first-child,
+.post-body > h2:first-child {
+  margin-top: 8px;
+}
+
+.post-body > h1::before,
+.post-body > h2::before {
+  counter-increment: section;
+  content: counter(section);
+  display: inline-grid;
+  place-content: center;
+  width: 24px;
+  height: 24px;
+  margin-right: 10px;
+  vertical-align: 2px;
+  font-family: var(--hand);
+  font-size: 14px;
+  line-height: 1;
+  color: var(--pencil);
+  border: 1.4px solid var(--pencil);
+  border-radius: 50% 46% 52% 48%;
+  rotate: -4deg;
+}
+
+.post-body h3 {
+  margin: 26px 0 8px;
+  font-family: var(--body);
+  font-size: 19px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.post-body h4,
+.post-body h5,
+.post-body h6 {
+  margin: 18px 0 6px;
+  font-family: var(--body);
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--pencil);
+}
+
+.post-body h4::before {
+  content: "· ";
+  color: var(--faint-mark);
+}
+
+/* ---------- lists ---------- */
+
+.post-body ul,
+.post-body ol {
+  margin: 0 0 12px;
+  padding-left: 1.4em;
+}
+
+.post-body ul {
+  list-style: "– ";
+}
+
+.post-body ol li::marker {
+  font-family: var(--hand);
+  color: var(--pencil);
+}
+
+.post-body ul li::marker {
+  color: var(--faint-mark);
+}
+
+.post-body li > ul,
+.post-body li > ol {
+  margin-bottom: 0;
+}
+
+.post-body li > p {
+  margin-bottom: 4px;
+}
+
+/* GFM task lists: hand-drawn boxes and ticks. */
+.post-body ul.contains-task-list {
+  padding-left: 0;
+  list-style: none;
+}
+
+.post-body .task-list-item {
+  position: relative;
+  padding-left: 30px;
+}
+
+.post-body .task-list-item > input[type="checkbox"] {
+  appearance: none;
+  position: absolute;
+  top: 7px;
+  left: 0;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  background: var(--pencil);
+  -webkit-mask: url("/journal/doodle/box.svg") center / contain no-repeat;
+  mask: url("/journal/doodle/box.svg") center / contain no-repeat;
+}
+
+.post-body .task-list-item > input[type="checkbox"]:checked {
+  -webkit-mask-image: url("/journal/doodle/checklist.svg");
+  mask-image: url("/journal/doodle/checklist.svg");
+}
+
+/* ---------- quotes, rules, tables ---------- */
+
+.post-body blockquote {
+  margin: 14px 0;
+  padding: 4px 0 4px 16px;
+  border-left: 2px solid var(--faint-mark);
+  font-family: var(--hand);
+  color: var(--pencil);
+}
+
+.post-body blockquote p,
+.post-body blockquote li {
+  font-family: var(--hand);
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.post-body blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+.post-body hr {
+  margin: 24px 0;
+  border: 0;
+  border-top: 1px dashed var(--edge);
+}
+
+.post-body table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 12px 0 16px;
+  border-collapse: collapse;
+  font-family: var(--body);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.post-body th,
+.post-body td {
+  padding: 5px 10px;
+  border: 1px dashed rgb(94 78 52 / 0.3);
+  text-align: left;
+  vertical-align: top;
+  /* Narrow drawers squeeze columns down to one CJK glyph; keep them legible. */
+  min-width: 4em;
+  overflow-wrap: normal;
+}
+
+.post-body th {
+  font-weight: 400;
+  background: rgb(120 100 60 / 0.08);
+}
+
+/* ---------- inline code and marks ---------- */
+
+.post-body code {
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgb(120 100 60 / 0.1);
+  font-family: var(--code);
+  font-feature-settings: "calt" 0;
+  font-size: 0.84em;
+  overflow-wrap: anywhere;
+}
+
+.post-body :is(h1, h2, h3, h4, h5, h6) code {
+  font-size: 0.8em;
+}
+
+/* Identifiers in table cells stay whole; the table scrolls instead. */
+.post-body :is(td, th) code {
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+/* Marker pen. Rough Notation redraws it on the client and adds
+ * .is-annotated; this flat stroke is the no-JS fallback. */
+.post-body mark {
+  padding: 0 2px;
+  border-radius: 3px 5px 4px 6px;
+  background: linear-gradient(
+    176deg,
+    transparent 12%,
+    var(--highlight) 14%,
+    var(--highlight) 88%,
+    transparent 90%
+  );
+  color: inherit;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.post-body mark.is-annotated {
+  background: none;
+}
+
+/* ---------- code slips ---------- */
+
+/* A strip of paper taped onto the page, with a kraft file-name label. */
+.post-body .slip {
+  display: flow-root;
+  position: relative;
+  margin: 18px 0 20px;
+  padding: 16px 16px 14px;
+  background: var(--slip);
+  box-shadow: var(--shadow-slip);
+  rotate: var(--sr, -0.4deg);
+}
+
+/* Tape: image set per slip as --tape (280px wide files, shown at 86px). */
+.post-body .slip::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: -10px;
+  left: 18px;
+  width: 86px;
+  aspect-ratio: 600 / 112;
+  background: var(--tape) center / 100% 100% no-repeat;
+  rotate: var(--tr, 2deg);
+  pointer-events: none;
+}
+
+.post-body .slip .fname {
+  position: absolute;
+  z-index: 1;
+  top: -10px;
+  right: 14px;
+  max-width: calc(100% - 130px);
+  overflow: hidden;
+  padding: 1px 10px;
+  background: var(--kraft) center / 300px auto;
+  color: var(--kraft-ink);
+  font-family: var(--hand);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  rotate: 2deg;
+  user-select: none;
+}
+
+.post-body .slip pre {
+  margin: 0;
+  overflow-x: auto;
+  font-family: var(--code);
+  font-feature-settings: "calt" 0;
+  font-size: 13.5px;
+  line-height: 1.65;
+  tab-size: 4;
+  scrollbar-width: thin;
+  scrollbar-color: var(--edge) transparent;
+}
+
+.post-body .slip pre code {
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  font-size: inherit;
+  overflow-wrap: normal;
+}
+
+.post-body .slip pre:focus-visible {
+  outline-offset: 4px;
+}
+
+/* ---------- pictures ---------- */
+
+.post-body img {
+  height: auto;
+}
+
+/* Image-only paragraphs become polaroid photos. */
+.post-body p.pic {
+  margin: 16px 0 20px;
+}
+
+.post-body p.pic img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  padding: 8px 8px 22px;
+  background: var(--photo);
+  box-shadow:
+    0 1px 2px rgb(60 40 20 / 0.2),
+    0 8px 14px -8px rgb(60 40 20 / 0.35);
+  rotate: -0.5deg;
+}
+
+.post-body p.pic img + img {
+  margin-top: 16px;
+  rotate: 0.6deg;
+}
+
+.post-body p.pic img {
+  cursor: zoom-in;
+}
+
+/* ---------- lightbox (lightbox.ts) ---------- */
+
+/* A modal <dialog>: undo the browser's dialog box so it fills the screen. */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  padding: 40px 24px;
+  color: inherit;
+  background: rgb(46 36 22 / 0.55);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  transition: opacity 0.22s var(--out);
+  cursor: zoom-out;
+}
+
+.lightbox.is-open {
+  opacity: 1;
+}
+
+.lightbox::backdrop {
+  background: transparent;
+}
+
+.lightbox figure {
+  position: relative;
+  max-width: min(1100px, 100%);
+  max-height: 100%;
+  margin: 0;
+  padding: 12px 12px 42px;
+  background: var(--photo);
+  box-shadow:
+    0 2px 4px rgb(0 0 0 / 0.2),
+    0 30px 60px -20px rgb(0 0 0 / 0.55);
+  rotate: -0.6deg;
+  cursor: default;
+}
+
+.lightbox figure > img:not(.lightbox-tape) {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: calc(100vh - 150px);
+}
+
+.lightbox figcaption {
+  position: absolute;
+  right: 56px;
+  bottom: 10px;
+  left: 16px;
+  overflow: hidden;
+  font-family: var(--hand);
+  font-size: 15px;
+  color: var(--pencil);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.lightbox-tape {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  width: 110px;
+  margin-left: -55px;
+  rotate: -2deg;
+  pointer-events: none;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--doc);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgb(0 0 0 / 0.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lightbox {
+    transition: none;
+  }
+}
+
+/* ---------- footnotes ---------- */
+
+.post-body .footnotes {
+  margin-top: 28px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--edge);
+  font-size: 15px;
+}
+
+.post-body .footnotes li,
+.post-body .footnotes p {
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.post-body [data-footnote-ref] {
+  font-family: var(--hand);
+  text-decoration: none;
+}
+
+/* ---------- margin sticky note: > [!aside] 吐槽 ---------- */
+
+.post-body .aside-sticky {
+  float: right;
+  width: 176px;
+  margin: 4px -20px 10px 16px;
+  padding: 14px 14px 16px;
+  font-family: var(--hand);
+  font-size: 15px;
+  line-height: 1.55;
+  rotate: 2.2deg;
+}
+
+.post-body .aside-sticky b {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--pencil);
+}
+
+.post-body .aside-sticky p {
+  margin: 0;
+  font: inherit;
+}
+
+.post-body .aside-sticky p + p {
+  margin-top: 6px;
+}
+
+/* ---------- narrow screens ---------- */
+
+@media (max-width: 640px) {
+  .post-body .aside-sticky {
+    float: none;
+    margin: 8px 0 14px;
+  }
+}
+
+@media (max-width: 520px) {
+  .post-body .slip {
+    margin-right: -6px;
+    margin-left: -6px;
+    padding: 14px 12px 12px;
+  }
+
+  .post-body .slip pre {
+    font-size: 12.5px;
+  }
+}

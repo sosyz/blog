@@ -1,0 +1,73 @@
+---
+/**
+ * Floating toolbar: name, search, canvas/list switch, plus an optional slot
+ * (the sticker upload button on canvas pages) and, while logged in with
+ * GitHub, the avatar with 退出登录 (interact/AuthMenu.astro).
+ *
+ * On `/` the name is the page's <h1>; elsewhere it links home. The search
+ * query survives navigation (src/scripts/canvas/store.ts); the canvas dims
+ * cards and glides to the first hit, the list dims rows.
+ */
+import AuthMenu from "@/components/interact/AuthMenu.astro";
+
+type Props = {
+  /** Which view this page shows. */
+  view: "canvas" | "list";
+  /** Home page: render the name as the page heading. */
+  home?: boolean;
+};
+
+const { view, home = false } = Astro.props;
+const views = [
+  { key: "canvas", label: "画布", href: "/" },
+  { key: "list", label: "列表", href: "/list/" },
+] as const;
+const current = Astro.url.pathname;
+---
+
+<header class="toolbar">
+  <div class="toolbar-in doc-paper">
+    {home ? (
+      <h1 class="brand">Sonui 的手账</h1>
+    ) : (
+      <p class="brand">
+        <a href="/">Sonui 的手账</a>
+      </p>
+    )}
+    <search>
+      <label class="search">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"></circle>
+          <path d="M20 20l-4-4"></path>
+        </svg>
+        <input
+          type="search"
+          placeholder="搜索笔记"
+          aria-label="搜索笔记"
+          autocomplete="off"
+          enterkeyhint="search"
+          data-search
+        />
+        <span class="count" aria-live="polite" data-search-count></span>
+      </label>
+    </search>
+    <nav class="seg" aria-label="视图" data-view-switch>
+      {views.map((item) => (
+        <a
+          href={item.href}
+          class:list={{ "is-active": item.key === view }}
+          aria-current={current === item.href ? "page" : undefined}
+          data-view-link={item.key}
+        >
+          {item.label}
+        </a>
+      ))}
+    </nav>
+    <slot />
+    <AuthMenu />
+  </div>
+</header>
+
+<script>
+  import "@/scripts/canvas/toolbar";
+</script>

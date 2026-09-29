@@ -1,0 +1,188 @@
+---
+/**
+ * The drawer with one note, as it appears on /notes/<slug>/. Rendered on the
+ * server, so the full article is in the page's HTML.
+ *
+ * Frame: washi tape on top; 上一篇 / 下一篇 within the topic and 关闭 as real
+ * links (work without JavaScript); journal header (No., date and weekday,
+ * topic, tags, source); topic sticker; status stamp; <PostBody>; related and
+ * same-topic kraft tags; comments and inline comments.
+ *
+ * Hooks for scripts: `[data-drawer][data-slug]` (the panel),
+ * `[data-drawer-scroll]` (scrolls), `[data-drawer-page]` (fades between
+ * notes) and `[data-post-body]` (inside <PostBody>). See
+ * src/scripts/canvas/api.ts for the drawer events.
+ */
+import "@/styles/canvas.css";
+import Comments from "@/components/interact/Comments.astro";
+import InlineComments from "@/components/interact/InlineComments.astro";
+import PostBody from "@/components/post/PostBody.astro";
+import {
+  dotDate,
+  formatNoteNumber,
+  getNoteNumber,
+  getRelated,
+  getSameTopic,
+  getTopicNeighbours,
+  notePath,
+  type Post,
+  weekdayZh,
+} from "@/lib/posts";
+import {
+  rot,
+  stickerSrc,
+  TOPIC_STICKERS,
+  tapeSrc,
+} from "@/scripts/canvas/seed";
+
+type Props = {
+  entry: Post;
+};
+
+const TAPE_WIDTH = 130;
+const TAPE_RATIO = 600 / 112;
+const STICKER_WIDTH = 78;
+const KTAG_TILT = 4;
+
+const { entry } = Astro.props;
+const { data } = entry;
+const slug = entry.id;
+const no = formatNoteNumber(await getNoteNumber(slug));
+const related = await getRelated(slug);
+const sameTopic = await getSameTopic(slug);
+const { previous, next } = await getTopicNeighbours(slug);
+const sticker = TOPIC_STICKERS[data.topic]?.[0];
+const groups = [
+  { id: "note-related", title: "相关", posts: related },
+  { id: "note-same-topic", title: "同一主题", posts: sameTopic },
+];
+---
+
+<main
+  class="drawer doc-paper"
+  id="main"
+  aria-labelledby="note-title"
+  data-drawer
+  data-slug={slug}
+>
+  <img
+    class="tape"
+    src={tapeSrc("washi-grid-ivory")}
+    alt=""
+    width={TAPE_WIDTH}
+    height={Math.round(TAPE_WIDTH / TAPE_RATIO)}
+    style={`--tr: -1.5deg; --tape-w: ${TAPE_WIDTH}px`}
+  />
+  <nav class="dtop" aria-label="笔记导航">
+    {previous ? (
+      <a class="dnav" href={notePath(previous.id)} rel="prev">
+        ← 上一篇
+      </a>
+    ) : (
+      <span class="dnav" aria-disabled="true">
+        ← 上一篇
+      </span>
+    )}
+    {next ? (
+      <a class="dnav" href={notePath(next.id)} rel="next">
+        下一篇 →
+      </a>
+    ) : (
+      <span class="dnav" aria-disabled="true">
+        下一篇 →
+      </span>
+    )}
+    <span class="sp"></span>
+    <a class="dnav" href="/" aria-keyshortcuts="Escape" data-drawer-close>
+      关闭 Esc
+    </a>
+  </nav>
+  <div class="dscroll" data-drawer-scroll>
+    <article class="dbody" data-drawer-page>
+      {sticker && (
+        <img
+          class="sticker dsticker"
+          src={stickerSrc(sticker)}
+          alt=""
+          width={STICKER_WIDTH}
+          height={STICKER_WIDTH}
+          style={`--w: ${STICKER_WIDTH}px; --r: 8deg`}
+        />
+      )}
+      {data.status && (
+        <span class:list={["stamp", { "is-open": data.status === "未解决" }]}>
+          <span aria-hidden="true">
+            {data.status.slice(0, 2)}
+            <br />
+            {data.status.slice(2)}
+          </span>
+          <span class="sr-only">{data.status}</span>
+        </span>
+      )}
+      <p class="dhead">
+        <span>
+          <b>No.</b>
+          {no}
+        </span>
+        <span>
+          <b>Date</b>
+          <time datetime={data.pubDate.toISOString()}>
+            {dotDate(data.pubDate)}
+            {weekdayZh(data.pubDate)}
+          </time>
+        </span>
+        <span>
+          <b>Topic</b>
+          {data.topic}
+        </span>
+        {data.tags.length > 0 && (
+          <span>
+            <b>Tags</b>
+            {data.tags.join(" · ")}
+          </span>
+        )}
+        {data.source && (
+          <span>
+            <b>原文</b>
+            <a href={data.source} rel="noopener">
+              链接
+            </a>
+          </span>
+        )}
+      </p>
+      <h1 class="dtitle" id="note-title" tabindex="-1">
+        {data.title}
+      </h1>
+
+      <PostBody entry={entry} />
+
+      <footer class="dfoot">
+        {groups.map((group) => (
+          <section aria-labelledby={group.id}>
+            <h2 id={group.id}>{group.title}</h2>
+            {group.posts.length > 0 ? (
+              <ul class="tags-row">
+                {group.posts.map((post) => (
+                  <li>
+                    <a
+                      class="ktag"
+                      href={notePath(post.id)}
+                      style={`--tr: ${rot(post.id, KTAG_TILT)}deg`}
+                    >
+                      {post.data.title}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p class="none">暂无</p>
+            )}
+          </section>
+        ))}
+      </footer>
+
+      <Comments slug={slug} />
+      <InlineComments slug={slug} />
+    </article>
+  </div>
+</main>

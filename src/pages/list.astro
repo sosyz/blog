@@ -1,0 +1,21 @@
+---
+/**
+ * All notes in time order, grouped by year, with type and topic filters and
+ * the toolbar search.
+ */
+import NoteList from "@/components/canvas/NoteList.astro";
+import Toolbar from "@/components/canvas/Toolbar.astro";
+import Base from "@/layouts/Base.astro";
+---
+
+<Base
+  title="全部笔记"
+  description="按时间排列的全部笔记，可以按类型和主题筛选。"
+  canonical="/list/"
+  bodyClass="view-list"
+>
+  <Toolbar view="list" />
+  <main class="list desk-paper" id="main">
+    <NoteList titleTag="h1" />
+  </main>
+</Base>

@@ -1,5 +1,14 @@
-// Place any global data in this file.
-// You can import this data from anywhere in your site by using the `import` keyword.
+// Owner profile shown on the canvas intro card.
+// Site name, description and URLs live in src/lib/seo/site.ts.
 
-export const SITE_TITLE = "Sonui's Blog";
-export const SITE_DESCRIPTION = "Welcome to my website!";
+export const PROFILE = {
+  name: "Sonui",
+  title: "工程、AI 与一点点生活记录",
+  bio: "这里收集我在编程、产品构建、AI 工具链和日常观察里的笔记。内容不追求宏大，更偏向把真实踩过的坑和有效的做法留下来。",
+  links: [
+    { label: "GitHub", href: "https://github.com/sosyz" },
+    { label: "RSS", href: "/rss.xml" },
+    { label: "全部笔记", href: "/list/" },
+  ],
+  facts: ["Astro / TypeScript", "AI SDK", "工程实践", "持续写作中"],
+} as const;
