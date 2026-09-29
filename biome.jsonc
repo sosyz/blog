@@ -4,10 +4,28 @@
     "globals": ["Bun"]
   },
   "files": {
-    "includes": ["**", "!src/**/*.astro"]
+    "includes": [
+      "**",
+      "!src/**/*.astro",
+      "!public/fonts",
+      "!public/ort",
+      "!public/models",
+      "!worker-configuration.d.ts",
+      "!fonts-src",
+      "!wrangler.jsonc"
+    ]
   },
   "linter": {
-    "includes": ["**", "!src/**/*.astro"]
+    "includes": [
+      "**",
+      "!src/**/*.astro",
+      "!public/fonts",
+      "!public/ort",
+      "!public/models",
+      "!worker-configuration.d.ts",
+      "!fonts-src",
+      "!wrangler.jsonc"
+    ]
   },
   "extends": ["ultracite"]
 }

@@ -1,15 +1,18 @@
 {
   "extends": "astro/tsconfigs/strict",
-  "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist"],
+  "include": [
+    ".astro/types.d.ts",
+    "worker-configuration.d.ts",
+    "src/**/*",
+    "scripts/**/*",
+    "tests/**/*",
+    "astro.config.mjs"
+  ],
+  "exclude": ["dist", "fonts-src", "public"],
   "compilerOptions": {
-    "strictNullChecks": true,
-    "jsx": "react-jsx",
-    "jsxImportSource": "react",
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     },
-    "types": ["bun-types"]
+    "types": ["node", "bun"]
   }
 }

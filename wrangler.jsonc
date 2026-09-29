@@ -1,0 +1,56 @@
+// Cloudflare Workers config (Workers with static assets; no Pages).
+// Docs: https://developers.cloudflare.com/workers/wrangler/configuration/
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "sonui-blog",
+  // src/worker.ts wraps Astro's Cloudflare handler (EdgeOne requests are
+  // rewritten first, src/lib/server/edge.ts).
+  "main": "./src/worker.ts",
+  "compatibility_date": "2026-09-01",
+  // The Worker's own hostname. Visitors use blog.sonui.cn on Tencent EdgeOne,
+  // which fetches from here (docs/deploy.md 「EdgeOne」); /admin/ is used here.
+  "routes": [{ "pattern": "cf-blog.sonui.cn", "custom_domain": true }],
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  // Public Turnstile site key, served to the browser by GET /api/turnstile.
+  // Fill in the real key from Cloudflare dashboard → Turnstile before deploying
+  // (it is public, so it can live here). Locally .dev.vars overrides it with
+  // the always-pass test key. The secret key is a `wrangler secret`, never here.
+  // GITHUB_CLIENT_ID is the public client id of the GitHub OAuth App for the
+  // optional visitor login (docs/deploy.md); empty = login hidden. Its secret
+  // GITHUB_CLIENT_SECRET is a `wrangler secret`. OWNER_GITHUB_ID is the blog
+  // owner's numeric GitHub id (sosyz = 30596875): 博主 stamp, 整理贴纸.
+  "vars": {
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAFJaBcgKot9fUIaf",
+    "GITHUB_CLIENT_ID": "d0ca547fe3adf273324b",
+    "OWNER_GITHUB_ID": "30596875"
+  },
+  // Comments, sticker metadata and the moderation queue. Schema: migrations/.
+  // Created with `bunx wrangler d1 create sonui-blog --location apac`.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "sonui-blog",
+      "database_id": "216c91f5-bcf4-4911-822a-a600d0ab0716",
+      "migrations_dir": "migrations"
+    }
+  ],
+  // Visitor sticker images. Create with `bunx wrangler r2 bucket create sonui-blog-stickers`
+  // (or let the first deploy provision it).
+  "r2_buckets": [
+    {
+      "binding": "STICKERS",
+      "bucket_name": "sonui-blog-stickers"
+    }
+  ],
+  // Secrets are not listed here. Set them with `bunx wrangler secret put <NAME>`
+  // (production) or in .dev.vars (local; see .dev.vars.example):
+  //   TURNSTILE_SECRET_KEY, ACCESS_TEAM_DOMAIN, ACCESS_AUD, GITHUB_CLIENT_SECRET
+  // TURNSTILE_SITE_KEY is public and is read at build time (see .env.example).
+}

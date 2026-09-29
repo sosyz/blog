@@ -1,0 +1,36 @@
+# Local Worker secrets for `astro dev` / `wrangler dev`.
+# Copy to .dev.vars (gitignored) and fill in. Production: `bunx wrangler secret put <NAME>`.
+
+# Turnstile test keys that always pass. Real keys: Cloudflare dashboard → Turnstile.
+# The site key is public; in production set it in wrangler.jsonc `vars` (or as a Worker var).
+TURNSTILE_SITE_KEY=1x00000000000000000000AA
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+
+# Cloudflare Access (protects /admin/). Team domain without protocol, e.g. myteam.cloudflareaccess.com
+ACCESS_TEAM_DOMAIN=
+# Application Audience (AUD) tag from Zero Trust → Access → Applications.
+ACCESS_AUD=
+
+# Local development only: let /admin/ and /api/admin/* through without Cloudflare
+# Access. Works only for requests to localhost / 127.0.0.1, so it is inert in
+# production even if set by mistake. Leave it out of production secrets.
+ADMIN_DEV_BYPASS=1
+# Optional: salt for hashing visitor IPs and e-mails (rate limiting, admin fingerprints). Defaults to TURNSTILE_SECRET_KEY.
+IP_HASH_SALT=
+
+# Optional GitHub login (docs/deploy.md). Leave both empty to hide the login.
+# For local real-login testing use a second OAuth App whose callback is
+# http://localhost:4321/api/auth/github/callback. Production: GITHUB_CLIENT_ID
+# in wrangler.jsonc vars, GITHUB_CLIENT_SECRET via `wrangler secret put`.
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+# Numeric GitHub id of the blog owner (sosyz): 博主 stamp and 整理贴纸.
+OWNER_GITHUB_ID=30596875
+# Local development only: GET /api/auth/dev-login?login=someone&id=123 logs in
+# as a made-up GitHub account without an OAuth App. Works only for localhost /
+# 127.0.0.1 (ADMIN_DEV_BYPASS=1 enables it too). Never set it in production.
+AUTH_DEV_LOGIN=1
+
+# Tencent EdgeOne in front of the Worker (docs/deploy.md 「EdgeOne」): the value
+# EdgeOne sends in the x-edge-auth origin header. Empty = no EdgeOne.
+EDGE_ORIGIN_SECRET=
