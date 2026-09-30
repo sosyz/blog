@@ -1,0 +1,442 @@
+---
+/**
+ * /licenses/ — 开源许可: the site's own licences (source code MIT, notes
+ * CC BY-NC-SA 4.0), then everything third-party that the site uses, grouped
+ * (浏览器里运行的代码 / 字体 / 模型 / 素材 / 构建工具), then the full licence
+ * texts once each in <details>. Minified bundles lose their licence headers,
+ * so this page is where visitors find them.
+ *
+ * The list is src/data/licenses.ts; the texts are src/data/license-texts.ts.
+ * Prerendered, in the sitemap. Linked from the site footer and from the
+ * sticker workshop (#u2netp).
+ */
+import SiteFooter from "@/components/site/SiteFooter.astro";
+import { APACHE_2_0_TEXT, MIT_TEXT, OFL_1_1_TEXT } from "@/data/license-texts";
+import {
+  componentsIn,
+  componentVersion,
+  GROUPS,
+  holdersOf,
+  LICENSE_NAMES,
+  LICENSE_TEXT_ANCHORS,
+  type LicenseGroup,
+  SITE_SOURCE,
+} from "@/data/licenses";
+import Base from "@/layouts/Base.astro";
+import { LICENSE, REPRINT_NOTICE } from "@/lib/seo/copyright";
+import { stickerSrc, tapeSrc } from "@/scripts/canvas/seed";
+
+const TAPE_WIDTH = 120;
+const TAPE_RATIO = 600 / 112;
+const STICKER_WIDTH = 84;
+
+const GROUP_NOTES: Partial<Record<LicenseGroup, string>> = {
+  browser:
+    "这些代码会下载到你的浏览器里运行。打包压缩时会去掉文件开头的版权声明，所以都写在这里。",
+  fonts:
+    "小赖和朱雀仿宋切成了很多小块，只下载页面用到的字；每个字体文件夹里附一份 OFL.txt。",
+  assets: "CC0 和公有领域的素材不要求署名，列在这里表示感谢。",
+  build:
+    "只在构建网站时运行，你下载到的页面里没有它们的代码，不需要附许可证，列在这里表示感谢。",
+};
+
+const sourceLine = `许可证，${SITE_SOURCE.copyright}。保留这行版权声明就可以随意使用、修改和分发。`;
+const postsLine = `协议：${REPRINT_NOTICE}。`;
+
+const groups = GROUPS.map((group) => ({
+  ...group,
+  note: GROUP_NOTES[group.id],
+  items: componentsIn(group.id).map((component) => ({
+    ...component,
+    shownVersion: componentVersion(component),
+    textAnchor: LICENSE_TEXT_ANCHORS[component.license],
+  })),
+}));
+
+const texts = [
+  {
+    id: "mit",
+    title: "MIT 许可证",
+    intro: "以下作品采用 MIT 许可证，各自的版权声明不同，许可条款相同：",
+    holders: holdersOf("MIT"),
+    text: `MIT License\n\nCopyright (c) <year> <copyright holders>\n\n${MIT_TEXT}`,
+  },
+  {
+    id: "apache-2-0",
+    title: "Apache License 2.0",
+    intro: "以下作品采用 Apache License 2.0：",
+    holders: holdersOf("Apache-2.0"),
+    text: APACHE_2_0_TEXT,
+  },
+  {
+    id: "ofl-1-1",
+    title: "SIL Open Font License 1.1",
+    intro: "以下字体采用 SIL Open Font License 1.1：",
+    holders: holdersOf("OFL-1.1"),
+    text: OFL_1_1_TEXT,
+  },
+];
+---
+
+<Base
+  title="开源许可"
+  description="本站源码采用 MIT，文章采用 CC BY-NC-SA 4.0；以及本站用到的开源代码、字体、模型和素材的许可证。"
+  canonical="/licenses/"
+  bodyClass="view-licenses"
+>
+  <main class="licenses desk-paper" id="main">
+    <article class="sheet doc-paper">
+      <img
+        class="tape"
+        src={tapeSrc("masking-cream")}
+        alt=""
+        width={TAPE_WIDTH}
+        height={Math.round(TAPE_WIDTH / TAPE_RATIO)}
+        style={`--tr: -2deg; --tape-w: ${TAPE_WIDTH}px`}
+      />
+      <img
+        class="sticker"
+        src={stickerSrc("obj-tools")}
+        alt=""
+        width={STICKER_WIDTH}
+        height={STICKER_WIDTH}
+      />
+      <p class="back">
+        <a href="/">← 回到画布</a>
+      </p>
+      <h1>开源许可</h1>
+      <p class="lead">
+        这本手账用了很多人的作品。下面列出本站用到的别人的代码、字体、模型和素材，它们按各自的许可证使用，许可证全文附在最后。
+      </p>
+      <ul class="own">
+        <li>
+          本站源码采用{" "}
+          <a href={SITE_SOURCE.licenseUrl} rel="noopener">
+            MIT
+          </a>{" "}
+          {sourceLine}
+        </li>
+        <li>
+          文章和配图采用{" "}
+          <a href={LICENSE.deed} rel="noopener">
+            {LICENSE.name}
+          </a>{" "}
+          {postsLine}
+        </li>
+      </ul>
+
+      {groups.map((group) => (
+        <section class="group" aria-labelledby={`group-${group.id}`}>
+          <h2 id={`group-${group.id}`}>{group.title}</h2>
+          {group.note && <p class="note">{group.note}</p>}
+          <ul class="items">
+            {group.items.map((item) => (
+              <li class="item" id={item.id}>
+                <p class="item-head">
+                  <a class="item-name" href={item.url} rel="noopener">
+                    {item.name}
+                  </a>
+                  {item.shownVersion && (
+                    <span class="item-version">{item.shownVersion}</span>
+                  )}
+                  {item.textAnchor ? (
+                    <a class="item-license" href={`#${item.textAnchor}`}>
+                      {LICENSE_NAMES[item.license]}
+                    </a>
+                  ) : (
+                    <span class="item-license">
+                      {LICENSE_NAMES[item.license]}
+                    </span>
+                  )}
+                </p>
+                <p class="item-use">{item.usedFor}</p>
+                <p class="item-holder">{item.copyright.join("；")}</p>
+                {(item.licenseFile || item.notice) && (
+                  <p class="item-files">
+                    {item.licenseFile && (
+                      <a href={item.licenseFile}>许可证文件</a>
+                    )}
+                    {item.notice && (
+                      <a href={item.notice.url} rel="noopener">
+                        {item.notice.label}
+                      </a>
+                    )}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+
+      <h2>许可证全文</h2>
+      <p class="note">点开查看。每种许可证只列一次，适用的作品写在上面。</p>
+      {texts.map((entry) => (
+        <details class="text" id={entry.id}>
+          <summary>{entry.title}</summary>
+          <p>{entry.intro}</p>
+          <ul class="holders">
+            {entry.holders.map((holder) => (
+              <li>{holder}</li>
+            ))}
+          </ul>
+          <pre lang="en">{entry.text}</pre>
+        </details>
+      ))}
+      <SiteFooter class="licenses-foot" />
+    </article>
+  </main>
+</Base>
+
+<style>
+  .licenses {
+    min-height: 100dvh;
+    padding: 56px 16px 64px;
+  }
+
+  .sheet {
+    position: relative;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 34px 28px 30px 48px;
+    /* Red margin line over the paper texture from .doc-paper. */
+    background-image:
+      linear-gradient(
+        90deg,
+        transparent 30px,
+        var(--margin) 30px,
+        var(--margin) 31px,
+        transparent 31px
+      ),
+      var(--paper-doc);
+    background-size:
+      100% 100%,
+      520px auto;
+    background-repeat: no-repeat, repeat;
+    box-shadow: var(--shadow-card);
+    font-family: var(--body);
+    font-size: 16.5px;
+    line-height: 1.85;
+    color: var(--ink);
+    rotate: 0.3deg;
+  }
+
+  .tape {
+    top: -12px;
+    left: 40px;
+  }
+
+  .sticker {
+    --w: 84px;
+    --r: -8deg;
+    position: absolute;
+    top: -26px;
+    right: -14px;
+    pointer-events: none;
+  }
+
+  .back {
+    margin: 0 0 6px;
+    font-family: var(--hand);
+    font-size: 15px;
+  }
+
+  h1 {
+    margin: 0 0 10px;
+    font-family: var(--hand);
+    font-size: 30px;
+    font-weight: 400;
+  }
+
+  h2 {
+    margin: 26px 0 6px;
+    font-family: var(--hand);
+    font-size: 20px;
+    font-weight: 400;
+  }
+
+  p {
+    margin: 0 0 8px;
+  }
+
+  .lead {
+    color: var(--pencil);
+  }
+
+  .own {
+    margin: 0 0 8px;
+    padding-left: 1.2em;
+  }
+
+  .own li + li {
+    margin-top: 4px;
+  }
+
+  .own li::marker {
+    color: var(--faint-mark);
+  }
+
+  .note {
+    font-size: 15px;
+    color: var(--pencil);
+  }
+
+  a {
+    color: var(--link);
+    text-underline-offset: 3px;
+  }
+
+  .items {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .item {
+    padding: 8px 0 6px;
+    border-top: 1px dashed var(--edge);
+    scroll-margin-top: 24px;
+  }
+
+  /* Arriving from a link such as /licenses/#u2netp: marker pen on it. */
+  .item:target {
+    background: var(--highlight);
+  }
+
+  .item p {
+    margin: 0;
+  }
+
+  .item-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 10px;
+  }
+
+  .item-name {
+    font-family: var(--hand);
+    font-size: 17.5px;
+    color: var(--ink);
+  }
+
+  .item-version {
+    font-family: var(--code);
+    font-feature-settings: "calt" 0;
+    font-size: 13px;
+    color: var(--faint);
+  }
+
+  .item-license {
+    font-family: var(--hand);
+    font-size: 14px;
+    padding: 0 6px;
+    border: 1px solid var(--stamp);
+    border-radius: 4px;
+    color: var(--stamp-ink);
+    text-decoration: none;
+    line-height: 1.5;
+  }
+
+  a.item-license:hover {
+    background: rgb(191 63 54 / 0.08);
+  }
+
+  .item-use {
+    font-size: 15.5px;
+  }
+
+  .item-holder {
+    font-size: 14px;
+    color: var(--faint);
+    overflow-wrap: anywhere;
+  }
+
+  .item-files {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 14px;
+    font-family: var(--hand);
+    font-size: 14px;
+  }
+
+  .text {
+    margin: 10px 0 0;
+    padding: 6px 12px;
+    border: 1px dashed var(--edge);
+    border-radius: 6px;
+    background: var(--slip);
+    scroll-margin-top: 24px;
+  }
+
+  .text summary {
+    font-family: var(--hand);
+    font-size: 17px;
+    cursor: pointer;
+  }
+
+  .text[open] summary {
+    margin-bottom: 6px;
+  }
+
+  .text p {
+    font-size: 15px;
+  }
+
+  .holders {
+    margin: 0 0 10px;
+    padding-left: 1.2em;
+    font-size: 14px;
+    color: var(--faint);
+    overflow-wrap: anywhere;
+  }
+
+  .holders li::marker {
+    color: var(--faint-mark);
+  }
+
+  .text pre {
+    max-height: 420px;
+    margin: 0 0 6px;
+    padding: 10px 12px;
+    overflow: auto;
+    font-family: var(--code);
+    font-feature-settings: "calt" 0;
+    font-size: 12.5px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    color: var(--ink);
+    background: rgb(94 78 52 / 0.05);
+    border-radius: 4px;
+  }
+
+  .sheet :global(.licenses-foot) {
+    margin: 28px 0 0;
+    padding-top: 10px;
+    border-top: 1px dashed var(--edge);
+  }
+
+  @media (max-width: 480px) {
+    .sheet {
+      padding: 30px 18px 24px 38px;
+      background-image:
+        linear-gradient(
+          90deg,
+          transparent 22px,
+          var(--margin) 22px,
+          var(--margin) 23px,
+          transparent 23px
+        ),
+        var(--paper-doc);
+      font-size: 16px;
+      rotate: 0deg;
+    }
+
+    .sticker {
+      --w: 60px;
+      top: -20px;
+      right: -4px;
+    }
+  }
+</style>

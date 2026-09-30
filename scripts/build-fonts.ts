@@ -26,7 +26,8 @@
  *    search queries). One stylesheet, public/fonts/rest.<hash>.css, loaded
  *    without blocking rendering.
  *
- * Output (committed): public/fonts/{xiaolai,zhuque}/*.woff2,
+ * Output (committed): public/fonts/{xiaolai,zhuque}/*.woff2 with an OFL.txt
+ * (the split files keep the copyright line but lose the licence fields),
  * public/fonts/rest.<hash>.css and src/layouts/fonts.generated.ts.
  */
 import { existsSync } from "node:fs";
@@ -36,6 +37,8 @@ import { Glob } from "bun";
 import { fontSplit } from "cn-font-split";
 import { consola } from "consola";
 import { create, type Font } from "fontkitten";
+import { oflFile } from "../src/data/license-texts";
+import { FONT_COPYRIGHT } from "../src/data/licenses";
 import {
   averageAdvance,
   type Chunk,
@@ -82,6 +85,8 @@ type FontJob = {
   /** Preload the first site file (the body text font). */
   preload: boolean;
   fallback: Fallback;
+  /** Copyright lines for OFL.txt (src/data/licenses.ts). */
+  copyright: readonly string[];
 };
 
 const ROOT = join(import.meta.dir, "..");
@@ -89,6 +94,8 @@ const SOURCE_DIR = join(ROOT, "fonts-src");
 const PUBLIC_FONTS = join(ROOT, "public", "fonts");
 const GENERATED = join(ROOT, "src", "layouts", "fonts.generated.ts");
 const SITE_TMP = ".site";
+/** The font's licence, next to its chunks. */
+const LICENSE_FILE = "OFL.txt";
 /** 8 MiB: big enough that cn-font-split never splits a site subset. */
 const SITE_CHUNK_SIZE = 8_388_608;
 const HASH_LENGTH = 10;
@@ -114,6 +121,7 @@ const JOBS: FontJob[] = [
     site: (sets) => [sets.hand],
     features: true,
     preload: false,
+    copyright: FONT_COPYRIGHT.xiaolai,
     fallback: {
       cjk: [
         "PingFangSC-Regular",
@@ -136,6 +144,7 @@ const JOBS: FontJob[] = [
     site: (sets) => [sets.common, sets.body],
     features: false,
     preload: true,
+    copyright: FONT_COPYRIGHT.zhuque,
     fallback: {
       cjk: [
         "STSongti-SC-Regular",
@@ -373,6 +382,7 @@ const buildJob = async (job: FontJob, sets: SiteSets): Promise<JobResult> => {
       await rm(join(outDir, file), { force: true });
     }
   }
+  await Bun.write(join(outDir, LICENSE_FILE), oflFile(job.copyright));
 
   consola.success(
     `${job.family}: ${faces.length} site woff2 + ${rest.length} chunks → ${outDir}`

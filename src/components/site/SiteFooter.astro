@@ -1,14 +1,15 @@
 ---
 /**
  * The site's small print: 「© <first note year>–<build year> Sonui · 文章采用
- * CC BY-NC-SA 4.0」, links to 隐私说明 and RSS, and the ICP line when
- * `ICP_RECORD.number` (src/lib/seo/copyright.ts) is filled in.
+ * CC BY-NC-SA 4.0」, links to 隐私说明, 开源许可 (/licenses/: source code MIT,
+ * third-party licences) and RSS, and the ICP line when `ICP_RECORD.number`
+ * (src/lib/seo/copyright.ts) is filled in.
  *
- * Used on the canvas intro card (`links={false}`: the card already links to
- * RSS, so only 隐私说明 is added), at the bottom of the list (/list/ and the
- * phone list on /), /links/, /privacy/ and 404. The page sets its margin
- * (through `class`). Build time only (reads the posts); do not use it on
- * on-demand pages such as /admin/.
+ * Used on the canvas intro card (`rss={false}`: the card already links to
+ * RSS, so only 隐私说明 and 开源许可 are added), at the bottom of the list
+ * (/list/ and the phone list on /), /links/, /privacy/, /licenses/ and 404.
+ * The page sets its margin (through `class`). Build time only (reads the
+ * posts); do not use it on on-demand pages such as /admin/.
  */
 import { getPosts } from "@/lib/posts";
 import {
@@ -36,20 +37,19 @@ const years = yearRange(
 ---
 
 <p class:list={["site-foot", className]}>
-  <span>
-    © {years}
-    {COPYRIGHT_HOLDER} · 文章采用
-    <a
-      class="site-foot-license"
-      href={LICENSE.deed}
-      rel="noopener"
-      target="_blank"
-    >
+  <span class="site-foot-part">
+    © {years} {COPYRIGHT_HOLDER}
+  </span>
+  <span class="site-foot-part">
+    文章采用
+    <a href={LICENSE.deed} rel="noopener" target="_blank">
       {LICENSE.name}
     </a>
   </span>
   <span class="site-foot-links">
     <a href="/privacy/">隐私说明</a>
+    <span aria-hidden="true">·</span>
+    <a href="/licenses/">开源许可</a>
     {rss && (
       <>
         <span aria-hidden="true">·</span>
@@ -89,7 +89,10 @@ const years = yearRange(
     text-underline-offset: 3px;
   }
 
-  .site-foot .site-foot-license {
+  /* Each part wraps as a whole: never 「文章采用」 on one line and the
+     licence on the next. */
+  .site-foot-part,
+  .site-foot-links {
     white-space: nowrap;
   }
 

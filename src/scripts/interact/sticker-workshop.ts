@@ -166,7 +166,7 @@ const MARKUP = `<img class="tape" src="/journal/tape/washi-grid-ivory.webp" alt=
   <p class="vs-status" role="status" data-shop="status"></p>
   <div class="vs-opts">
     <label class="vs-check"><input type="checkbox" data-shop="cutout" autofocus />自动抠图</label>
-    <p class="vs-note" data-shop="cutout-note">第一次用要下载约 ${Math.round(CUTOUT_DOWNLOAD_BYTES / MB)} MB 的抠图工具；抠图在你的浏览器里完成。</p>
+    <p class="vs-note" data-shop="cutout-note">第一次用要下载约 ${Math.round(CUTOUT_DOWNLOAD_BYTES / MB)} MB 的抠图工具；抠图在你的浏览器里完成。抠图模型 <a href="/licenses/#u2netp" target="_blank" rel="noopener">U-2-Netp（Apache-2.0）</a>。</p>
     <label class="vs-check"><input type="checkbox" data-shop="filter" checked />手账滤镜</label>
     <label class="vs-range">白边粗细
       <input type="range" min="0" max="2" step="1" value="${DEFAULT_BORDER}" data-shop="border" aria-valuetext="${BORDER_LABELS[DEFAULT_BORDER]}" />

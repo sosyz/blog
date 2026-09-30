@@ -1,8 +1,19 @@
 # Attributions
 
 Third-party material used by this site, and the licence each one is under.
-Code dependencies from npm keep their own licences in `node_modules`; only
-assets and bundled libraries that ship to visitors are listed here.
+
+**The canonical list is `src/data/licenses.ts`**, shown to visitors on
+[/licenses/](https://blog.sonui.cn/licenses/) (开源许可, linked from the
+footer) with the full MIT, Apache-2.0 and SIL OFL 1.1 texts. Minified bundles
+lose their licence headers, so that page is where the notices live. When a
+library, font, model or asset is added or removed, change the data module
+first, then this file; `tests/licenses.test.ts` fails if browser code imports
+an npm package the module does not list.
+
+This site itself: the source code is MIT (`LICENSE`, Copyright (c) 2025-2026
+Sonui); the notes in `src/posts/` and their images are CC BY-NC-SA 4.0
+(`src/lib/seo/copyright.ts`). Build-time-only npm dependencies keep their own
+licences in `node_modules`.
 
 ## Fonts
 
@@ -11,11 +22,14 @@ The CJK fonts are split into small woff2 chunks by `scripts/build-fonts.ts`
 (cn-font-split) so the browser only downloads the characters a page uses.
 The split files are for loading on this site only and are not distributed
 as fonts on their own.
+The split woff2 keep the copyright line but lose the licence fields, so each
+folder has an `OFL.txt` with the font's copyright lines and the full licence;
+`bun run fonts` rewrites it (lines in `FONT_COPYRIGHT`, `src/data/licenses.ts`).
 
 | Font | Used for | Files | Source |
 | --- | --- | --- | --- |
 | 小赖字体 Xiaolai (LXGW, based on Seto Font by Nozomi Seto) | topic names, sticky notes, UI chrome | `public/fonts/xiaolai/` | <https://github.com/lxgw/kose-font> |
-| 朱雀仿宋 Zhuque Fangsong (Triones Type), technical preview | article body | `public/fonts/zhuque/` | <https://github.com/TrionesType/zhuque> |
+| 朱雀仿宋 Zhuque Fangsong (Triones Type, Copyright 2023 JadeFoci), technical preview | article body | `public/fonts/zhuque/` | <https://github.com/TrionesType/zhuque> |
 | Maple Mono (subframe7536), latin subset | code | `@fontsource/maple-mono` | <https://github.com/subframe7536/maple-font> |
 
 Zhuque Fangsong's author asks that modified versions are not redistributed
@@ -47,7 +61,9 @@ only; replace them when 1.0 is released (`bun run fonts`).
 
 | Library | Licence | Source |
 | --- | --- | --- |
+| Astro client runtime (`<ClientRouter />` page transitions, script loading), Copyright (c) 2021 Fred K. Schott | MIT | <https://github.com/withastro/astro> |
 | Rough Notation (highlight, underline, box marks) | MIT | <https://github.com/rough-stuff/rough-notation> |
+| Rough.js (bundled inside Rough Notation; also used at build time for the hand-drawn doodles and diagram strokes), Copyright (c) 2019 Preet Shihn | MIT | <https://github.com/rough-stuff/rough> |
 | transformers.js (`@huggingface/transformers` 4.3.0; runs the sticker cutout model in a Web Worker) | Apache-2.0 | <https://github.com/huggingface/transformers.js> |
 | ONNX Runtime Web (`onnxruntime-web` 1.31.0-dev, bundled JS + `public/ort/<version>/ort-wasm-simd-threaded.{mjs,wasm}`), Copyright (c) Microsoft Corporation | MIT | <https://github.com/microsoft/onnxruntime> |
 | GitHub mark (`mark-github-16` from Octicons, inlined as SVG on the 「用 GitHub 登录」 button in `src/scripts/interact/auth.ts`), Copyright (c) GitHub Inc. | MIT | <https://github.com/primer/octicons> |
@@ -104,3 +120,11 @@ SOFTWARE.
 
 The 手账滤镜 grain uses the CC0 paper grain texture above
 (`public/journal/paper/grain-overlay-gray.jpg`).
+
+## Build tools
+
+These run while the site is built; visitors download their output, not their
+code, so no licence travels with the pages. Credited on /licenses/: Mermaid
+(MIT; diagrams in notes are drawn to hand-drawn SVG at build time), SVGO
+(MIT), Shiki (MIT, code colouring) and cn-font-split (Apache-2.0, font
+splitting).
