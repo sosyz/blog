@@ -13,6 +13,7 @@
     "check": "astro check",
     "fonts": "bun scripts/build-fonts.ts",
     "og": "bun src/lib/seo/build-og-image.ts",
+    "icons": "bun scripts/build-icons.ts",
     "diagrams": "bun scripts/build-diagrams.ts",
     "cf-typegen": "wrangler types --env-file .dev.vars.example",
     "test": "bun test tests"
