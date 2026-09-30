@@ -110,9 +110,16 @@ Schema 定义在 `src/content.config.ts`。当前主题：AI、Web、后端、Go
 
 - 文章署名 Sonui，采用 CC BY-NC-SA 4.0（署名-非商业性使用-相同方式共享）。
 - **版权纸条**：每篇笔记正文之后、「相关」之前，一张虚线边的小纸条，右上角盖一个朱红「版权」小戳：作者、原文链接（带「复制」按钮，复制后写「已复制」）、发布于 / 更新于、协议（链接到中文协议说明），最后一行「转载请署名并注明原文链接，非商业使用，改编后以相同协议发布」。
-- **页脚**：一行淡铅笔小字「© 最早一篇笔记的年份–今年 Sonui · 文章采用 CC BY-NC-SA 4.0」，加「隐私说明」和「RSS」。放在画布的自我介绍卡底部（卡上已经有 RSS，只加隐私说明）、列表底部、`/links/`、`/privacy/`、404。年份在构建时算。
+- **页脚**：一行淡铅笔小字「© 最早一篇笔记的年份–今年 Sonui · 文章采用 CC BY-NC-SA 4.0」，加「隐私说明」「开源许可」和「RSS」。放在画布的自我介绍卡底部（卡上已经有 RSS，只加隐私说明和开源许可）、列表底部、`/links/`、`/privacy/`、`/licenses/`、404。年份在构建时算。
 - 备案号暂不显示；配置里留了一个空字段，以后填上就会出现在页脚。
 - 机器也能读到：文章的结构化数据写明协议和版权人，RSS 有版权声明，`llms.txt` 和每篇的 `.md` 版本写明协议。
+
+### 开源许可
+
+- 本站源码采用 MIT（仓库根目录 `LICENSE`，Copyright (c) 2025-2026 Sonui，保留署名即可使用）；`LICENSE` 末尾写明 MIT 只管源码，`src/posts/` 的文章和配图仍是 CC BY-NC-SA 4.0，第三方素材按各自许可。
+- **`/licenses/`「开源许可」**：和 `/privacy/` 一样的一张纸。开头两行本站自己的许可，然后分组列出用到的别人的东西（浏览器里运行的代码 / 字体 / 模型 / 素材 / 构建工具）：名称、版本、许可证小戳（点了跳到全文）、用在哪、版权行、许可证文件链接；最后是 MIT、Apache-2.0、SIL OFL 1.1 全文各一份，收在 `<details>` 里。从别处链到某一项（如 `#u2netp`）时这一项涂上荧光笔。打包压缩会去掉库的版权声明，所以声明都放在这页。
+- 清单在 `src/data/licenses.ts`，npm 包的版本构建时从 `node_modules` 读；加库、字体、模型、素材时先改它，再改 `ATTRIBUTIONS.md`。贴纸工坊「自动抠图」的说明里链到 `#u2netp`（新标签页打开，不丢正在做的贴纸）。
+- 切片后的小赖和朱雀仿宋保留了版权行、丢了许可字段，所以 `public/fonts/{xiaolai,zhuque}/OFL.txt` 放原版权行加 OFL 全文，`bun run fonts` 每次重写。
 
 ## 视觉
 
@@ -135,6 +142,7 @@ Schema 定义在 `src/content.config.ts`。当前主题：AI、Web、后端、Go
   - 非文字 ≥ 3:1：输入框下划线、搜索框边框。
   - 搜索时没命中的卡片淡到 40%，同时移出 Tab 顺序；列表里没命中的行淡到 40%。
   - 抽屉打开时画布变暗只到 6%：再暗，画布上的铅笔字和卡片上的链接就不到 4.5:1。
+  - 图表：Mermaid 画成手绘风（mermaid 的 handDrawn 样式，固定随机种子，每次构建一样），墨色线框和小赖字直接画在文档纸上，节点不填色，不贴纸条也不贴胶带；比页面宽的图最多缩到原来的 3/4，再宽就左右滚动。图下有「图的文字版」可以展开看源码。图在写作时预先渲染成 SVG（`bun run diagrams`），页面不加载 mermaid。
   - 代码高亮只用几种墨水色：关键字蓝黑 `#3d5f8f`、字符串赭石 `#9a4d2c`、注释灰 `#736b59`（原来的 `#8f8672` 在纸条上对比度只有 3.5:1，加深到 4.5:1 以上）。
 - 字体（不用霞鹜文楷）：
 
@@ -278,7 +286,7 @@ Schema 定义在 `src/content.config.ts`。当前主题：AI、Web、后端、Go
 | 抽屉：滑出、切换淡入淡出、`Esc`、点空白处关闭、上一篇/下一篇、相关和同一主题吊牌 | `src/components/drawer/Drawer.astro`、`src/scripts/canvas/drawer.ts`、`canvas.ts` | 已完成 |
 | 列表：筛选（类型、主题，同步到地址栏） | `src/components/canvas/NoteList.astro`、`src/scripts/canvas/list.ts` | 已完成；按**年**分组，不是上文写的按月份 |
 | 纸色、墨水色、字体、材质 | `src/styles/tokens.css`、`materials.css`、`public/journal/`、`public/fonts/`、`scripts/build-fonts.ts` | 已完成 |
-| 抽屉正文：代码纸条和牛皮纸文件名、拍立得配图、荧光笔、页边便利贴、小节圈号 | `src/lib/markdown/`、`src/components/post/`（`marks.ts` 用 Rough Notation）、`src/styles/prose.css` | 已完成；Mermaid 只显示为代码纸条，不画成图 |
+| 抽屉正文：代码纸条和牛皮纸文件名、拍立得配图、荧光笔、页边便利贴、小节圈号 | `src/lib/markdown/`、`src/components/post/`（`marks.ts` 用 Rough Notation）、`src/styles/prose.css` | 已完成；Mermaid 画成预先渲染的手绘图（`src/lib/markdown/diagrams.ts`、`src/styles/diagrams.css`、`scripts/build-diagrams.ts`） |
 | 动效清单 1–6 和减弱动效 | `src/scripts/canvas/canvas.ts`、`camera.ts`、`input.ts`、`drawer.ts`、`src/styles/canvas.css`、`base.css` | 已完成 |
 | 动效 8：画布和列表切换 | `/` 与 `/list/` 之间靠 `<ClientRouter />` 默认的淡入淡出；窄屏首页内的画布/列表切换在 `src/styles/canvas.css` | 部分完成：窄屏首页内切换没有淡入淡出 |
 | 图片查看（FLIP 放大、拍立得外框） | `src/components/post/lightbox.ts`、`src/styles/prose.css` | 已实现 |
@@ -293,6 +301,7 @@ Schema 定义在 `src/content.config.ts`。当前主题：AI、Web、后端、Go
 | SEO 与 GEO | `src/components/seo/Seo.astro`、`src/lib/seo/`、`src/integrations/legacy-list-redirects.ts` | 代码已完成；Cloudflare 上的 AI 爬虫设置要在上线时按 deploy.md 操作 |
 | 友链：画布上的名片堆、`/links/`、列表里的「友链」、交换友链和复制 | `src/data/links.ts`、`src/lib/{links,friends}.ts`、`src/components/links/`、`src/pages/links.astro`、`src/scripts/canvas/layout.ts`（`layoutFriends`）、`src/scripts/copy.ts` | 已完成；列表还是空的，等博主添加 |
 | 版权：笔记末尾的版权纸条、页脚、结构化数据 / RSS / llms.txt / `.md` 里的协议 | `src/lib/seo/copyright.ts`、`src/components/post/CopyrightSlip.astro`、`src/components/site/SiteFooter.astro`、`Seo.astro`、`src/pages/{rss.xml,llms.txt,llms-full.txt}.ts`、`src/lib/seo/markdown.ts` | 已完成；备案号字段留空，不显示 |
+| 开源许可：源码 MIT、`/licenses/` 列出第三方许可和全文、字体 OFL.txt | `LICENSE`、`src/data/{licenses,license-texts}.ts`、`src/pages/licenses.astro`、`public/fonts/{xiaolai,zhuque}/OFL.txt`、`ATTRIBUTIONS.md`、`tests/licenses.test.ts` | 已完成 |
 
 还没做或待确认：
 

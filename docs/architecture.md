@@ -24,16 +24,19 @@ src/worker.ts             Worker 入口（wrangler.jsonc `main`）：先用 src/
 migrations/0001_init.sql  D1 全部表结构：users、sessions、comments、stickers、moderation_log、hidden_builtins（上线前合并成一个文件；以后改表新增 0002_*.sql）
 scripts/build-fonts.ts    把 fonts-src/ 里的中文字体切片到 public/fonts/（bun run fonts），生成 src/layouts/fonts.generated.ts
 scripts/font-chars.ts     build-fonts 用的纯函数：全站用字、unicode-range、回退字体度量
+scripts/build-diagrams.ts 把笔记里的 ```mermaid 块用本机 Chrome 渲染成手绘 SVG（bun run diagrams），SVGO 压缩后写进 src/assets/diagrams/<哈希>.svg（提交），删掉不再用的
 scripts/build-tapes.ts    把 scripts/assets/tape/ 的纸胶带缩到 public/journal/tape/
 scripts/build-cutout-assets.ts  复制 ONNX Runtime Web 到 public/ort/<版本>/，校验 U-2-Netp 模型
 tests/                    bun test 单元测试（src/lib/server 的纯模块、划线定位）
-ATTRIBUTIONS.md           字体、纸纹、贴纸、库的授权
+ATTRIBUTIONS.md           字体、纸纹、贴纸、库的授权（规范清单是 src/data/licenses.ts）
+LICENSE                   源码 MIT（Copyright (c) 2025-2026 Sonui）；文章仍是 CC BY-NC-SA 4.0
 public/
   _headers                静态资源的安全头（/*）、缓存规则、.md 的 canonical、llms-full.txt 的 noindex
   _redirects              只放注释；规则见 lib/seo/redirects.ts 和 lib/seo/redirect-rules.ts
   .assetsignore           不上传的文件（旧的 lxgw-wenkai、atkinson 字体）
   fonts/xiaolai/          小赖：全站用字的 woff2 + 其余字的小切片
   fonts/zhuque/           朱雀仿宋：同上（全站用字分成「每页都有」和「只在正文」两个文件）
+  fonts/{xiaolai,zhuque}/OFL.txt  字体的版权行和 OFL 全文（切片丢了许可字段；bun run fonts 重写）
   fonts/rest.<hash>.css   其余切片的 @font-face（unicode-range 不含全站用字），不阻塞渲染
   journal/                纸纹、纸胶带、涂鸦、回形针、印章斑驳纹理、手账配件
   stickers/               16 张手账贴纸（webp）
@@ -44,10 +47,12 @@ src/
   content.config.ts       `blog` 集合的 schema
   consts.ts               自我介绍卡上的主人信息；站点名称等在 lib/seo/site.ts
   data/links.ts           友链（手写维护的 FRIEND_LINKS，见 AGENTS.md「加一条友链」）
+  data/licenses.ts        第三方许可清单（/licenses/ 和 ATTRIBUTIONS.md 以它为准）；data/license-texts.ts 是 MIT / Apache-2.0 / OFL 全文
   posts/                  笔记（.md / .mdx）
   assets/posts/<slug>/    正文配图
   assets/covers/          封面图（卡片上的拍立得、分享图）
   assets/links/           友链头像（data/links.ts 的 avatar 写文件名，构建时缩小）
+  assets/diagrams/        Mermaid 图的手绘 SVG（bun run diagrams 生成、提交；lib/markdown/diagrams.ts 内联进正文）
   layouts/Base.astro      页面外壳
   layouts/fonts.generated.ts  全站用字的 @font-face、preload 列表、rest.<hash>.css 地址（bun run fonts 生成；Base.astro 和 /admin/ 引用）
   middleware.ts           给 Worker 渲染的响应（/api/*、/admin/）补安全头，已有的同名头不覆盖
@@ -59,7 +64,7 @@ src/
     drawer/Drawer.astro   包住 PostBody 的抽屉                  （画布）
     post/CopyrightSlip.astro  笔记末尾的版权纸条（作者、原文链接和复制、日期、协议）
     links/*               友链名片 FriendCard、交换友链便利贴 ExchangeCard、画布上的友链堆 FriendsPile
-    site/SiteFooter.astro © 年份 · 协议 · 隐私说明 · RSS（· 备案号）
+    site/SiteFooter.astro © 年份 · 协议 · 隐私说明 · 开源许可 · RSS（· 备案号）
     interact/*            评论、划线评论、贴纸、Turnstile        （互动）
   scripts/
     canvas/api.ts         客户端约定：CanvasApi 和抽屉事件
@@ -100,6 +105,7 @@ src/
 | 404 | `pages/404.astro` | 静态 | SEO |
 | `/links/` | `pages/links.astro` | 静态 | 友链（全部名片 + 交换友链；JSON-LD `CollectionPage` + `ItemList`；在 sitemap 里） |
 | `/privacy/` | `pages/privacy.astro` | 静态 | 互动（存了什么、怎么删除；改表、cookie、localStorage 键时同步） |
+| `/licenses/` | `pages/licenses.astro` | 静态 | 友链与版权（开源许可：清单 `data/licenses.ts`，全文 `data/license-texts.ts`；在 sitemap 里） |
 | `/admin/` | `pages/admin/index.astro` | 按需，Access 之后 | 互动（审核台：收件箱，链接到现场审核） |
 | `/api/*` | `pages/api/**`（见「访客内容接口」「GitHub 登录」） | 按需 | 互动 |
 | 旧 Hexo 链接、`/about/`、`/blog/*` | `lib/seo/redirects.ts`（静态）+ `lib/seo/redirect-rules.ts`（`/tags/*` 等通配，由 `integrations/legacy-list-redirects.ts` 追加到末尾）→ `dist/client/_redirects` | 301 | SEO |
@@ -112,7 +118,7 @@ src/
 - **正文**：`src/components/post/**`、`src/lib/markdown/**`、`src/styles/prose.css`
 - **互动 / 后端**：`src/components/interact/**`、`src/scripts/interact/**`、`src/lib/server/**`、`src/pages/api/**`、`src/pages/admin/**`、`src/pages/privacy.astro`、`migrations/**`、`wrangler.jsonc` 的绑定和 `vars`、`tests/**`
 - **SEO**：`src/components/seo/**`、`src/lib/seo/**`、`src/pages/rss.xml.ts`、`src/pages/llms*.ts`、`src/pages/notes/[slug].md.ts`、`src/pages/404.astro`、`src/pages/robots.txt.ts`、`public/og-default.png`、`public/_redirects`、`public/_headers`
-- **友链与版权**：`src/data/links.ts`、`src/lib/{links,friends}.ts`、`src/assets/links/**`、`src/components/links/**`、`src/components/site/**`、`src/components/post/CopyrightSlip.astro`、`src/pages/links.astro`、`src/lib/seo/copyright.ts`、`src/scripts/copy.ts`
+- **友链与版权**：`src/data/links.ts`、`src/lib/{links,friends}.ts`、`src/assets/links/**`、`src/components/links/**`、`src/components/site/**`、`src/components/post/CopyrightSlip.astro`、`src/pages/links.astro`、`src/lib/seo/copyright.ts`、`src/scripts/copy.ts`、`LICENSE`、`src/data/{licenses,license-texts}.ts`、`src/pages/licenses.astro`、`ATTRIBUTIONS.md`
 - **共用基础（小心改）**：`astro.config.mjs`、`package.json`、`tsconfig.json`、`src/layouts/Base.astro`、`src/lib/posts.ts`、`src/styles/{tokens,base,materials}.css`、`src/scripts/canvas/api.ts`（约定本身）、`src/scripts/canvas/seed.ts`、`src/content.config.ts`、`public/journal/**`、`public/stickers/**`、`public/fonts/**`
 
 ## 数据流
@@ -166,6 +172,7 @@ slug 就是集合 id（文件名去掉扩展名）。
 - **交换友链**（`ExchangeCard.astro`，props `id`、`headingTag`）：怎么申请（任意笔记下留言或 GitHub），本站名片（`lib/links.ts` 的 `SELF_CARD`：名称、地址、`PROFILE.title`、小狗头像绝对地址），每项一个复制按钮。
 - **复制按钮**（`src/scripts/copy.ts`）：`<button type="button" data-copy="文字" data-copy-status="<id>">`，`<id>` 是页面里已有的 `role="status"` 元素；成功写「已复制」，失败写「没复制成功，请手动选中复制」，约 2.4 秒后清空。document 上只挂一次监听，抽屉换页后照样有效。
 - **版权**：协议、转载说明、备案号、年份和各种输出格式在 `src/lib/seo/copyright.ts`（纯函数，只用相对导入）。`LICENSE.url` 是规范地址（JSON-LD `license`、`<link rel="license">`、RSS、`.md`），`LICENSE.deed` 是中文说明页（页面上的链接）。`copyrightYears(dates, now)` 按上海时区取年：最早一篇笔记的年份到构建时的年份；`SiteFooter` 和 RSS 的 `<copyright>` 用它。`ICP_RECORD.number` 为空时页脚不显示备案行。
+- **开源许可**：`src/data/licenses.ts` 的 `COMPONENTS`（`{id, name, npm?, version?, license, copyright, url, usedFor, group, shipsToBrowser, licenseFile?, notice?}`）是第三方许可的规范清单，`/licenses/` 按 `GROUPS` 分组显示，`id` 是锚点（贴纸工坊链到 `#u2netp`）；有 `npm` 的项构建时从 `node_modules/<pkg>/package.json` 读版本（`npmVersion`，读不到就不显示）。许可证全文在 `src/data/license-texts.ts`（`MIT_TEXT`、`APACHE_2_0_TEXT`、`OFL_1_1_TEXT`、`oflFile`），两者都只用相对导入；`scripts/build-fonts.ts` 用 `oflFile(FONT_COPYRIGHT.<family>)` 写 `public/fonts/<family>/OFL.txt`。`tests/licenses.test.ts` 扫描浏览器代码（`src/scripts` 等的 TS 和 `.astro` 的 `<script>`）里的 npm 包，没列进清单就失败，也检查 OFL.txt 与 `oflFile` 一致、`LICENSE` 的内容。
 - **版权纸条**（`CopyrightSlip.astro`）在 `Drawer.astro` 里 `<PostBody>` 之后、`.dfoot` 之前，不在 `[data-post-body]` 里。原文链接是 `noteUrl(slug)`；「更新于」只在 `updatedDate` 和发布日不同时显示；状态行 id 是 `note-copy-status`。
 - **机器可读**：`Seo.astro` 的 `BlogPosting` 展开 `licenseFields(pubDate)`（`license`、`copyrightHolder: {"@id": PERSON_ID}`、`copyrightYear`）并在笔记页输出 `<link rel="license">`；`rss.xml.ts` 频道 `<copyright>`、每条 `<dc:rights>` 和正文末尾的 `feedItemFooter`；`llms.txt` / `llms-full.txt` 开头的 `llmsLicenseLine()`（不以 `- [` 开头，`/admin/` 按那个格式解析笔记标题）；`/notes/<slug>.md` 用 `noteMarkdown(post, { frontMatter: true })` 在开头加 YAML front matter（`title`、`description`、`author`、`url`、`published`、`updated?`、`license`、`license_url`、`based_on?`），`llms-full.txt` 不加 front matter，只在每篇的头部列表里多一行「协议」。
 

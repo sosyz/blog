@@ -57,6 +57,7 @@ Sonui 的博客 2.0：一本灵感手账。首页是一块无限画布，中央�
 | `bun run test` | 单元测试（`bun test tests`） |
 | `bun run fonts` | 重新切分中文字体（源文件放 `fonts-src/`，见 `scripts/build-fonts.ts` 开头） |
 | `bun run og` | 重新生成默认分享图 `public/og-default.png`（需要 `fonts-src/xiaolai-regular.ttf`） |
+| `bun run diagrams` | 把笔记里的 Mermaid 块渲染成手绘 SVG（`src/assets/diagrams/`，要提交）；需要本机 Chrome（或 `CHROME_PATH`）和 `fonts-src/xiaolai-regular.ttf`，已有的跳过，`--force` 全部重画，升级 mermaid / svgo 后改 `DIAGRAM_CONFIG_VERSION` |
 | `bun scripts/build-tapes.ts` | 重新生成纸胶带 `public/journal/tape/*.webp` |
 | `bun scripts/build-cutout-assets.ts` | 复制 / 校验贴纸工坊的抠图文件（`public/ort/<版本>/`、`public/models/u2netp/`）；升级 `@huggingface/transformers` 后运行 |
 | `bun run cf-typegen` | 改了 `wrangler.jsonc` 后重新生成 `worker-configuration.d.ts` |
@@ -103,7 +104,7 @@ Sonui 的博客 2.0：一本灵感手账。首页是一块无限画布，中央�
    | `heroImage` | 可选，相对路径（`../assets/covers/…` 或 `../assets/posts/<slug>/…`）。踩坑卡片上贴成拍立得（装饰性，`alt` 为空）；也是分享图（裁成 1200×630）。随想卡片不显示它。 |
 
 3. **放配图**：放进 `src/assets/posts/<slug>/`，文件名用小写短横线，正文里写 `![替代文字](../assets/posts/<slug>/xxx.png)`。替代文字自己写，用中文描述图里的内容，不写「图片」「照片」这类词。只有图片的段落会显示成拍立得。构建时的 AI 替代文字（`src/lib/ai/image.ts`）只在图片完全没有 `alt` 属性时才调用，Markdown 图片总会带 `alt`，所以不要指望它补。
-4. **用手账元素**（详见 [src/lib/markdown/README.md](src/lib/markdown/README.md)）：代码块写语言，想要文件名标签就写 ```` ```ts title="gateway.ts" ````；`==重点==` 画荧光笔；`> [!aside] 吐槽` 开头的引用块变成页边便利贴；脚注显示为「注释」。Mermaid 目前只显示为代码纸条。
+4. **用手账元素**（详见 [src/lib/markdown/README.md](src/lib/markdown/README.md)）：代码块写语言，想要文件名标签就写 ```` ```ts title="gateway.ts" ````；`==重点==` 画荧光笔；`> [!aside] 吐槽` 开头的引用块变成页边便利贴；脚注显示为「注释」。```` ```mermaid ```` 画成手绘图：块里先写 `accTitle: 一句话标题` 和 `accDescr: 一句话说明`（读屏软件读它们），然后 `bun run diagrams` 把图渲染成 `src/assets/diagrams/<哈希>.svg` 并一起提交；改了图就再跑一次。构建只内联这些 SVG，缺了就失败，不需要浏览器。
 5. **画布会自动处理**：卡片进入对应主题堆；胶带颜色、回形针、倾斜角和偏移由 slug 决定，每次构建都一样；RSS、sitemap、`llms.txt`、`llms-full.txt`、`/notes/<slug>.md` 都自动包含新笔记。不需要手动摆放。
 6. **预览**：`bun run dev`，打开 `/notes/<slug>/`，再看一眼 `/`（卡片在哪堆、摘要是否截断）和 `/notes/<slug>.md`。然后 `bun run fonts`（约 2 秒，把新笔记用到的字放进全站字体文件，否则这些字要多下载切片），最后跑 `bun run build`：frontmatter、`related`、图片路径的错误都在这一步暴露。
 
@@ -130,6 +131,7 @@ Sonui 的博客 2.0：一本灵感手账。首页是一块无限画布，中央�
 文章署名 Sonui，采用 CC BY-NC-SA 4.0。协议、转载说明、年份、备案号都在 `src/lib/seo/copyright.ts`（纯函数，`tests/copyright.test.ts`）：
 
 - 每篇笔记末尾的版权纸条（`CopyrightSlip.astro`，在抽屉里 `<PostBody>` 之后、`[data-post-body]` 外面，划线评论不会落到它上面）；站点页脚一行（`SiteFooter.astro`：画布自我介绍卡、列表、`/links/`、`/privacy/`、404）。年份从最早一篇笔记的发布年到构建那年，每次构建自动更新。
+- 源码（代码、样式、脚本、配置、文档）用 MIT，见根目录 `LICENSE`；文章和配图仍是 CC BY-NC-SA 4.0。页脚「隐私说明 · 开源许可」链到 `/licenses/`：用到的第三方库、字体、模型、素材及其许可证，数据在 `src/data/licenses.ts`（`tests/licenses.test.ts` 检查浏览器代码用到的 npm 包都列上了）。加依赖、字体或素材时同步更新它和 [ATTRIBUTIONS.md](ATTRIBUTIONS.md)。
 - 给机器读的：`BlogPosting` 的 `license`、`copyrightHolder`、`copyrightYear`，笔记页 `<link rel="license">`，RSS 的 `<copyright>` 和每条的 `<dc:rights>` 加正文末尾一段版权说明，`llms.txt` / `llms-full.txt` 的协议一行，`/notes/<slug>.md` 的 YAML front matter（`url`、`license`、`license_url`）。机器读的地方用协议的规范地址 `LICENSE.url`，给人点的链接用中文版 `LICENSE.deed`。
 - 备案号：`ICP_RECORD.number` 现在是空的，页脚不显示；填上（如 `"京ICP备12345678号-1"`）后所有页脚都出现一行链接到 `beian.miit.gov.cn`，再 `bun run fonts`、构建。
 
