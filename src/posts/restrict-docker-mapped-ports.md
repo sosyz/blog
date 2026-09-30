@@ -18,6 +18,8 @@ pubDate: "2024-12-03"
 
 ```mermaid
 flowchart TD
+    accTitle: 访问容器端口的数据包流向
+    accDescr: 客户端经 eth0 到达宿主机，经 iptables NAT 到 docker0 网桥，再转发到容器
     A[客户端] --eth0--> B[宿主机] --iptables NAT--> C[docker0 网桥] --转发--> D[容器]
 ```
 

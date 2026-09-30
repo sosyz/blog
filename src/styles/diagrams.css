@@ -1,0 +1,100 @@
+/*
+ * Mermaid diagrams in a note (src/lib/markdown/diagrams.ts):
+ *   figure.diagram > div.diagram-sheet > svg      the hand-drawn diagram
+ *                  + details.diagram-source       图的文字版 (the source)
+ * The SVGs are pre-rendered (bun run diagrams) with ink lines and 小赖
+ * labels on a transparent ground, so they are drawn straight onto the page's
+ * paper: no slip, no tape. Imported by prose.css; scoped to .post-body.
+ */
+
+.post-body .diagram {
+  margin: 22px 0 24px;
+}
+
+/*
+ * The sheet scrolls sideways when the diagram is wider than the page. The
+ * SVG shrinks to fit down to 3/4 of its natural width (--w, set by
+ * build-diagrams.ts), where 15px labels are still ~11px; past that it
+ * scrolls instead of shrinking further.
+ */
+.post-body .diagram-sheet {
+  overflow-x: auto;
+  padding: 4px 2px 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--edge) transparent;
+}
+
+.post-body .diagram-sheet:focus-visible {
+  outline-offset: 2px;
+}
+
+.post-body .diagram-sheet svg {
+  display: block;
+  width: min(100%, var(--w, 100%));
+  min-width: calc(var(--w, 0px) * 0.75);
+  max-width: none;
+  height: auto;
+  margin-inline: auto;
+}
+
+/* ---------- 图的文字版 ---------- */
+
+.post-body .diagram-source {
+  margin-top: 4px;
+  text-align: center;
+}
+
+.post-body .diagram-source summary {
+  display: inline-block;
+  padding: 2px 8px;
+  color: var(--pencil);
+  font-family: var(--hand);
+  font-size: 14px;
+  line-height: 1.6;
+  cursor: pointer;
+  list-style: none;
+}
+
+.post-body .diagram-source summary::-webkit-details-marker {
+  display: none;
+}
+
+.post-body .diagram-source summary::before {
+  content: "▸ ";
+  color: var(--faint-mark);
+}
+
+.post-body .diagram-source[open] summary::before {
+  content: "▾ ";
+}
+
+.post-body .diagram-source pre {
+  margin: 6px 0 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+  border: 1px dashed var(--edge);
+  background: var(--slip);
+  text-align: left;
+  font-family: var(--code);
+  font-feature-settings: "calt" 0;
+  font-size: 13px;
+  line-height: 1.65;
+  tab-size: 4;
+  scrollbar-width: thin;
+  scrollbar-color: var(--edge) transparent;
+}
+
+.post-body .diagram-source pre code {
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  font-size: inherit;
+  overflow-wrap: normal;
+}
+
+@media (max-width: 520px) {
+  .post-body .diagram {
+    margin-right: -6px;
+    margin-left: -6px;
+  }
+}

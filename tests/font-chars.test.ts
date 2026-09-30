@@ -50,6 +50,15 @@ tags: [网络]
 \`\`\`ts title="配置.ts"
 const x = 1;
 \`\`\`
+
+\`\`\`mermaid
+graph LR
+  A[浏览器] --> B[服务器]
+\`\`\`
+
+\`\`\`js
+const 变量 = 2;
+\`\`\`
 `;
 
   test("splits frontmatter from the body", () => {
@@ -64,6 +73,9 @@ const x = 1;
     expect(text).toContain("引用用手写体");
     expect(text).toContain("拓扑图");
     expect(text).toContain("配置.ts");
+    // Diagram labels are SVG text in the hand font; other code is not.
+    expect(text).toContain("A[浏览器] --> B[服务器]");
+    expect(text).not.toContain("变量");
     expect(text).not.toContain("正文");
   });
 

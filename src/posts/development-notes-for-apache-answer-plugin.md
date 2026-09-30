@@ -35,6 +35,8 @@ type Notification interface {
 
 ```mermaid
 graph LR
+    accTitle: 绑定飞书账号
+    accDescr: 飞书用户通过菜单找到飞书机器人，机器人把用户的 OpenID 交给 Answer 完成绑定
     A[飞书用户] --Menu--> B[飞书机器人] --OpenID--> C[Answer]
 ```
 
@@ -42,6 +44,8 @@ graph LR
 
 ```mermaid
 graph LR
+    accTitle: 通知的发送路径
+    accDescr: 收件箱、所有新问题通知和关注标签的新问题通知都通过 HttpClient 交给飞书机器人，机器人再把消息发给用户
     A[收件箱] --HttpClient--> B[飞书机器人] --Message--> C[用户]
     D[所有新问题通知] --HttpClient--> B
     E[关注标签的新问题通知] --HttpClient--> B

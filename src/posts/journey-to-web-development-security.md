@@ -268,6 +268,8 @@ console.log(str.match(nonGreedyRegExp)[0])
 
 ```mermaid
 graph LR;
+accTitle: 中间人攻击
+accDescr: 客户端和服务器之间的请求和响应都要经过中间人
 A[客户端]
 B[中间人]
 C[服务器]

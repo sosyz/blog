@@ -43,11 +43,14 @@ const IMAGE_ALT = /!\[([^\]]*)\]/g;
 const FENCE_TITLE =
   /^[ \t]*(?:```|~~~).*?(?:title|file)=(?:"([^"]+)"|'([^']+)'|(\S+))/gm;
 const FOOTNOTE_LINE = /^\[\^[^\]]+\]:(.*)$/gm;
+const MERMAID_BLOCK =
+  /^[ \t]*(`{3,}|~{3,})mermaid\b[^\n]*\n([\s\S]*?)^[ \t]*\1[ \t]*$/gm;
 
 /**
  * The parts of a note body that prose.css sets in the hand font (Xiaolai):
  * quotes and margin notes, picture captions (image alt text), code-slip file
- * names and footnotes. The rest of the body is Zhuque Fangsong.
+ * names, footnotes and Mermaid diagrams (their labels are SVG text in 小赖,
+ * src/styles/diagrams.css). The rest of the body is Zhuque Fangsong.
  */
 export const handText = (body: string) => {
   const parts: string[] = [];
@@ -62,6 +65,9 @@ export const handText = (body: string) => {
   }
   for (const match of body.matchAll(FOOTNOTE_LINE)) {
     parts.push(match[1] ?? "");
+  }
+  for (const match of body.matchAll(MERMAID_BLOCK)) {
+    parts.push(match[2] ?? "");
   }
   return parts.join("\n");
 };

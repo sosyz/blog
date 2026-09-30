@@ -25,6 +25,8 @@ CORS 全称是跨域资源共享（Cross-Origin Resource Sharing），是一种�
 
 ```mermaid
 flowchart TD
+    accTitle: 跨域请求的判断流程
+    accDescr: 同源请求正常发送；跨域的简单请求直接发送，非简单请求先发 OPTIONS 预检，预检通过才发正式请求，失败则请求失败；最后由服务器响应头检查决定请求成功或失败
     A[请求] --> B{是否同源?}
     B -->|是| C[正常请求]
     B -->|否| D{是否简单请求?}

@@ -14,6 +14,7 @@ import {
   feedItemFooter,
   noteRights,
 } from "@/lib/seo/copyright";
+import { feedDiagrams } from "@/lib/seo/feed-html";
 import { renderPostHtml } from "@/lib/seo/render";
 import {
   AUTHOR,
@@ -48,7 +49,7 @@ export const GET: APIRoute = async () => {
       pubDate: post.data.pubDate,
       link: notePath(post.id),
       categories: [...new Set([post.data.topic, ...post.data.tags])],
-      content: `${await renderPostHtml(post)}${feedItemFooter(noteUrl(post.id))}`,
+      content: `${feedDiagrams(await renderPostHtml(post), noteUrl(post.id))}${feedItemFooter(noteUrl(post.id))}`,
       customData: [
         `<dc:creator>${escapeXml(AUTHOR.name)}</dc:creator>`,
         `<dc:rights>${escapeXml(noteRights(post.data.pubDate))}</dc:rights>`,

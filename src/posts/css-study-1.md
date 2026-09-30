@@ -46,6 +46,8 @@ CSS（Cascading Style Sheets）是一种用来定义 HTML 页面的样式的语�
 
 ```mermaid
 graph LR
+accTitle: 浏览器渲染页面的流程
+accDescr: 加载并解析 HTML 创建 DOM 树后展示页面；解析 HTML 时加载并解析 CSS，把样式添加到 DOM 节点，再回到 DOM 树
 A(加载HTML)-->B(解析HTML)-->C(创建DOM树)-->D(展示页面)
 B-->E(加载CSS)-->F(解析CSS)-->G(添加样式到DOM节点)-->C
 ```
