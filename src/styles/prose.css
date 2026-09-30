@@ -2,12 +2,16 @@
  * Article typography inside the drawer: the element with [data-post-body]
  * (src/components/post/PostBody.astro). Values come from the approved motion
  * prototype (.dbody rules). Markup comes from src/lib/markdown/plugins.ts:
- *   figure.slip > pre.astro-code + figcaption.fname   code slips
+ *   figure.slip > pre.astro-code (or details.slip-fold > summary + pre)
+ *     + button.slip-copy + span.slip-said + figcaption.fname   code slips
  *   p.pic > img                                        polaroid photos
  *   mark                                               ==marker pen==
  * Class names match the prototype (.slip, .fname, .pic) because the drawer
  * and inline-comment code select on them.
  */
+
+/* Mermaid diagrams (figure.diagram, src/lib/markdown/diagrams.ts). */
+@import "./diagrams.css";
 
 .post-body {
   counter-reset: section;
@@ -269,12 +273,16 @@
 
 /* ---------- code slips ---------- */
 
-/* A strip of paper taped onto the page, with a kraft file-name label. */
+/* A strip of paper taped onto the page, with a kraft file-name label and a
+ * copy tab (markup: codeSlips in src/lib/markdown/plugins.ts). The tape,
+ * label and tab stick 10px out above the slip on purpose. */
 .post-body .slip {
+  --slip-pad: 16px;
   display: flow-root;
   position: relative;
   margin: 18px 0 20px;
-  padding: 16px 16px 14px;
+  /* The side padding is on the pre, so marked lines can reach the edge. */
+  padding: var(--slip-pad) 0 14px;
   background: var(--slip);
   box-shadow: var(--shadow-slip);
   rotate: var(--sr, -0.4deg);
@@ -294,12 +302,13 @@
   pointer-events: none;
 }
 
+/* The label sits left of the copy tab (right: 12px, 42px wide). */
 .post-body .slip .fname {
   position: absolute;
   z-index: 1;
   top: -10px;
-  right: 14px;
-  max-width: calc(100% - 130px);
+  right: 60px;
+  max-width: calc(100% - 180px);
   overflow: hidden;
   padding: 1px 10px;
   background: var(--kraft) center / 300px auto;
@@ -313,8 +322,69 @@
   user-select: none;
 }
 
+/* Copy tab: a small paper tab pinned beside the label. */
+.post-body .slip-copy {
+  position: absolute;
+  z-index: 1;
+  top: -11px;
+  right: 12px;
+  width: 42px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--field-line);
+  border-radius: 2px;
+  background: var(--slip);
+  color: var(--pencil);
+  font-family: var(--hand);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  rotate: -3deg;
+  box-shadow: 0 1px 2px rgb(60 40 20 / 0.18);
+  transition:
+    color var(--dur-fast) var(--out),
+    translate var(--dur-fast) var(--out);
+}
+
+.post-body .slip-copy:hover {
+  color: var(--ink);
+  translate: 0 -1px;
+}
+
+.post-body .slip-copy:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: 2px;
+}
+
+/* 已复制 (or the failure message) stamped over the tab for a moment; it
+ * grows to the left over the label when longer. */
+.post-body .slip-said {
+  position: absolute;
+  z-index: 2;
+  top: -11px;
+  right: 10px;
+  padding: 3px 6px;
+  border: 1.5px solid var(--stamp);
+  border-radius: 3px;
+  background: var(--slip);
+  color: var(--stamp-ink);
+  font-family: var(--hand);
+  font-size: 13px;
+  line-height: 1.2;
+  white-space: nowrap;
+  rotate: -4deg;
+  pointer-events: none;
+}
+
+/* Hidden while empty but still rendered, so the live region stays in the
+ * accessibility tree and 已复制 is announced. */
+.post-body .slip-said:empty {
+  opacity: 0;
+}
+
 .post-body .slip pre {
   margin: 0;
+  padding: 0 var(--slip-pad);
   overflow-x: auto;
   font-family: var(--code);
   font-feature-settings: "calt" 0;
@@ -322,19 +392,201 @@
   line-height: 1.65;
   tab-size: 4;
   scrollbar-width: thin;
-  scrollbar-color: var(--edge) transparent;
+  /* ≥ 3:1 on the slip, so the reader can see there is more to the right. */
+  scrollbar-color: var(--field-line) transparent;
 }
 
+/* inline-block (not grid or block) so the lines can be full width without
+ * turning the \n between them into blank lines. */
 .post-body .slip pre code {
+  display: inline-block;
+  min-width: 100%;
   padding: 0;
   border-radius: 0;
   background: none;
   font-size: inherit;
   overflow-wrap: normal;
+  counter-reset: code-line;
 }
 
 .post-body .slip pre:focus-visible {
   outline-offset: 4px;
+}
+
+/* Lines fill the pre's side padding too, so a marked line spans the slip. */
+.post-body .slip .line {
+  display: inline-block;
+  position: relative;
+  box-sizing: content-box;
+  width: 100%;
+  margin: 0 calc(var(--slip-pad) * -1);
+  padding: 0 var(--slip-pad);
+}
+
+/* {1,3} and // [!code highlight]: marker pen across the line. */
+.post-body .slip .line.highlighted {
+  background: var(--code-mark);
+  box-shadow: inset 3px 0 var(--highlight);
+}
+
+/* /word/ and // [!code word:…] */
+.post-body .slip .highlighted-word {
+  border-radius: 2px;
+  background: var(--code-word);
+  box-shadow: 0 0 0 1px var(--code-word);
+}
+
+/* // [!code ++] and // [!code --]: pale green / pale vermilion, with the
+ * + and − drawn in the gutter so they are never copied or selected. */
+.post-body .slip .line.diff.add {
+  background: var(--diff-add);
+}
+
+.post-body .slip .line.diff.remove {
+  background: var(--diff-remove);
+}
+
+.post-body .slip .line.diff::after {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--slip-pad);
+  text-align: center;
+  user-select: none;
+}
+
+.post-body .slip .line.diff.add::after {
+  content: "+";
+  color: var(--diff-add-ink);
+}
+
+.post-body .slip .line.diff.remove::after {
+  content: "−";
+  color: var(--stamp-ink);
+}
+
+/* showLineNumbers: pencil numbers from a CSS counter (never copied). */
+.post-body .slip pre[data-line-numbers] .line {
+  counter-increment: code-line;
+}
+
+.post-body .slip pre[data-line-numbers] .line::before {
+  content: counter(code-line);
+  display: inline-block;
+  width: 3ch;
+  margin-right: 1.5ch;
+  color: var(--faint);
+  text-align: right;
+  user-select: none;
+}
+
+/* collapse: a folded slip, opened with 展开代码（N 行）. */
+.post-body .slip-fold > summary {
+  display: inline-block;
+  margin: 0 var(--slip-pad);
+  padding: 0 2px;
+  color: var(--pencil);
+  font-family: var(--hand);
+  font-size: 14px;
+  line-height: 1.8;
+  cursor: pointer;
+  list-style: none;
+}
+
+.post-body .slip-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.post-body .slip-fold > summary::before {
+  content: "▸";
+  display: inline-block;
+  margin-right: 6px;
+  transition: rotate var(--dur-fast) var(--out);
+}
+
+.post-body .slip-fold[open] > summary {
+  margin-bottom: 6px;
+}
+
+.post-body .slip-fold:not([open]) > summary {
+  margin-top: 4px;
+}
+
+.post-body .slip-fold[open] > summary::before {
+  rotate: 90deg;
+}
+
+.post-body .slip-fold > summary:hover {
+  color: var(--ink);
+}
+
+.post-body .slip-fold > summary:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: 2px;
+}
+
+.post-body .slip-fold[open] .slip-open,
+.post-body .slip-fold:not([open]) .slip-close {
+  display: none;
+}
+
+/* A soft paper fade at the right edge while the code scrolls on sideways.
+ * The overlay's opacity follows the pre's horizontal scroll: 1 at the
+ * start, 0 at the end; when the pre does not overflow, the timeline is
+ * inactive and the overlay keeps its base opacity, 0. */
+@supports (animation-timeline: scroll()) {
+  .post-body .slip {
+    timeline-scope: --slip-x;
+  }
+
+  .post-body .slip pre {
+    scroll-timeline: --slip-x x;
+  }
+
+  .post-body .slip::after {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    top: var(--slip-pad);
+    right: 0;
+    bottom: 14px;
+    width: 40px;
+    background: linear-gradient(to right, transparent, var(--slip) 85%);
+    opacity: 0;
+    pointer-events: none;
+    animation: slip-more linear both;
+  }
+
+  /* A separate, more specific rule: in one block the minifier folds the
+   * timeline into the animation shorthand, which browsers reject. */
+  .post-body figure.slip::after {
+    animation-timeline: --slip-x;
+  }
+}
+
+@keyframes slip-more {
+  from {
+    opacity: 1;
+  }
+
+  90% {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .post-body .slip-copy,
+  .post-body .slip-fold > summary::before {
+    transition: none;
+  }
+
+  .post-body .slip-copy:hover {
+    translate: none;
+  }
 }
 
 /* ---------- pictures ---------- */
@@ -530,9 +782,10 @@
 
 @media (max-width: 520px) {
   .post-body .slip {
+    --slip-pad: 12px;
     margin-right: -6px;
     margin-left: -6px;
-    padding: 14px 12px 12px;
+    padding: 14px 0 12px;
   }
 
   .post-body .slip pre {

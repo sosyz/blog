@@ -35,17 +35,31 @@
   --margin: rgb(196 84 72 / 0.38); /* red margin line */
   --highlight: rgb(250 214 92 / 0.55); /* marker pen */
 
-  /* code inks */
+  /* code inks (src/lib/markdown/ink-theme.ts); ≥ 4.5:1 on --slip */
   --kw: #3d5f8f;
   --str: #9a4d2c;
   --com: #736b59;
+  --fn: #9e3129; /* functions, types, tags: the vermilion --stamp-ink */
+  --punct: #524a3e; /* punctuation, operators: pencil, so they recede */
+  /* marked code lines; every ink above stays ≥ 4.5:1 on them */
+  --code-mark: rgb(250 214 92 / 0.34); /* {1,3} and [!code highlight] */
+  --code-word: rgb(250 214 92 / 0.36); /* /word/ and [!code word:…] */
+  --diff-add: rgb(111 150 80 / 0.1);
+  --diff-remove: rgb(191 63 54 / 0.07);
+  --diff-add-ink: #4f6b3a; /* the + mark */
 
   /* type */
   --hand:
     "Xiaolai", "Xiaolai Fallback", "PingFang SC", "Hiragino Sans GB", cursive;
   --body:
     "Zhuque Fangsong", "Zhuque Fangsong Fallback", "Songti SC", "STSong", serif;
-  --code: "Maple Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  /* Chinese in code falls through the monospace fonts (no CJK glyphs) to
+   * Zhuque Fangsong, whose note-body subset already holds every character
+   * inside code fences (scripts/font-chars.ts). It comes after them so Latin
+   * never turns proportional while Maple Mono loads. */
+  --code:
+    "Maple Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Zhuque Fangsong", monospace;
   --ui:
     "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
 

@@ -1,6 +1,6 @@
 import { satteri } from "@astrojs/markdown-satteri";
 import type { AstroUserConfig } from "astro";
-import { inkTheme } from "./ink-theme.ts";
+import { mermaidDiagrams } from "./diagrams.ts";
 import {
   asideStickies,
   codeSlips,
@@ -8,32 +8,10 @@ import {
   highlightMarks,
   pictureParagraphs,
   responsivePictures,
+  shikiConfig,
 } from "./plugins.ts";
 
 type MarkdownConfig = NonNullable<AstroUserConfig["markdown"]>;
-type ShikiTransformer = Entry<
-  NonNullable<NonNullable<MarkdownConfig["shikiConfig"]>["transformers"]>
->;
-type Entry<T> = T extends readonly (infer E)[] ? E : never;
-
-// ```ts title="gateway.ts"  or  ```ts file=gateway.ts
-const TITLE_META = /(?:title|file)=(?:"([^"]+)"|'([^']+)'|(\S+))/;
-
-/**
- * Astro only hands the fence meta to Shiki, so read the file name here and
- * leave it on the <pre> for the code-slip plugin's kraft label.
- */
-const fenceTitle: ShikiTransformer = {
-  name: "journal-fence-title",
-  pre(node) {
-    const raw = (this.options.meta as { __raw?: string } | undefined)?.__raw;
-    const match = raw ? TITLE_META.exec(raw) : null;
-    const title = match?.[1] ?? match?.[2] ?? match?.[3];
-    if (title) {
-      node.properties.dataTitle = title;
-    }
-  },
-};
 
 /**
  * Markdown pipeline for `.md` posts (MDX inherits it). Imported by
@@ -44,6 +22,9 @@ export const markdownConfig: MarkdownConfig = {
     mdastPlugins: [highlightMarks],
     hastPlugins: [
       dropTitleHeading,
+      // Before codeSlips: it swaps mermaid blocks for drawn diagrams, and
+      // codeSlips leaves any mermaid block it did not draw alone.
+      mermaidDiagrams,
       codeSlips,
       pictureParagraphs,
       responsivePictures,
@@ -58,8 +39,7 @@ export const markdownConfig: MarkdownConfig = {
       },
     },
   }),
-  shikiConfig: {
-    theme: inkTheme,
-    transformers: [fenceTitle],
-  },
+  // Mermaid is drawn by mermaidDiagrams, so Shiki must leave it as source.
+  syntaxHighlight: { type: "shiki", excludeLangs: ["math", "mermaid"] },
+  shikiConfig,
 };

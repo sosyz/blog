@@ -6,10 +6,23 @@
  * passes. See ./README.md for what each one emits and why.
  */
 import type { SatteriProcessorOptions } from "@astrojs/markdown-satteri";
+import {
+  transformerMetaHighlight,
+  transformerMetaWordHighlight,
+  transformerNotationDiff,
+  transformerNotationHighlight,
+  transformerNotationWordHighlight,
+} from "@shikijs/transformers";
+import type { AstroUserConfig } from "astro";
 import type { Element, ElementContent } from "hast";
 import type { PhrasingContent } from "mdast";
+import { inkTheme } from "./ink-theme.ts";
 
 type Entry<T> = T extends readonly (infer E)[] ? E : never;
+type ShikiConfig = NonNullable<
+  NonNullable<AstroUserConfig["markdown"]>["shikiConfig"]
+>;
+type ShikiTransformer = Entry<NonNullable<ShikiConfig["transformers"]>>;
 type HastPlugin = Extract<
   Entry<NonNullable<SatteriProcessorOptions["hastPlugins"]>>,
   { name: string }
@@ -31,6 +44,7 @@ type CustomNode = {
 
 const EXTENSION = /\.(md|mdx)$/;
 const WHITESPACE = /\s+/g;
+const TRAILING_NEWLINE = /\n$/;
 
 /** Post slug from the file URL: the collection id is the file name. */
 const slugOf = (fileURL: URL | undefined) => {
@@ -76,6 +90,81 @@ const classList = (node: Readonly<Element>): string[] => {
 
 const isBlank = (child: ElementContent) =>
   child.type === "text" && child.value.trim() === "";
+
+/* ---------- fence meta and Shiki ---------- */
+
+// ```ts title="gateway.ts"  or  ```ts file=gateway.ts
+const TITLE_META = /(?:title|file)=(?:"([^"]+)"|'([^']+)'|(\S+))/;
+// Bare words in the fence meta: ```ts collapse showLineNumbers
+const COLLAPSE_META = /(?:^|\s)collapse(?=\s|$)/;
+const LINE_NUMBERS_META = /(?:^|\s)showLineNumbers(?=\s|$)/;
+
+type FenceMeta = { title?: string; collapse: boolean; lineNumbers: boolean };
+/** Where fenceMeta keeps what it read, in Shiki's per-block `this.meta`. */
+const FENCE_META = Symbol("journal-fence-meta");
+
+/** Read the file name and the bare flags from a fence's raw meta. */
+export const parseFenceMeta = (raw: string): FenceMeta => {
+  const match = TITLE_META.exec(raw);
+  const title = match?.[1] ?? match?.[2] ?? match?.[3];
+  return {
+    ...(title ? { title } : {}),
+    collapse: COLLAPSE_META.test(raw),
+    lineNumbers: LINE_NUMBERS_META.test(raw),
+  };
+};
+
+/**
+ * Astro only hands the fence meta to Shiki, so read it here and leave it on
+ * the <pre> as data-title / data-collapse / data-line-numbers for codeSlips
+ * and prose.css. It runs first and drops `title="…"` from the meta the other
+ * transformers see, so a path like `title="src/lib/a.ts"` is not read as a
+ * `/word/` highlight.
+ */
+export const fenceMeta: ShikiTransformer = {
+  name: "journal-fence-meta",
+  preprocess(_code, options) {
+    const meta = options.meta as { __raw?: string } | undefined;
+    const raw = meta?.__raw;
+    if (!(meta && raw)) {
+      return;
+    }
+    (this.meta as Record<symbol, FenceMeta>)[FENCE_META] = parseFenceMeta(raw);
+    meta.__raw = raw.replace(TITLE_META, "");
+  },
+  pre(node) {
+    const found = (this.meta as Record<symbol, FenceMeta | undefined>)[
+      FENCE_META
+    ];
+    if (found?.title) {
+      node.properties.dataTitle = found.title;
+    }
+    if (found?.collapse) {
+      node.properties.dataCollapse = "";
+    }
+    if (found?.lineNumbers) {
+      node.properties.dataLineNumbers = "";
+    }
+  },
+};
+
+/**
+ * Shiki settings for the whole site (config.ts): the three-ink theme, the
+ * fence meta, and marked lines from the meta ({1,3-4}, /word/) or from
+ * `// [!code ++]`-style comments (the `v3` algorithm counts the comment's
+ * own line). See ./README.md for how to write them in a post.
+ */
+export const shikiConfig: ShikiConfig = {
+  theme: inkTheme,
+  transformers: [
+    fenceMeta,
+    transformerMetaHighlight(),
+    transformerMetaWordHighlight(),
+    transformerNotationDiff({ matchAlgorithm: "v3" }),
+    transformerNotationHighlight({ matchAlgorithm: "v3" }),
+    transformerNotationWordHighlight({ matchAlgorithm: "v3" }),
+  ],
+};
 
 /* ---------- code slips ---------- */
 
@@ -132,13 +221,58 @@ const labelOf = (pre: Readonly<Element>, lang: string) => {
   return lang === "plaintext" || lang === "" ? "code" : lang;
 };
 
+/** Languages another plugin draws (diagrams.ts); never put on a slip. */
+const NOT_CODE = new Set(["mermaid"]);
+
+const textNode = (value: string): ElementContent => ({
+  type: "text",
+  value,
+});
+
+const spanOf = (className: string, value: string): Element => ({
+  type: "element",
+  tagName: "span",
+  properties: { className: [className] },
+  children: [textNode(value)],
+});
+
 /**
- * Wrap every code block in a taped paper slip with a kraft file-name label:
- * <figure class="slip" data-lang style="--tape --tr --sr">
+ * A folded slip: `<details>` with the pre inside and a summary that reads
+ * 展开代码（N 行） while closed and 收起代码 while open (prose.css shows one
+ * span at a time, so the button's accessible name follows its state).
+ */
+const folded = (pre: Readonly<Element>, lines: number): Element => ({
+  type: "element",
+  tagName: "details",
+  properties: { className: ["slip-fold"] },
+  children: [
+    {
+      type: "element",
+      tagName: "summary",
+      properties: {},
+      children: [
+        spanOf("slip-open", `展开代码（${lines} 行）`),
+        spanOf("slip-close", "收起代码"),
+      ],
+    },
+    pre,
+  ],
+});
+
+/**
+ * Wrap every code block in a taped paper slip with a kraft file-name label
+ * and a copy tab (src/scripts/copy.ts copies the code and writes 已复制 into
+ * the slip's own status region):
+ * <figure class="slip" data-lang data-no-annotate style="--tape --tr --sr">
  *   <pre class="astro-code" data-language …>…</pre>
+ *     (or, with `collapse` in the fence meta,
+ *      <details class="slip-fold"><summary>…</summary><pre>…</pre></details>)
+ *   <button type="button" class="slip-copy" aria-label="复制代码">复制</button>
+ *   <span class="slip-said" role="status"></span>
  *   <figcaption class="fname">gateway.ts</figcaption>
  * </figure>
- * The tape is the figure's ::before (no <img> inside the article).
+ * The tape is the figure's ::before (no <img> inside the article). Mermaid
+ * blocks are left alone for the diagrams plugin.
  */
 export const codeSlips = ({ fileURL }: FactoryContext): HastPlugin => {
   const slug = slugOf(fileURL);
@@ -148,26 +282,53 @@ export const codeSlips = ({ fileURL }: FactoryContext): HastPlugin => {
     element: {
       filter: ["pre"],
       visit(pre, ctx) {
-        index += 1;
         const lang = languageOf(pre);
-        const lines = ctx.textContent(pre).split("\n").length;
+        if (NOT_CODE.has(lang)) {
+          return;
+        }
+        index += 1;
+        const lines = ctx
+          .textContent(pre)
+          .replace(TRAILING_NEWLINE, "")
+          .split("\n").length;
         const tape = TAPES[index % TAPES.length];
         const tapeAngle = angle(`${slug}:${index}:tape`, TAPE_TILT_SPAN);
-        const slipAngle = lines > STRAIGHT_AFTER_LINES ? 0 : SLIP_TILT;
-        ctx.wrapNode(pre, {
+        const collapse = pre.properties?.dataCollapse !== undefined;
+        // A folded slip is short on the page, so it keeps the tilt.
+        const straight = lines > STRAIGHT_AFTER_LINES && !collapse;
+        ctx.replaceNode(pre, {
           type: "element",
           tagName: "figure",
           properties: {
             className: ["slip"],
             dataLang: lang,
-            style: `--tape: url("/journal/tape/${tape}.webp"); --tr: ${tapeAngle}deg; --sr: ${slipAngle}deg`,
+            // Inline comments skip the slip (inline.ts: [data-no-annotate]).
+            dataNoAnnotate: "",
+            style: `--tape: url("/journal/tape/${tape}.webp"); --tr: ${tapeAngle}deg; --sr: ${straight ? 0 : SLIP_TILT}deg`,
           },
           children: [
+            collapse ? folded(pre, lines) : pre,
+            {
+              type: "element",
+              tagName: "button",
+              properties: {
+                type: "button",
+                className: ["slip-copy"],
+                ariaLabel: "复制代码",
+              },
+              children: [textNode("复制")],
+            },
+            {
+              type: "element",
+              tagName: "span",
+              properties: { className: ["slip-said"], role: "status" },
+              children: [],
+            },
             {
               type: "element",
               tagName: "figcaption",
               properties: { className: ["fname"] },
-              children: [{ type: "text", value: labelOf(pre, lang) }],
+              children: [textNode(labelOf(pre, lang))],
             },
           ],
         });
