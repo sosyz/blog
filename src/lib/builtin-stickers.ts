@@ -52,7 +52,7 @@ const LABELS: Readonly<Record<string, string>> = {
   "obj-tools": "工具",
   "people-coder": "写代码的人",
   "people-coffee": "喝咖啡的人",
-  "people-dog": "戴眼镜和耳机的小狗",
+  "people-dog": "看萤火虫的小黑猫",
   "people-traveler": "旅行的人",
   "place-bridge": "桥",
   "place-lighthouse": "灯塔",

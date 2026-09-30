@@ -54,7 +54,7 @@ only; replace them when 1.0 is released (`bun run fonts`).
 
 | Asset | Files | Licence |
 | --- | --- | --- |
-| 16 journal stickers (places, people incl. the dog avatar, dev objects) | `public/stickers/*.webp` | Original artwork generated for this blog (Codex image generation from original prompts, no reference images) |
+| 16 journal stickers (places, people incl. the owner's avatar, dev objects) | `public/stickers/*.webp` | Artwork generated for this blog (Codex image generation) |
 | Cover of "通过 Cloudflare AI Gateway 使用 LLM" | `src/assets/covers/cloudflare-ai-gateway-llama.png` | Original artwork generated for this blog |
 
 ## Libraries shipped to the browser

@@ -139,7 +139,7 @@ Sonui 的博客 2.0：一本灵感手账。首页是一块无限画布，中央�
 
 1. 准备 320×320、透明背景的 webp，控制在 20 KB 左右。必须是原创或可免费商用的素材。
 2. 按类别命名放进 `public/stickers/`：`place-*`（地方）、`people-*`（人物）、`obj-*`（开发小物）。
-3. 在 `src/scripts/canvas/seed.ts` 里引用：`TOPIC_STICKERS`（主题堆旁）或 `OUTER_STICKERS`（画布外圈）。`people-dog` 是博主头像，用在自我介绍卡、列表页和博主回复上。
+3. 在 `src/scripts/canvas/seed.ts` 里引用：`TOPIC_STICKERS`（主题堆旁）或 `OUTER_STICKERS`（画布外圈）。`people-dog` 是博主头像（一只小黑猫；文件名和 key 保留旧名，别改），用在自我介绍卡、列表页和博主回复上。
 4. 在 [ATTRIBUTIONS.md](ATTRIBUTIONS.md) 里写上来源和授权。
 
 访客上传的贴纸走接口和审核，存在 R2，不进仓库。
@@ -162,7 +162,7 @@ Sonui 的博客 2.0：一本灵感手账。首页是一块无限画布，中央�
 - **挪动已贴的贴纸**（`src/scripts/interact/sticker-edit.ts`，拖动 / 旋转 / 缩放的手势与摆放共用 `sticker-transform.ts`）：
   1. **上传者挪自己的贴纸**：用 GitHub 登录时贴的贴纸记在账号上（`stickers.user_id`），任何设备登录后都能挪，不用口令。没登录时，POST `/api/stickers` 生成 256 位编辑口令（`src/lib/server/edit-token.ts`），只存加盐哈希 `edit_token_hash`，口令只在响应里返回一次；浏览器把 id + 口令记在 localStorage `interact:owned-stickers`（`sticker-store.ts`，审核通过后仍保留，被拒后删除）。点选自己的贴纸出现旋转 / 缩放手柄，松手（键盘和滚轮停下约 0.7 秒后）PATCH `/api/stickers/:id` 保存，所有人可见、不重新审核；待审和已通过的都能挪，已拒绝的不能。按访客 IP 哈希限频（每小时 60 次、每天 300 次，从 `moderation_log` 里带 IP 哈希的 `move` 和 `reject` 行计数，挪动和撕掉共用这个额度；博主不限）。上传者和博主也可以把贴纸撕下来扔进垃圾桶：`DELETE /api/stickers/:id`，权限同 PATCH，删除 R2 图片并把状态改为 `rejected`。
   2. **博主整理贴纸**：两条路。用 GitHub 登录为博主（`/api/auth/me` 的 `isOwner`）时直接显示「整理贴纸」，存到 PATCH `/api/stickers/:id`（不限频）。否则 `/admin/` 通过 Access 后在 localStorage 记 `interact:owner`；只有带这个标记（或地址带 `?review=`）的浏览器才请求 GET `/api/admin/whoami`，200 才显示「整理贴纸」，存到 PATCH `/api/admin/stickers/:id`。打开后所有访客贴纸都能像自己的一样挪。内置贴纸是代码的一部分，这个模式不保存它们的位置。
-  3. **任何人只为自己挪贴纸**：所有贴纸（访客贴纸和内置的主题贴纸、小狗、外圈贴纸）都能拖，偏移（世界坐标 dx、dy）按贴纸存在 localStorage `interact:sticker-offsets`（`sticker-offsets.ts`；访客贴纸键 `vs:<id>`，内置贴纸用 `Canvas.astro` 里的 `data-sticker-key`）。只能拖，不能转或缩放。有偏移时工具条出现「贴纸放回原位」。偏移写在 `--dx` / `--dy`（`translate`）上，画布重新排版只改 left / top，不会丢。
+  3. **任何人只为自己挪贴纸**：所有贴纸（访客贴纸和内置的主题贴纸、头像小黑猫、外圈贴纸）都能拖，偏移（世界坐标 dx、dy）按贴纸存在 localStorage `interact:sticker-offsets`（`sticker-offsets.ts`；访客贴纸键 `vs:<id>`，内置贴纸用 `Canvas.astro` 里的 `data-sticker-key`）。只能拖，不能转或缩放。有偏移时工具条出现「贴纸放回原位」。偏移写在 `--dx` / `--dy`（`translate`）上，画布重新排版只改 left / top，不会丢。
   4. **博主扔掉内置贴纸**：博主（上面两条路任一条）撕下内置贴纸时也出现垃圾桶（聚焦后按 Delete 也行），「已扔掉 · 撤销」过后 POST `/api/builtins` `{key, hidden: true}`，所有访客都看不到它（表 `hidden_builtins`，`migrations/0001_init.sql`；`GET /api/stickers` 的 `hiddenBuiltins`；客户端 `builtin-hidden.ts`，localStorage `interact:hidden-builtins` 记上次的名单防闪烁）。`/admin/` 的「藏起来的自带贴纸」点「恢复」（`hidden: false`）。key 和缩略图都从 `src/lib/builtin-stickers.ts` 取，`Canvas.astro` 也用它生成 `data-sticker-key`。这个接口不在 `/api/admin/` 下（GitHub 登录的博主要能访问），自己检查 Access 或博主会话。
   - 按下贴纸不会拖动画布；移动不到 4px 算点击。每次保存的挪动都在 `moderation_log` 记一条 `move`（note 写旧 → 新位置），`/admin/` 的待审贴纸显示「挪过 N 次」。
 - **贴纸工坊**：选图之后、摆放之前的一步（`src/scripts/interact/sticker-workshop.ts`，模态 `<dialog>`）。自动抠图、白边、手账滤镜都在访客浏览器里做，输出 ≤ 512×512、≤ 300 KB 的 WebP（不支持时 PNG），服务端限制不变。抠图 worker（`cutout.worker.ts`）用 transformers.js + ONNX Runtime Web 跑 U-2-Netp，所有文件自托管、打开开关才下载（约 18 MB）。约定和尺寸见 [docs/architecture.md](docs/architecture.md#贴纸工坊)。`@huggingface/transformers` 固定版本；升级时改 `cutout-assets.ts` 的 `ORT_VERSION` 并运行 `bun scripts/build-cutout-assets.ts`，`tests/cutout-assets.test.ts` 会检查。不要换成 asyncify / JSEP 版 wasm（超过 Workers 单文件 25 MiB）。
