@@ -26,6 +26,7 @@ scripts/build-fonts.ts    把 fonts-src/ 里的中文字体切片到 public/font
 scripts/font-chars.ts     build-fonts 用的纯函数：全站用字、unicode-range、回退字体度量
 scripts/build-diagrams.ts 把笔记里的 ```mermaid 块用本机 Chrome 渲染成手绘 SVG（bun run diagrams），SVGO 压缩后写进 src/assets/diagrams/<哈希>.svg（提交），删掉不再用的
 scripts/build-tapes.ts    把 scripts/assets/tape/ 的纸胶带缩到 public/journal/tape/
+scripts/build-icons.ts    从 public/favicon.svg（手画的矢量小黑猫头）生成 favicon.ico（16/32/48）和 apple-touch-icon.png（180，纸色底）（bun run icons）
 scripts/build-cutout-assets.ts  复制 ONNX Runtime Web 到 public/ort/<版本>/，校验 U-2-Netp 模型
 tests/                    bun test 单元测试（src/lib/server 的纯模块、划线定位）
 ATTRIBUTIONS.md           字体、纸纹、贴纸、库的授权（规范清单是 src/data/licenses.ts）
