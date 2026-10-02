@@ -11,7 +11,6 @@
   background-color: var(--doc);
   background-image: var(--paper-doc);
   background-size: 520px auto;
-  background-blend-mode: multiply;
 }
 
 /* Sticky note: no tape, bottom-right corner curls up (approved shadow). */
@@ -20,12 +19,11 @@
   background-image:
     linear-gradient(to top, rgb(150 110 20 / 0.1), transparent 26%),
     linear-gradient(to bottom, rgb(150 110 20 / 0.06), transparent 16%),
-    var(--grain);
+    var(--paper-sticky);
   background-size:
     auto,
     auto,
     420px auto;
-  background-blend-mode: normal, normal, soft-light;
   border-bottom-right-radius: 70px 8px;
   box-shadow: var(--shadow-sticky);
 }
@@ -41,11 +39,10 @@
   background-color: var(--desk);
   background-image:
     radial-gradient(circle, rgb(110 95 70 / 0.3) 1px, transparent 1.4px),
-    var(--paper-canvas);
+    var(--paper-desk);
   background-size:
     20px 20px,
-    480px auto;
-  background-blend-mode: normal, multiply;
+    480px 280px;
 }
 
 /* ---------- fixings ---------- */

@@ -61,6 +61,7 @@ const externalLinks = PROFILE.links.filter((link) => link.href !== "/list/");
 
 <div class="canvas" data-canvas transition:persist="canvas">
   <section class="viewport" aria-label="笔记画布" data-viewport>
+    <div class="desk" aria-hidden="true" data-desk></div>
     <div class="world" data-world>
       <svg class="links" aria-hidden="true" data-links></svg>
 
@@ -186,6 +187,12 @@ const externalLinks = PROFILE.links.filter((link) => link.href !== "/list/");
       cursor: auto;
       min-height: 100dvh;
       padding: 96px 16px 48px;
+      background-image:
+        radial-gradient(circle, rgb(110 95 70 / 0.3) 1px, transparent 1.4px),
+        var(--paper-desk);
+      background-size:
+        20px 20px,
+        480px 280px;
     }
     .viewport:not(.is-laid-out) .world {
       position: static;
@@ -218,6 +225,7 @@ const externalLinks = PROFILE.links.filter((link) => link.href !== "/list/");
       width: auto;
       padding-top: 0;
     }
+    .desk,
     .world .sticker,
     .world .arrow,
     .world .scribble,

@@ -71,10 +71,14 @@
   --dur-slow: 350ms;
   --dur-drawer: 400ms;
 
-  /* real paper textures (public/journal/, see ATTRIBUTIONS.md) */
-  --paper-canvas: url("/journal/paper/canvas-beige-fine.jpg");
-  --paper-doc: url("/journal/paper/document-ivory.jpg");
-  --grain: url("/journal/paper/grain-overlay-gray.jpg");
+  /*
+   * real paper textures (public/journal/, see ATTRIBUTIONS.md). desk, doc and
+   * sticky already have --desk, --doc and --sticky blended in
+   * (scripts/build-papers.ts): no background-blend-mode to repaint.
+   */
+  --paper-desk: url("/journal/paper/desk.jpg");
+  --paper-doc: url("/journal/paper/doc.jpg");
+  --paper-sticky: url("/journal/paper/sticky.jpg");
   --kraft: url("/journal/paper/kraft-smooth.jpg");
   --speckle: url("/journal/stamp-speckle.png");
 

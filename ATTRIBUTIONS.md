@@ -40,7 +40,7 @@ only; replace them when 1.0 is released (`bun run fonts`).
 
 | Asset | Files | Licence | Source |
 | --- | --- | --- | --- |
-| Paper textures (canvas, document, grain, kraft) | `paper/*.jpg` | CC0 1.0 | Derived from [ambientCG](https://ambientcg.com/) Paper001/002/004/006 |
+| Paper textures (canvas, document, grain, kraft; desk, doc, sticky are those with the paper colour blended in) | `paper/*.jpg` | CC0 1.0 | Derived from [ambientCG](https://ambientcg.com/) Paper001/002/004/006 |
 | Washi and masking tapes | `tape/*.webp` | CC0 1.0 | Rendered for this site from CC0 ambientCG paper grain |
 | Stamp speckle texture | `stamp-speckle.png` | CC0 1.0 | Rendered for this site from CC0 ambientCG grain |
 | Paperclip | `paperclip.svg` | Public domain | [Openclipart](https://openclipart.org/) |

@@ -355,11 +355,22 @@ window 事件（在 `WindowEventMap` 里有类型；`onDrawerOpen`、`onDrawerRe
 - 代码文字一律 `font-feature-settings: "calt" 0`（关闭 Maple Mono 连字）；`base.css` 已经对 `code, pre, kbd, samp` 设置。
 - 只有浅色：手账是纸，没有深色主题（`color-scheme: light`）。
 
+### 性能（老机器也要流畅）
+
+目标是十年前的电脑也能顺畅拖动画布。下面几条是实测出来的（CPU 降速 4 倍、关闭 GPU 的 Chrome 里录 trace），改画布前先看：
+
+- **平移不重画**：`.world` 和 `.desk` 都是 `will-change: transform` 的合成层，镜头每帧只改它们的 `transform`。桌面纸纹在 `.desk::before` 上，不在 `.desk` 自己身上：Chrome 会把移动中的层**自己的**背景图每帧整层重新光栅化，放在子元素上就不会。`.desk` 比视口大一块纹理（480×280，点阵 20px 能整除），按镜头偏移取模平移；只有缩放时才改它的 `--dot` / `--tile-w` / `--tile-h`。
+- **不在有子元素的元素上逐帧改自定义属性**：自定义属性会继承，改在 `.viewport` 上会让整个画布每帧重算样式（曾经每次拖动 1 秒多）。逐帧要改的值放到没有子元素的元素上，或直接写 `transform`。
+- **不用 `background-blend-mode`**：纸纹和 token 色的混合预先烘焙进图片（`desk.jpg`、`doc.jpg`、`sticky.jpg`，`bun scripts/build-papers.ts`）。改了 `--desk`、`--doc`、`--sticky` 或纹理就重跑。
+- **入场动画只给看得见的东西**：`setStagger` 给视口外（留 120px）的元素加 `data-still`，它们不跑落下动画；每个正在动画的元素都是一个合成层。
+- 不用全屏的 `backdrop-filter`，不做持续循环的动画（`design.md` 动效原则）。
+
 ### 素材
 
 手账材质和贴纸放在 `public/`，不放 `src/assets/`：脚本按名字在运行时取用（`/journal/tape/${name}.webp`、`/stickers/${name}.webp`），CSS 通过自定义属性引用纹理（`tokens.css` 里的 `url()`），两者都不能用带哈希的导入。它们已经很小（webp/jpg/svg）。
 
-- `/journal/paper/{canvas-beige-fine,document-ivory,grain-overlay-gray,kraft-smooth}.jpg`
+- `/journal/paper/{canvas-beige-fine,document-ivory,grain-overlay-gray,kraft-smooth}.jpg`：原始纸纹（CSS 只直接用牛皮纸；`grain-overlay-gray` 还给贴纸工坊的手账滤镜用）
+- `/journal/paper/{desk,doc,sticky}.jpg`：叠好了 `--desk` / `--doc` / `--sticky` 的纸纹，CSS 用的是这三张（`--paper-desk`、`--paper-doc`、`--paper-sticky`）；`bun scripts/build-papers.ts` 生成，要提交
 - `/journal/tape/{washi-grid-ivory,washi-stripes-pink,washi-dots-mustard,washi-plain-sage,masking-cream,kraft-brown}.webp`（2 倍渲染，按一半宽度显示，例如 108–130px；源文件在 `scripts/assets/tape/`，`bun scripts/build-tapes.ts` 重新生成）
 - `/journal/doodle/*.svg`（单色，当 CSS mask 用），`/journal/accessory/*.svg`
 - `/journal/paperclip.svg`、`/journal/stamp-speckle.png`

@@ -18,19 +18,40 @@
   touch-action: none;
   cursor: grab;
   background-color: var(--desk);
-  background-image:
-    radial-gradient(circle, rgb(110 95 70 / 0.3) 1px, transparent 1.4px),
-    var(--paper-canvas);
-  background-size:
-    var(--dot, 20px) var(--dot, 20px),
-    var(--tex, 480px) auto;
-  background-position:
-    var(--bx, 0) var(--by, 0),
-    var(--bx, 0) var(--by, 0);
-  background-blend-mode: normal, multiply;
   transition:
     opacity 0.2s var(--out),
     visibility 0s;
+}
+
+/*
+ * The dotted desk paper, moved by the camera (camera.ts): one tile larger
+ * than the viewport and shifted by less than a tile, so panning only moves
+ * this layer and zooming repaints only it. Childless on purpose: the camera
+ * sets custom properties here every zoom frame.
+ */
+.desk {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(100% + var(--tile-w, 480px));
+  height: calc(100% + var(--tile-h, 280px));
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* The paper sits on a pseudo-element, not on .desk itself: Chrome
+ * re-rasterises a moving layer's own background image every frame, but not
+ * its contents. */
+.desk::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle, rgb(110 95 70 / 0.3) 1px, transparent 1.4px),
+    var(--paper-desk);
+  background-size:
+    var(--dot, 20px) var(--dot, 20px),
+    var(--tile-w, 480px) var(--tile-h, 280px);
 }
 
 /* The desk darkens a little while a note is open. Kept light: text on the
@@ -49,11 +70,13 @@ body.drawer-open .viewport::after {
   opacity: 1;
 }
 
+/* Its own layer: a pan moves it without repainting a single card. */
 .world {
   position: absolute;
   left: 0;
   top: 0;
   transform-origin: 0 0;
+  will-change: transform;
 }
 
 /* The world has no width; images size themselves, not to 100% of 0. */
@@ -454,6 +477,12 @@ body.drawer-open .viewport::after {
 .world.enter .links {
   animation: fade 0.5s var(--out) backwards;
   animation-delay: 520ms;
+}
+
+/* Off screen at the start (layout.ts setStagger): no animation to run. */
+.world.enter [data-still],
+.world.enter [data-still] .ul {
+  animation: none;
 }
 
 @keyframes land {

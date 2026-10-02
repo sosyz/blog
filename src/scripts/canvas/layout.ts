@@ -341,9 +341,21 @@ const STAGGER_MAX = 520;
 /** Stickers and doodles land a little after the cards. */
 const DECOR_DELAY = 180;
 
+/** Things this far outside the window still land; the rest just sit there. */
+const LAND_MARGIN = 120;
+
+const offScreen = (r: DOMRect) =>
+  r.right < -LAND_MARGIN ||
+  r.bottom < -LAND_MARGIN ||
+  r.left > window.innerWidth + LAND_MARGIN ||
+  r.top > window.innerHeight + LAND_MARGIN;
+
 /**
  * Entrance order: centre first, outwards. Sets `--d` on each element from
- * its distance to the world origin (needs the current camera).
+ * its distance to the world origin (needs the current camera). Elements
+ * nobody can see get `data-still` and skip the animation (canvas.css):
+ * every landing element is a compositor layer while it runs, which old
+ * machines feel.
  */
 export const setStagger = (
   world: HTMLElement,
@@ -354,6 +366,7 @@ export const setStagger = (
   );
   for (const el of items) {
     const r = el.getBoundingClientRect();
+    el.toggleAttribute("data-still", offScreen(r));
     const x = (r.left + r.width / 2 - cam.x) / cam.s;
     const y = (r.top + r.height / 2 - cam.y) / cam.s;
     const decor =

@@ -639,8 +639,9 @@
   border: 0;
   padding: 40px 24px;
   color: inherit;
+  /* No backdrop blur: a full-screen blur is heavy on old GPUs and barely
+   * shows under this shade. */
   background: rgb(46 36 22 / 0.55);
-  backdrop-filter: blur(3px);
   opacity: 0;
   transition: opacity 0.22s var(--out);
   cursor: zoom-out;

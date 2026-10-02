@@ -2,6 +2,13 @@
  * Canvas camera: screen = world * s + (x, y). Pans, zooms around a point,
  * glides with an ease-out curve and coasts after a flick (inertia).
  * Background dots and paper texture move and scale with the world.
+ *
+ * Kept cheap for old machines: the world and the desk are their own
+ * compositor layers (canvas.css), so a pan only moves them. The desk is one
+ * tile larger than the viewport and shifts by the camera offset modulo a
+ * tile; its texture is resized only when the scale changes. Nothing here
+ * sets a custom property on an element with children, which would restyle
+ * the whole world every frame.
  */
 import { type Camera, prefersReducedMotion } from "./api";
 
@@ -10,7 +17,9 @@ export type Cam = { x: number; y: number; s: number };
 const MIN_SCALE = 0.3;
 const MAX_SCALE = 1.8;
 const DOT_PITCH = 20;
-const TEXTURE_SIZE = 480;
+/** Desk texture tile (CSS px at scale 1); a multiple of DOT_PITCH both ways. */
+const TILE_W = 480;
+const TILE_H = 280;
 const GLIDE_MS = 520;
 /** Velocity decay per 16ms frame while coasting. */
 const FRICTION = 0.94;
@@ -27,24 +36,38 @@ const easeOutCubic = (t: number) => 1 - (1 - t) ** CUBIC;
 
 export type CameraController = ReturnType<typeof createCamera>;
 
+/** Offset in [-tile, 0) that lines the desk's tiles up with the world's. */
+const tileOffset = (offset: number, tile: number) =>
+  (((offset % tile) + tile) % tile) - tile;
+
 export const createCamera = (
-  viewport: HTMLElement,
+  desk: HTMLElement,
   world: HTMLElement,
   percentEl: HTMLElement | null
 ) => {
   const cam: Cam = { x: 0, y: 0, s: 1 };
   const listeners = new Set<(camera: Camera) => void>();
   let raf = 0;
+  let deskScale = 0;
 
-  const apply = () => {
-    world.style.transform = `translate(${cam.x}px, ${cam.y}px) scale(${cam.s})`;
-    viewport.style.setProperty("--dot", `${DOT_PITCH * cam.s}px`);
-    viewport.style.setProperty("--tex", `${TEXTURE_SIZE * cam.s}px`);
-    viewport.style.setProperty("--bx", `${cam.x}px`);
-    viewport.style.setProperty("--by", `${cam.y}px`);
+  const scaleDesk = () => {
+    deskScale = cam.s;
+    desk.style.setProperty("--dot", `${DOT_PITCH * cam.s}px`);
+    desk.style.setProperty("--tile-w", `${TILE_W * cam.s}px`);
+    desk.style.setProperty("--tile-h", `${TILE_H * cam.s}px`);
     if (percentEl) {
       percentEl.textContent = `${Math.round(cam.s * PERCENT)}%`;
     }
+  };
+
+  const apply = () => {
+    world.style.transform = `translate(${cam.x}px, ${cam.y}px) scale(${cam.s})`;
+    if (cam.s !== deskScale) {
+      scaleDesk();
+    }
+    const dx = tileOffset(cam.x, TILE_W * cam.s);
+    const dy = tileOffset(cam.y, TILE_H * cam.s);
+    desk.style.transform = `translate(${dx}px, ${dy}px)`;
     const snapshot = { x: cam.x, y: cam.y, scale: cam.s };
     for (const listener of listeners) {
       listener(snapshot);

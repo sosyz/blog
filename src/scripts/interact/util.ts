@@ -40,16 +40,19 @@ export const TAPES = [
 
 export const tapeSrc = (name: string) => `/journal/tape/${name}.webp`;
 
-const dateFormat = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "Asia/Shanghai",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
+/** Made on first use: building it costs every page load a few ms of ICU. */
+let dateFormat: Intl.DateTimeFormat | null = null;
 
 /** 2025.10.08 in China time, as on the blue date stamp. */
-export const dotDate = (ms: number) =>
-  dateFormat.format(new Date(ms)).replaceAll("-", ".");
+export const dotDate = (ms: number) => {
+  dateFormat ??= new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return dateFormat.format(new Date(ms)).replaceAll("-", ".");
+};
 
 /** The first character of a name, for the circled initial. */
 export const initial = (name: string) => [...name.trim()].at(0) ?? "?";

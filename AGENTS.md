@@ -59,6 +59,7 @@ Sonui 的博客 2.0：一本灵感手账。首页是一块无限画布，中央�
 | `bun run og` | 重新生成默认分享图 `public/og-default.png`（需要 `fonts-src/xiaolai-regular.ttf`） |
 | `bun run diagrams` | 把笔记里的 Mermaid 块渲染成手绘 SVG（`src/assets/diagrams/`，要提交）；需要本机 Chrome（或 `CHROME_PATH`）和 `fonts-src/xiaolai-regular.ttf`，已有的跳过，`--force` 全部重画，升级 mermaid / svgo 后改 `DIAGRAM_CONFIG_VERSION` |
 | `bun scripts/build-tapes.ts` | 重新生成纸胶带 `public/journal/tape/*.webp` |
+| `bun scripts/build-papers.ts` | 把 `--desk` / `--doc` / `--sticky` 烘焙进纸纹（`public/journal/paper/{desk,doc,sticky}.jpg`）；改了这三个 token 或纹理后运行 |
 | `bun scripts/build-cutout-assets.ts` | 复制 / 校验贴纸工坊的抠图文件（`public/ort/<版本>/`、`public/models/u2netp/`）；升级 `@huggingface/transformers` 后运行 |
 | `bun run cf-typegen` | 改了 `wrangler.jsonc` 后重新生成 `worker-configuration.d.ts` |
 | `bunx wrangler d1 migrations apply sonui-blog --local` | 创建 / 升级本地 D1（第一次跑 `dev` 前执行） |

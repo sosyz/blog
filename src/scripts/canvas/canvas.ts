@@ -96,7 +96,7 @@ const createCanvas = (root: HTMLElement) => {
   const viewport = query<HTMLElement>(root, "[data-viewport]");
   const world = query<HTMLElement>(root, "[data-world]");
   const camera = createCamera(
-    viewport,
+    query<HTMLElement>(root, "[data-desk]"),
     world,
     root.querySelector("[data-zoom-pct]")
   );
