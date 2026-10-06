@@ -155,6 +155,35 @@
       scale: 1;
     }
   }
+  /* 落点 (sticker-landing.ts): while a peeled sticker is carried, a pencil
+     silhouette of it on the paper where it lands if let go now. It is a
+     copy of the sticker, so the same rules place it; it never takes the
+     pointer, and fades as the sticker is pressed down onto it. */
+  .world .peel-landing {
+    opacity: 0;
+    filter: brightness(0);
+    mix-blend-mode: multiply;
+    pointer-events: none;
+    transition: opacity 0.16s var(--out);
+  }
+  .world .peel-landing.is-shown {
+    opacity: 0.2;
+  }
+  @starting-style {
+    .world .peel-landing.is-shown {
+      opacity: 0;
+    }
+  }
+  .world .peel-landing img {
+    filter: none;
+  }
+  .world .peel-landing > :not(img) {
+    display: none;
+  }
+  /* Built-ins get their offset from [data-sticker-key], which it lacks. */
+  .world .sticker.peel-landing-builtin {
+    translate: var(--dx, 0px) var(--dy, 0px);
+  }
   .world .sticker[data-sticker-key].vs-gliding,
   .world .vs.vs-gliding {
     transition:

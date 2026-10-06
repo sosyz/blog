@@ -208,6 +208,7 @@ Schema 定义在 `src/content.config.ts`。当前主题：AI、Web、后端、Go
     - 撕下来的那一刻画面不跳：捏着的那条边一直在指针下，卷角在约 340ms 里柔和地（不回弹）松开到一个小卷角，贴纸从捏着的地方垂荡下来，影子同时升起、落得更远；卷的方向先保持拉的方向，再慢慢（约 280ms 的时间常数，走近的那边）转到从捏住的角往里卷。
     - 没撕下来就松手：卷起的部分平平地贴回原处（约 220ms），位置不变，不保存，也不出现垃圾桶。
     - 撕下来以后松手：捏着的边不动，卷角摊平落在松手的地方，轻轻压一下落回纸面，照原来的规则保存。撕下来的贴纸可以一直换地方再贴。
+    - **落点预览**：撕下来拿着的时候，纸面上有一个淡淡的铅笔灰剪影（贴纸本身的轮廓，约 20% 浓度），就是现在松手它会落下的位置和角度；拿着的贴纸是卷着、抬起来的，影子也落得远，光看它猜不准落在哪。剪影约 160ms 淡入，移到垃圾桶上时消失（那里不会贴下去），松手时随着贴纸压下去淡出。减弱动效和没有 WebGL 时也有。
     - 移动不到 4px 仍算点击（选中）；旋转圆点、缩放方块、滚轮和键盘照旧直接生效，不用先撕。
     - 没有 WebGL 或打开「减弱动效」时：拉得比贴纸长边的六成还远就算撕下来；在那之前只是按住的角微微翘起（减弱动效时连这点也没有），撕下来后才抬起，并在约 200ms 里从原处滑到手上（不瞬移；减弱动效时直接到位）。
     - 卷纸效果（WebGL）单独加载：指针移到贴纸上、聚焦贴纸，或画布显示着贴纸且浏览器空闲时就先取回来，第一次撕也能用上；手机列表视图和减弱动效时不取。
@@ -293,7 +294,7 @@ Schema 定义在 `src/content.config.ts`。当前主题：AI、Web、后端、Go
 | 评论、博主回复 | `src/components/interact/Comments.astro`、`src/scripts/interact/comments.ts`、`src/pages/api/comments.ts` | 已完成 |
 | 划线评论和桌面便签 | `src/components/interact/InlineComments.astro`、`src/scripts/interact/inline.ts`、`anchor.ts` | 已完成 |
 | 访客贴纸 | `src/components/interact/StickerLayer.astro`、`StickerUpload.astro`、`src/scripts/interact/sticker-upload.ts`、`src/pages/api/stickers/` | 已完成 |
-| 挪贴纸（自己的、博主整理、只为自己拖） | `src/scripts/interact/sticker-edit.ts`、`sticker-transform.ts`、`sticker-offsets.ts`、`src/pages/api/stickers/[id]/index.ts`、`src/pages/api/admin/stickers/[id].ts`、`migrations/0001_init.sql` | 已完成 |
+| 挪贴纸（自己的、博主整理、只为自己拖；撕下来时的落点预览） | `src/scripts/interact/sticker-edit.ts`、`sticker-peel.ts`、`sticker-landing.ts`、`sticker-transform.ts`、`sticker-offsets.ts`、`src/pages/api/stickers/[id]/index.ts`、`src/pages/api/admin/stickers/[id].ts`、`migrations/0001_init.sql` | 已完成 |
 | 贴纸工坊（自动抠图、白边、手账滤镜） | `src/scripts/interact/sticker-workshop.ts`、`cutout.worker.ts`、`die-cut.ts`、`public/ort/`、`public/models/u2netp/` | 已完成 |
 | GitHub 登录（可选）：登录后免人机验证、GitHub 头像和主页链接、换设备拥有自己的评论和贴纸、博主戳、博主用 GitHub 会话整理贴纸；隐私说明页 | `src/lib/server/{auth,github,login,session,users,visitor}.ts`、`src/pages/api/auth/`、`migrations/0001_init.sql`、`src/scripts/interact/{auth,auth-menu}.ts`、`src/components/interact/AuthMenu.astro`、`src/pages/privacy.astro` | 代码已完成；线上要按 deploy.md 第 10 步建 OAuth App、填 `GITHUB_CLIENT_ID`、设 `GITHUB_CLIENT_SECRET` |
 | 人机验证（隐藏的 Turnstile + 手写状态行） | `src/components/interact/Turnstile.astro`、`src/scripts/interact/turnstile.ts`、`src/lib/server/turnstile.ts` | 已完成 |

@@ -24,6 +24,8 @@
  *   corner, bent a little by the pointer's speed (`bendDirection`); it
  *   curls a bit more the faster it goes (`dragProgress`) and over the trash
  *   eases towards PEEL.trash;
+ * - while it is off, a pencil silhouette on the paper marks where it lands
+ *   if let go now (sticker-landing.ts); not over the trash;
  * - let go (`drop`): the curl flattens and it is pressed onto the desk
  *   (PEEL_MS.layBack) — where it was stuck if it never came off; once off,
  *   still pinned, so it unrolls onto the element where it is let go — then
@@ -69,6 +71,7 @@ import {
   throwPose,
   type Vec,
 } from "./sticker-gesture";
+import { createLanding, type Landing } from "./sticker-landing";
 
 /** Below the toolbar and zoom buttons (20) and the trash (21), as the world is. */
 const LAYER_Z = 19;
@@ -266,6 +269,17 @@ export const startPeel = (
   let fallAt: Vec = anchor.centre;
   let hidden = false;
   let fallen: ((done: boolean) => void) | null = null;
+  /** Where it lands if let go now (sticker-landing.ts), once it is off. */
+  let landing: Landing | null = null;
+
+  const dropLanding = (fade: boolean) => {
+    if (fade) {
+      landing?.fade();
+    } else {
+      landing?.remove();
+    }
+    landing = null;
+  };
 
   const hide = (on: boolean) => {
     if (hidden === on) {
@@ -344,6 +358,7 @@ export const startPeel = (
     live.delete(stop);
     window.clearTimeout(lateTimer);
     dropLayer();
+    dropLanding(false);
     // Thrown, or re-rendered: the element is gone, nothing to show.
     if (show) {
       hide(false);
@@ -614,6 +629,8 @@ export const startPeel = (
   /** Comes off the desk: from now on the caller carries it. */
   const detach = () => {
     off = true;
+    landing = createLanding(el);
+    landing.show(!overTrash);
     if (mode === "gl") {
       measureSlack = true;
       enter("pop", performance.now());
@@ -667,6 +684,8 @@ export const startPeel = (
 
   return {
     drop: () => {
+      // It is pressed down right there: the mark goes as it lands.
+      dropLanding(true);
       if (mode === "gl" && isMoving(phase)) {
         enter("layBack", performance.now());
         run();
@@ -683,11 +702,13 @@ export const startPeel = (
       finish(true);
     },
     end: () => {
+      dropLanding(false);
       el.classList.remove(LIFTED, TUGGED);
       stopGlide();
       finish(true);
     },
     fall: (bin) => {
+      dropLanding(false);
       if (mode !== "gl" || !(phase === "pop" || phase === "held")) {
         // The crumple starts from the element's place.
         stopGlide();
@@ -706,6 +727,7 @@ export const startPeel = (
     },
     hoverTrash: (over) => {
       overTrash = over;
+      landing?.show(!over);
     },
     lift: () => {
       if (phase !== "pressed") {
