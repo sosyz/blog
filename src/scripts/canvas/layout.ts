@@ -13,13 +13,18 @@
  */
 import { seeded } from "./seed";
 
-export type Box = { x: number; y: number; w: number; h: number };
+export interface Box {
+  h: number;
+  w: number;
+  x: number;
+  y: number;
+}
 
-export type Layout = {
+export interface Layout {
   /** World-space box of each card, by slug. */
   cards: Map<string, Box>;
   intro: Box;
-};
+}
 
 const COL = 252;
 const GAP = 18;
@@ -40,45 +45,45 @@ const HALF_TURN_DEG = 180;
 const DEG_PER_RAD = HALF_TURN_DEG / Math.PI;
 /** Elliptical spiral the piles are placed along (radians, px). */
 const SPIRAL = {
+  growth: 2.2,
+  radius: 60,
   start: -0.3,
   step: 0.2,
-  radius: 60,
-  growth: 2.2,
   stretchX: 1.35,
   stretchY: 0.85,
 } as const;
 /** Space kept clear around the intro card (px). */
-const INTRO_CLEARANCE = { side: 20, top: 50, bottom: 40 } as const;
+const INTRO_CLEARANCE = { bottom: 40, side: 20, top: 50 } as const;
 /** The dog sits by the intro card's bottom-left corner. */
 const DOG_OFFSET = { x: -112, y: -64 } as const;
 /** "最近在折腾" arrow, just outside the intro card. */
 const ARROW = {
   distance: 40,
-  x: -60,
-  y: -35,
-  tilt: -25,
   textX: -50,
   textY: -70,
+  tilt: -25,
+  x: -60,
+  y: -35,
 } as const;
 /** Topic stickers: after the topic name, and at the pile's bottom-right. */
 const PILE_STICKER = {
   afterLabel: 24,
-  top: -34,
-  right: 50,
   bottom: 40,
+  right: 50,
+  top: -34,
 } as const;
 /** Outer ring of place/people stickers, relative to everything's bounds. */
 const RING = {
-  left: 110,
-  top: 90,
-  topMid: 120,
-  topMidShift: 40,
-  right: 20,
-  rightTop: 80,
-  rightMid: 30,
   bottom: 30,
   bottomLeft: 120,
   bottomLeftUp: 20,
+  left: 110,
+  right: 20,
+  rightMid: 30,
+  rightTop: 80,
+  top: 90,
+  topMid: 120,
+  topMidShift: 40,
 } as const;
 /** How far a related line bows out, as a share of its length. */
 const LINK_BEND = 0.25;
@@ -102,7 +107,11 @@ const columnsFor = (count: number) => {
   return Math.min(FEW_COLUMNS, count);
 };
 
-type LocalCard = { el: HTMLElement; slug: string; box: Box };
+interface LocalCard {
+  box: Box;
+  el: HTMLElement;
+  slug: string;
+}
 
 /** Masonry inside one pile, in pile-local coordinates (below the head). */
 const stackPile = (cards: HTMLElement[]) => {
@@ -117,31 +126,31 @@ const stackPile = (cards: HTMLElement[]) => {
     const jx = (seeded(`${slug}x`) - CENTRE) * JITTER_X;
     const jy = (seeded(`${slug}y`) - CENTRE) * JITTER_Y;
     local.push({
-      el,
-      slug,
       box: {
+        h,
+        w,
         x: column * (COL + GAP) + (COL - w) / 2 + jx,
         y: (heights[column] ?? 0) + jy,
-        w,
-        h,
       },
+      el,
+      slug,
     });
     heights[column] = (heights[column] ?? 0) + h + GAP;
   }
   const width = cols * COL + (cols - 1) * GAP;
   const height = Math.max(...heights) - GAP + HEAD;
-  return { local, width, height };
+  return { height, local, width };
 };
 
 /** First free spot along an elliptical spiral around the centre. */
 const findSpot = (taken: Box[], w: number, h: number): Box => {
-  let box: Box = { x: -w / 2, y: -h / 2, w, h };
-  for (let k = 0; k < MAX_SPIRAL_STEPS; k++) {
+  let box: Box = { h, w, x: -w / 2, y: -h / 2 };
+  for (let k = 0; k < MAX_SPIRAL_STEPS; k += 1) {
     const angle = SPIRAL.start + k * SPIRAL.step;
     const radius = SPIRAL.radius + k * SPIRAL.growth;
     const cx = Math.cos(angle) * radius * SPIRAL.stretchX;
     const cy = Math.sin(angle) * radius * SPIRAL.stretchY;
-    box = { x: cx - w / 2, y: cy - h / 2, w, h };
+    box = { h, w, x: cx - w / 2, y: cy - h / 2 };
     if (!taken.some((other) => overlaps(other, box))) {
       break;
     }
@@ -199,7 +208,7 @@ const layoutPile = (
   place(pileEl, box.x, box.y);
   for (const { el, slug, box: b } of local) {
     place(el, b.x, HEAD + b.y);
-    cards.set(slug, { x: box.x + b.x, y: box.y + HEAD + b.y, w: b.w, h: b.h });
+    cards.set(slug, { h: b.h, w: b.w, x: box.x + b.x, y: box.y + HEAD + b.y });
   }
   const label = pileEl.querySelector<HTMLElement>("[data-topic-label]");
   const [first, second] = pileEl.querySelectorAll<HTMLElement>(
@@ -267,7 +276,7 @@ export const layoutWorld = (world: HTMLElement): Layout => {
   const introEl = world.querySelector<HTMLElement>("[data-intro]");
   const iw = introEl?.offsetWidth ?? 0;
   const ih = introEl?.offsetHeight ?? 0;
-  const intro: Box = { x: -iw / 2, y: -ih / 2, w: iw, h: ih };
+  const intro: Box = { h: ih, w: iw, x: -iw / 2, y: -ih / 2 };
   if (introEl) {
     place(introEl, intro.x, intro.y);
   }
@@ -279,10 +288,10 @@ export const layoutWorld = (world: HTMLElement): Layout => {
   const { side, top, bottom } = INTRO_CLEARANCE;
   const taken: Box[] = [
     {
+      h: ih + top + bottom,
+      w: iw + 2 * side,
       x: -iw / 2 - side,
       y: -ih / 2 - top,
-      w: iw + 2 * side,
-      h: ih + top + bottom,
     },
   ];
   const cards: Layout["cards"] = new Map();

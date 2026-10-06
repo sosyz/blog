@@ -2,7 +2,10 @@
 
 /** Comment list → inline comments: scroll to a highlight and open its note. */
 export const JUMP_EVENT = "interact:jump";
-export type JumpDetail = { slug: string; exact: string };
+export interface JumpDetail {
+  exact: string;
+  slug: string;
+}
 
 /** Sticker upload → sticker layer: the visitor's pending stickers changed. */
 export const STICKERS_CHANGED = "interact:stickers-changed";

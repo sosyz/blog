@@ -17,33 +17,37 @@ const FLICK_WINDOW = 90;
 const MAX_SAMPLES = 6;
 const WHEEL_ZOOM = 0.01;
 
-type Sample = { t: number; x: number; y: number };
+interface Sample {
+  t: number;
+  x: number;
+  y: number;
+}
 
-type Drag = {
-  id: number;
-  sx: number;
-  sy: number;
+interface Drag {
   cx: number;
   cy: number;
+  id: number;
   moved: boolean;
   samples: Sample[];
-};
+  sx: number;
+  sy: number;
+}
 
-type Pinch = {
+interface Pinch {
+  cam: { x: number; y: number; s: number };
   dist: number;
   mid: { x: number; y: number };
-  cam: { x: number; y: number; s: number };
-};
+}
 
 const INTERACTIVE = "a, button, input, textarea, select, label, [role=button]";
 
-export type InputOptions = {
-  viewport: HTMLElement;
+export interface InputOptions {
   camera: CameraController;
+  isDragging?: (dragging: boolean) => void;
   onEmptyClick: () => void;
   onUserMove: () => void;
-  isDragging?: (dragging: boolean) => void;
-};
+  viewport: HTMLElement;
+}
 
 const midpoint = (a: Sample, b: Sample) => ({
   x: (a.x + b.x) / 2,
@@ -70,9 +74,9 @@ export const bindInput = ({
     }
     camera.stop();
     pinch = {
+      cam: camera.get(),
       dist: Math.hypot(b.x - a.x, b.y - a.y) || 1,
       mid: midpoint(a, b),
-      cam: camera.get(),
     };
     if (drag) {
       drag.moved = true;
@@ -91,7 +95,7 @@ export const bindInput = ({
     const mid = midpoint(a, b);
     const wx = (start.mid.x - start.cam.x) / start.cam.s;
     const wy = (start.mid.y - start.cam.y) / start.cam.s;
-    camera.set({ x: mid.x - wx * s, y: mid.y - wy * s, s });
+    camera.set({ s, x: mid.x - wx * s, y: mid.y - wy * s });
   };
 
   const onDown = (e: PointerEvent) => {
@@ -110,13 +114,13 @@ export const bindInput = ({
     camera.stop();
     const cam = camera.get();
     drag = {
-      id: e.pointerId,
-      sx: e.clientX,
-      sy: e.clientY,
       cx: cam.x,
       cy: cam.y,
+      id: e.pointerId,
       moved: false,
       samples: [],
+      sx: e.clientX,
+      sy: e.clientY,
     };
   };
 
@@ -144,7 +148,7 @@ export const bindInput = ({
     if (!drag.moved) {
       return;
     }
-    camera.set({ x: drag.cx + dx, y: drag.cy + dy, s: camera.get().s });
+    camera.set({ s: camera.get().s, x: drag.cx + dx, y: drag.cy + dy });
     drag.samples.push({ t: performance.now(), x: e.clientX, y: e.clientY });
     if (drag.samples.length > MAX_SAMPLES) {
       drag.samples.shift();

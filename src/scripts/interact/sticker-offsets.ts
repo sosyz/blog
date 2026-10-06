@@ -8,7 +8,10 @@
  * readOffsets / writeOffsets touch storage.
  */
 
-export type Offset = { dx: number; dy: number };
+export interface Offset {
+  dx: number;
+  dy: number;
+}
 export type Offsets = Record<string, Offset>;
 
 const KEY = "interact:sticker-offsets";

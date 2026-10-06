@@ -20,7 +20,10 @@ import { getAuth } from "./auth";
 export const OWNER_FLAG = "interact:owner";
 const OK = 200;
 
-export type ReviewTarget = { type: "comment" | "sticker"; id: string };
+export interface ReviewTarget {
+  id: string;
+  type: "comment" | "sticker";
+}
 
 const REVIEW_PARAM = "review";
 const REVIEW_PATTERN = /^(c|s):([A-Za-z0-9-]{1,64})$/;
@@ -31,7 +34,7 @@ export const parseReview = (value: string | null): ReviewTarget | null => {
   if (!match) {
     return null;
   }
-  return { type: match[1] === "c" ? "comment" : "sticker", id: match[2] ?? "" };
+  return { id: match[2] ?? "", type: match[1] === "c" ? "comment" : "sticker" };
 };
 
 /** Pure: the query string value for a deep link. */
@@ -70,9 +73,9 @@ let moderateCheck: Promise<boolean> | null = null;
 const askServer = async () => {
   try {
     const response = await fetch("/api/admin/whoami", {
-      redirect: "manual",
-      credentials: "same-origin",
       cache: "no-store",
+      credentials: "same-origin",
+      redirect: "manual",
     });
     await response.text().catch(() => "");
     if (response.status === OK) {

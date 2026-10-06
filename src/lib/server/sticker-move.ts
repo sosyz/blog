@@ -16,19 +16,22 @@ import {
 import type { ItemStatus } from "./types";
 
 /** The columns that decide who may edit a sticker. */
-export type EditableRow = {
-  status: ItemStatus;
+export interface EditableRow {
   edit_token_hash: string | null;
+  status: ItemStatus;
   /** The logged-in uploader (users.id), if any. */
   user_id?: string | null;
-};
+}
 
 export type MovableRow = Placement & EditableRow;
 
 export type DeletableRow = EditableRow & { r2_key: string };
 
 /** A logged-in GitHub user making the request. */
-export type MoveSession = { userId: string; isOwner: boolean };
+export interface MoveSession {
+  isOwner: boolean;
+  userId: string;
+}
 
 export type MoveAuth =
   | {
@@ -111,18 +114,18 @@ export const planMove = async (
   auth: MoveAuth
 ): Promise<MovePlan> => {
   if (!row) {
-    return { ok: false, status: STATUS.notFound, message: NOT_FOUND };
+    return { message: NOT_FOUND, ok: false, status: STATUS.notFound };
   }
   const via = await authoriseStickerEdit(row, auth);
   if (!via) {
-    return { ok: false, status: STATUS.notFound, message: NOT_YOURS };
+    return { message: NOT_YOURS, ok: false, status: STATUS.notFound };
   }
   if (row.status === "rejected") {
-    return { ok: false, status: STATUS.conflict, message: GONE };
+    return { message: GONE, ok: false, status: STATUS.conflict };
   }
   const from = roundPlacement(row);
   const to = roundPlacement(input);
-  return { ok: true, from, to, changed: !samePlacement(from, to), via };
+  return { changed: !samePlacement(from, to), from, ok: true, to, via };
 };
 
 /**
@@ -138,13 +141,13 @@ export const planDelete = async (
 ): Promise<DeletePlan> => {
   const via = row ? await authoriseStickerEdit(row, auth) : null;
   if (!(row && via)) {
-    return { ok: false, status: STATUS.notFound, message: CANNOT_TEAR };
+    return { message: CANNOT_TEAR, ok: false, status: STATUS.notFound };
   }
   return {
-    ok: true,
-    via,
     alreadyGone: row.status === "rejected",
+    ok: true,
     r2Key: row.r2_key,
+    via,
   };
 };
 

@@ -21,10 +21,10 @@ const chunked = (chunks: string[]) => {
     },
   });
   return new Request("https://blog.test/api", {
-    method: "POST",
     body,
     // @ts-expect-error `duplex` is required for stream bodies but not typed.
     duplex: "half",
+    method: "POST",
   });
 };
 
@@ -88,9 +88,9 @@ describe("bounded body reads", () => {
 
   test("Content-Length over the limit is refused before reading", async () => {
     const request = new Request("https://blog.test/api", {
-      method: "POST",
       body: "x".repeat(20),
       headers: { "content-length": "2000" },
+      method: "POST",
     });
     expect(await readBodyBytes(request, 1000)).toBeNull();
   });

@@ -139,13 +139,13 @@ const reject = async (card: HTMLElement, button: HTMLButtonElement) => {
   setStatus(card, "正在拒绝……");
   try {
     const response = await fetch("/api/admin/decide", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        type: card.dataset.type,
-        id: card.dataset.id,
         decision: "reject",
+        id: card.dataset.id,
+        type: card.dataset.type,
       }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
     });
     const data = (await response.json().catch(() => ({}))) as DecideReply;
     if (!response.ok) {
@@ -183,9 +183,9 @@ const restoreBuiltin = async (card: HTMLElement, button: HTMLButtonElement) => {
   setStatus(card, "正在恢复……");
   try {
     const response = await fetch("/api/builtins", {
-      method: "POST",
+      body: JSON.stringify({ hidden: false, key }),
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ key, hidden: false }),
+      method: "POST",
     });
     const data = (await response.json().catch(() => ({}))) as RestoreReply;
     if (!response.ok) {

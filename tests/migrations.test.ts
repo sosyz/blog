@@ -91,8 +91,8 @@ describe("migrations", () => {
       )
       .all();
     expect(rows).toEqual([
-      { id: 1, decision: "approve" },
-      { id: 2, decision: "move" },
+      { decision: "approve", id: 1 },
+      { decision: "move", id: 2 },
     ]);
   });
 });

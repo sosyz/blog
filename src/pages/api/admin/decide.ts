@@ -73,11 +73,11 @@ export const POST: APIRoute = async ({ request }) => {
     await stickerBucket().delete(result.r2Key);
   }
   const body: DecideResponse = {
-    ok: true,
-    id: input.id,
     decision: input.decision,
-    status: result.status,
+    id: input.id,
     next: await nextPending(db, input.id),
+    ok: true,
+    status: result.status,
   };
   return json(body);
 };

@@ -14,9 +14,9 @@ const LINE_CLASS = /<span class="([^"]*\bline\b[^"]*)"/g;
 
 /** The site's Shiki settings and codeSlips, as config.ts wires them. */
 const renderer = createSatteriMarkdownProcessor({
-  syntaxHighlight: { type: "shiki", excludeLangs: ["math", "mermaid"] },
-  shikiConfig,
   hastPlugins: [codeSlips],
+  shikiConfig,
+  syntaxHighlight: { excludeLangs: ["math", "mermaid"], type: "shiki" },
 });
 
 const render = async (markdown: string) => {
@@ -37,7 +37,7 @@ describe("codeSlips", () => {
     expect(html).toContain("data-no-annotate");
     expect(html).toContain('<figcaption class="fname">gateway.ts</figcaption>');
     expect(html).toContain(
-      '<button type="button" class="slip-copy" aria-label="复制代码">复制</button>'
+      '<button aria-label="复制代码" class="slip-copy" type="button">复制</button>'
     );
     expect(html).toContain('<span class="slip-said" role="status"></span>');
     // figcaption is the figure's last child.
@@ -131,14 +131,14 @@ describe("marked lines", () => {
 describe("parseFenceMeta", () => {
   test("reads the title and the bare flags", () => {
     expect(parseFenceMeta('title="a b.ts" collapse {1}')).toEqual({
-      title: "a b.ts",
       collapse: true,
       lineNumbers: false,
+      title: "a b.ts",
     });
     expect(parseFenceMeta("file=x.go showLineNumbers")).toEqual({
-      title: "x.go",
       collapse: false,
       lineNumbers: true,
+      title: "x.go",
     });
     expect(parseFenceMeta('title="collapsed.ts"').collapse).toBe(false);
   });

@@ -36,7 +36,7 @@ describe("self-hosted cutout assets", () => {
         "node_modules/onnxruntime-web/dist",
         file.name
       );
-      const size = (await stat(served)).size;
+      const { size } = await stat(served);
       expect(size).toBe(file.bytes);
       expect(size).toBeLessThan(ASSET_LIMIT);
       expect(await sha256(served)).toBe(await sha256(original));

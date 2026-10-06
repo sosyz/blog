@@ -19,9 +19,9 @@ export type AuthState = MeResponse;
 
 export const ANONYMOUS: AuthState = {
   enabled: false,
-  user: null,
   isOwner: false,
   login: null,
+  user: null,
 };
 
 type Listener = (state: AuthState) => void;
@@ -32,8 +32,8 @@ const listeners = new Set<Listener>();
 
 const fetchMe = () =>
   requestJson<MeResponse>("/api/auth/me", {
-    credentials: "same-origin",
     cache: "no-store",
+    credentials: "same-origin",
   }).then((result) => (result.ok ? result.data : ANONYMOUS));
 
 const publish = (state: AuthState) => {
@@ -102,8 +102,8 @@ export const loginHref = (state: Pick<AuthState, "login">, next: string) => {
  */
 export const logout = async () => {
   const done = await fetch("/api/auth/logout", {
-    method: "POST",
     credentials: "same-origin",
+    method: "POST",
   }).then(
     (response) => response.ok,
     () => false

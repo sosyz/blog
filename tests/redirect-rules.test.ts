@@ -14,6 +14,7 @@ import {
   splatRedirectLines,
 } from "../src/lib/seo/redirect-rules";
 import { redirects } from "../src/lib/seo/redirects";
+import { rejectionMessage } from "./support/rejection";
 
 const ROOT = new URL("../", import.meta.url);
 const read = (path: string) => readFile(new URL(path, ROOT), "utf-8");
@@ -50,7 +51,7 @@ describe("checkRedirects", () => {
     const report = checkRedirects(
       "/about/ / 301\n/old/ /new/ 301\n/tags/* /list/ 301\n"
     );
-    expect(report).toEqual({ staticRules: 2, dynamicRules: 1, problems: [] });
+    expect(report).toEqual({ dynamicRules: 1, problems: [], staticRules: 2 });
   });
 
   test("fails when a splat comes before a static rule", () => {
@@ -80,8 +81,8 @@ describe("checkRedirects", () => {
 
   test("fails when static rules exceed the limit", () => {
     const report = checkRedirects("/a/ /b/ 301\n/c/ /d/ 301", {
-      static: 1,
       dynamic: 100,
+      static: 1,
     });
     expect(report.problems).toHaveLength(1);
   });
@@ -90,7 +91,7 @@ describe("checkRedirects", () => {
     const rules = parseRedirectRules(
       "# /tags/* /list/ 301\n\n/a/ /b/ 301 # moved\nnot-a-rule\n"
     );
-    expect(rules).toEqual([{ line: 3, from: "/a/", dynamic: false }]);
+    expect(rules).toEqual([{ dynamic: false, from: "/a/", line: 3 }]);
   });
 });
 
@@ -176,7 +177,7 @@ describe("legacyListRedirects integration", () => {
       } as unknown as HookOptions);
       return await readFile(join(dir, "_redirects"), "utf-8");
     } finally {
-      await rm(dir, { recursive: true, force: true });
+      await rm(dir, { force: true, recursive: true });
     }
   };
 
@@ -189,8 +190,8 @@ describe("legacyListRedirects integration", () => {
   });
 
   test("fails the build when a splat was left in front", async () => {
-    await expect(runHook("/tags/* /list/ 301\n/about/ / 301")).rejects.toThrow(
-      "/about/"
-    );
+    expect(
+      await rejectionMessage(runHook("/tags/* /list/ 301\n/about/ / 301"))
+    ).toContain("/about/");
   });
 });

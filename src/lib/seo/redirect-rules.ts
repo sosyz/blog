@@ -44,7 +44,11 @@ const WHITESPACE = /\s+/;
 const MIN_TOKENS = 2;
 const MAX_TOKENS = 3;
 
-export type RedirectRule = { line: number; from: string; dynamic: boolean };
+export interface RedirectRule {
+  dynamic: boolean;
+  from: string;
+  line: number;
+}
 
 /** The rules Cloudflare would parse from a `_redirects` file, in order. */
 export const parseRedirectRules = (content: string) => {
@@ -63,16 +67,16 @@ export const parseRedirectRules = (content: string) => {
     const dynamic: boolean =
       sawDynamic || SPLAT.test(from) || PLACEHOLDER.test(from);
     sawDynamic = dynamic;
-    rules.push({ line: index + 1, from, dynamic });
+    rules.push({ dynamic, from, line: index + 1 });
   }
   return rules;
 };
 
-export type RedirectReport = {
-  staticRules: number;
+export interface RedirectReport {
   dynamicRules: number;
   problems: string[];
-};
+  staticRules: number;
+}
 
 /**
  * Counts the rules and lists what Cloudflare would drop or demote: a plain
@@ -81,8 +85,8 @@ export type RedirectReport = {
 export const checkRedirects = (
   content: string,
   limits: { static: number; dynamic: number } = {
-    static: MAX_STATIC_RULES,
     dynamic: MAX_DYNAMIC_RULES,
+    static: MAX_STATIC_RULES,
   }
 ): RedirectReport => {
   const rules = parseRedirectRules(content);
@@ -107,7 +111,7 @@ export const checkRedirects = (
   if (dynamicRules > limits.dynamic) {
     problems.push(`动态规则 ${dynamicRules} 条，超过 ${limits.dynamic} 条`);
   }
-  return { staticRules, dynamicRules, problems };
+  return { dynamicRules, problems, staticRules };
 };
 
 /** Appends lines at the end, making sure they start on a line of their own. */

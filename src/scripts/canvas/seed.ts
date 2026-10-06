@@ -72,12 +72,12 @@ export const cardFixing = (
  */
 export const TOPIC_STICKERS: Readonly<Record<string, readonly string[]>> = {
   AI: ["obj-idea"],
-  Web: ["obj-laptop", "obj-bug"],
-  后端: ["obj-tools", "obj-coffee"],
   Go: ["people-coder"],
+  Web: ["obj-laptop", "obj-bug"],
   云原生: ["obj-cloud"],
-  运维与网络: ["place-lighthouse"],
+  后端: ["obj-tools", "obj-coffee"],
   早年笔记: ["people-coffee"],
+  运维与网络: ["place-lighthouse"],
 };
 
 /** Places and people around the outer ring of the canvas. */

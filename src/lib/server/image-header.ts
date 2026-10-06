@@ -10,7 +10,11 @@
 
 export type ImageMime = "image/png" | "image/gif" | "image/webp" | "image/jpeg";
 
-export type ImageHeader = { mime: ImageMime; width: number; height: number };
+export interface ImageHeader {
+  height: number;
+  mime: ImageMime;
+  width: number;
+}
 
 const ascii = (bytes: Uint8Array, start: number, length: number) =>
   String.fromCharCode(...bytes.subarray(start, start + length));
@@ -30,7 +34,7 @@ const parsePng = (b: Uint8Array): ImageHeader | null => {
   if (!signature || b.length < 24 || ascii(b, 12, 4) !== "IHDR") {
     return null;
   }
-  return { mime: "image/png", width: u32be(b, 16), height: u32be(b, 20) };
+  return { height: u32be(b, 20), mime: "image/png", width: u32be(b, 16) };
 };
 
 const parseGif = (b: Uint8Array): ImageHeader | null => {
@@ -38,7 +42,7 @@ const parseGif = (b: Uint8Array): ImageHeader | null => {
   if ((magic !== "GIF87a" && magic !== "GIF89a") || b.length < 10) {
     return null;
   }
-  return { mime: "image/gif", width: u16le(b, 6), height: u16le(b, 8) };
+  return { height: u16le(b, 8), mime: "image/gif", width: u16le(b, 6) };
 };
 
 const parseWebp = (b: Uint8Array): ImageHeader | null => {
@@ -52,9 +56,9 @@ const parseWebp = (b: Uint8Array): ImageHeader | null => {
       return null;
     }
     return {
+      height: u16le(b, 28) % LOW_14_BITS,
       mime: "image/webp",
       width: u16le(b, 26) % LOW_14_BITS,
-      height: u16le(b, 28) % LOW_14_BITS,
     };
   }
   if (chunk === "VP8L") {
@@ -68,14 +72,14 @@ const parseWebp = (b: Uint8Array): ImageHeader | null => {
     const b4 = b[24] ?? 0;
     const width = 1 + b1 + (b2 % 64) * 256;
     const height = 1 + Math.floor(b2 / 64) + b3 * 4 + (b4 % 16) * 1024;
-    return { mime: "image/webp", width, height };
+    return { height, mime: "image/webp", width };
   }
   if (chunk === "VP8X") {
     // Extended: canvas width-1 and height-1 as 24-bit little endian.
     return {
+      height: 1 + u24le(b, 27),
       mime: "image/webp",
       width: 1 + u24le(b, 24),
-      height: 1 + u24le(b, 27),
     };
   }
   return null;
@@ -125,8 +129,8 @@ const jpegStep = (
   }
   return {
     header: {
-      mime: "image/jpeg",
       height: u16be(b, i + 5),
+      mime: "image/jpeg",
       width: u16be(b, i + 7),
     },
   };
@@ -159,7 +163,10 @@ export const parseImageHeader = (bytes: Uint8Array): ImageHeader | null => {
   return header;
 };
 
-export type StickerImageLimits = { maxBytes: number; maxSide: number };
+export interface StickerImageLimits {
+  maxBytes: number;
+  maxSide: number;
+}
 
 /** Checks an upload; returns a visitor-facing error or the parsed header. */
 export const checkStickerImage = (
@@ -167,26 +174,26 @@ export const checkStickerImage = (
   limits: StickerImageLimits
 ): { ok: true; header: ImageHeader } | { ok: false; message: string } => {
   if (bytes.length === 0) {
-    return { ok: false, message: "没有收到图片。" };
+    return { message: "没有收到图片。", ok: false };
   }
   if (bytes.length > limits.maxBytes) {
     const kb = Math.round(limits.maxBytes / 1024);
-    return { ok: false, message: `图片太大了，最大 ${kb} KB。` };
+    return { message: `图片太大了，最大 ${kb} KB。`, ok: false };
   }
   const header = parseImageHeader(bytes);
   if (!header) {
     return {
-      ok: false,
       message: "只支持 PNG、WebP、GIF 或 JPEG 图片。",
+      ok: false,
     };
   }
   if (header.width > limits.maxSide || header.height > limits.maxSide) {
     return {
-      ok: false,
       message: `图片最大 ${limits.maxSide}×${limits.maxSide} 像素，这张是 ${header.width}×${header.height}。`,
+      ok: false,
     };
   }
-  return { ok: true, header };
+  return { header, ok: true };
 };
 
 /** Width of a sticker on the canvas, in world px (same on server and client). */

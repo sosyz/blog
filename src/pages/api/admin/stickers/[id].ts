@@ -59,12 +59,12 @@ export const PATCH: APIRoute = async ({ params, request }) => {
     return json(body);
   }
   const moved = await moveSticker(db, id.data, plan.to, {
-    itemType: "sticker",
-    itemId: id.data,
-    decision: "move",
     actor: `admin:${admin.email}`,
-    note: moveNote(plan.from, plan.to, "博主整理贴纸"),
     createdAt: Date.now(),
+    decision: "move",
+    itemId: id.data,
+    itemType: "sticker",
+    note: moveNote(plan.from, plan.to, "博主整理贴纸"),
   });
   if (!moved) {
     return fail(STATUS.conflict, "这张贴纸已经被拒绝，没法再挪了。");

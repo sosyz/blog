@@ -47,7 +47,7 @@ describe("fromEdge", () => {
     const request = fromEdge(
       edgeRequest(
         { [EDGE_AUTH_HEADER]: SECRET, "content-type": "application/json" },
-        { method: "POST", body: '{"a":1}' }
+        { body: '{"a":1}', method: "POST" }
       ),
       CONFIG
     );

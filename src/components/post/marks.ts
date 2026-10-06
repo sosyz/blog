@@ -58,12 +58,12 @@ const draw = async (body: HTMLElement, force: boolean) => {
   const annotations = marks.filter(isVisible).map((mark) => {
     mark.classList.add(ANNOTATED);
     return annotate(mark, {
-      type: "highlight",
-      color: MARKER,
-      multiline: true,
-      iterations: 1,
       animate,
       animationDuration: 600,
+      color: MARKER,
+      iterations: 1,
+      multiline: true,
+      type: "highlight",
     });
   });
   drawn.set(body, annotations);

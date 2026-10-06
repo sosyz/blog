@@ -115,9 +115,9 @@ const createCanvas = (root: HTMLElement) => {
   const vh = () => viewport.clientHeight || window.innerHeight;
 
   const home = (): Cam => ({
+    s: vw() < HOME_NARROW ? HOME_NARROW_SCALE : 1,
     x: vw() / 2,
     y: vh() / 2 + HOME_OFFSET_Y,
-    s: vw() < HOME_NARROW ? HOME_NARROW_SCALE : 1,
   });
 
   /** Width of the desk left of the drawer, or 0 when the drawer covers it. */
@@ -143,9 +143,9 @@ const createCanvas = (root: HTMLElement) => {
     const s = Math.max(camera.get().s, FOCUS_MIN_SCALE);
     const sx = keepLeftOf ? keepLeftOf / 2 : vw() / 2;
     return {
+      s,
       x: sx - (box.x + box.w / 2) * s,
       y: vh() / 2 - (box.y + box.h / 2) * s,
-      s,
     };
   };
 
@@ -214,7 +214,7 @@ const createCanvas = (root: HTMLElement) => {
    */
   const showFocused = (el: Element, slug: string | null) => {
     const keepLeftOf = findDrawer() ? freeWidth() : 0;
-    const area = { width: keepLeftOf || vw(), height: vh() };
+    const area = { height: vh(), width: keepLeftOf || vw() };
     const box = el.getBoundingClientRect();
     if (!isOutside(box, area)) {
       return;
@@ -268,8 +268,10 @@ const createCanvas = (root: HTMLElement) => {
 
   cleanups.push(
     bindInput({
-      viewport,
       camera,
+      isDragging: (value) => {
+        dragging = value;
+      },
       onEmptyClick: () => {
         if (findDrawer()) {
           closeNote();
@@ -278,9 +280,7 @@ const createCanvas = (root: HTMLElement) => {
       onUserMove: () => {
         userMoved = true;
       },
-      isDragging: (value) => {
-        dragging = value;
-      },
+      viewport,
     })
   );
 
@@ -372,28 +372,28 @@ const createCanvas = (root: HTMLElement) => {
   };
 
   const api: CanvasApi = {
-    viewportEl: viewport,
-    worldEl: world,
+    closeNote,
+    currentNote: () => current,
+    getCamera: () => {
+      const c = camera.get();
+      return { scale: c.s, x: c.x, y: c.y };
+    },
+    onCameraChange: camera.onChange,
+    openNote: (slug) => go(notePath(slug)),
+    panTo: (point, options) => {
+      const s = options?.scale ?? camera.get().s;
+      camera.glide({ s, x: vw() / 2 - point.x * s, y: vh() / 2 - point.y * s });
+    },
     screenToWorld: ({ x, y }) => {
       const c = camera.get();
       return { x: (x - c.x) / c.s, y: (y - c.y) / c.s };
     },
+    viewportEl: viewport,
+    worldEl: world,
     worldToScreen: ({ x, y }) => {
       const c = camera.get();
       return { x: x * c.s + c.x, y: y * c.s + c.y };
     },
-    getCamera: () => {
-      const c = camera.get();
-      return { x: c.x, y: c.y, scale: c.s };
-    },
-    onCameraChange: camera.onChange,
-    panTo: (point, options) => {
-      const s = options?.scale ?? camera.get().s;
-      camera.glide({ x: vw() / 2 - point.x * s, y: vh() / 2 - point.y * s, s });
-    },
-    currentNote: () => current,
-    openNote: (slug) => go(notePath(slug)),
-    closeNote,
   };
 
   const reveal = () => {
@@ -429,7 +429,7 @@ const createCanvas = (root: HTMLElement) => {
   };
 
   camera.set(home());
-  const fonts = document.fonts;
+  const { fonts } = document;
   Promise.race([fonts.ready, wait(FONT_WAIT_MS)]).then(reveal, reveal);
   fonts.ready.then(scheduleRelayout, scheduleRelayout);
   fonts.addEventListener("loadingdone", scheduleRelayout);
@@ -449,20 +449,20 @@ const createCanvas = (root: HTMLElement) => {
   });
 
   return {
-    root,
-    setCurrent,
-    /** Glide so a note's card sits in the desk area left of the drawer. */
-    glideToNote: (slug: string) => {
-      if (layout) {
-        focusCard(slug, freeWidth());
-      }
-    },
     destroy: () => {
       camera.stop();
       for (const cleanup of cleanups) {
         cleanup();
       }
     },
+    /** Glide so a note's card sits in the desk area left of the drawer. */
+    glideToNote: (slug: string) => {
+      if (layout) {
+        focusCard(slug, freeWidth());
+      }
+    },
+    root,
+    setCurrent,
   };
 };
 
@@ -601,10 +601,10 @@ const announceRendered = () => {
   }
   renderedDrawers.add(drawer.drawerEl);
   emitDrawerRendered({
-    slug: drawer.slug,
+    bodyEl: drawer.bodyEl,
     drawerEl: drawer.drawerEl,
     scrollEl: drawer.scrollEl,
-    bodyEl: drawer.bodyEl,
+    slug: drawer.slug,
   });
 };
 

@@ -127,7 +127,7 @@ describe("shapes and bounds", () => {
 
   test("alphaBounds finds the artwork box", () => {
     const box = alphaBounds(disc(10), SIZE, SIZE, 26);
-    expect(box).toEqual({ x: 40, y: 40, width: 21, height: 21 });
+    expect(box).toEqual({ height: 21, width: 21, x: 40, y: 40 });
     expect(alphaBounds(new Uint8ClampedArray(9), 3, 3)).toBeNull();
   });
 

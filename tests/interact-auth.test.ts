@@ -16,10 +16,10 @@ import {
 } from "../src/scripts/interact/comment-view";
 
 const USER: PublicUser = {
-  login: "octo-cat",
-  name: "Octo <Cat>",
   avatarUrl: "https://avatars.githubusercontent.com/u/583231?v=4",
   htmlUrl: "https://github.com/octo-cat",
+  login: "octo-cat",
+  name: "Octo <Cat>",
 };
 
 const TITLE_ID = /aria-labelledby="([^"]+)"/;
@@ -152,8 +152,8 @@ describe("comment view", () => {
   });
 
   test("博主 stamp only for the owner's GitHub comments", () => {
-    expect(ownerStampHtml({ user: USER, isOwner: true })).toContain("博主");
-    expect(ownerStampHtml({ user: USER, isOwner: false })).toBe("");
-    expect(ownerStampHtml({ user: null, isOwner: true })).toBe("");
+    expect(ownerStampHtml({ isOwner: true, user: USER })).toContain("博主");
+    expect(ownerStampHtml({ isOwner: false, user: USER })).toBe("");
+    expect(ownerStampHtml({ isOwner: true, user: null })).toBe("");
   });
 });

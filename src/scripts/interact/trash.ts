@@ -21,17 +21,17 @@ import { BIN_MOUTH, CRUMPLE_STOPS, UNDO_MS } from "./sticker-gesture";
 import { reduceMotion } from "./util";
 
 /** Something thrown away, waiting for 撤销 to run out. */
-export type HeldThrow = {
+export interface HeldThrow {
   /** Sends the real request (keepalive while the page is being left). */
   commit: (keepalive: boolean) => Promise<void> | void;
-  /** 撤销: put it back. `hadFocus`: the slip had keyboard focus. */
-  undo: (hadFocus: boolean) => void;
   /**
    * The slip goes away while it has focus (and 撤销 was not pressed):
    * where focus goes instead. Default: the canvas toolbar.
    */
   refocus?: () => void;
-};
+  /** 撤销: put it back. `hadFocus`: the slip had keyboard focus. */
+  undo: (hadFocus: boolean) => void;
+}
 
 type Held = HeldThrow & { timer: number };
 
@@ -252,7 +252,11 @@ export const hold = (item: HeldThrow, focusUndo: boolean) => {
 /* ---------- crumpling a fixed-position slip into the can ---------- */
 
 /** Where it is now: its translate (px) and rotate (deg). */
-export type SlipPose = { dx: number; dy: number; turn: number };
+export interface SlipPose {
+  dx: number;
+  dy: number;
+  turn: number;
+}
 
 /**
  * Crumples a `position: fixed` element (translated by `pose`) into the can,
@@ -281,10 +285,10 @@ export const crumpleInto = async (el: HTMLElement, pose: SlipPose) => {
     : { x: 0, y: 0 };
   const frames = CRUMPLE_STOPS.map((stop) => ({
     offset: stop.offset,
-    translate: `${pose.dx + to.x * stop.way}px ${pose.dy + to.y * stop.way - stop.hop}px`,
-    scale: stop.scale,
-    rotate: `${pose.turn + stop.turn}deg`,
     opacity: stop.opacity,
+    rotate: `${pose.turn + stop.turn}deg`,
+    scale: stop.scale,
+    translate: `${pose.dx + to.x * stop.way}px ${pose.dy + to.y * stop.way - stop.hop}px`,
   }));
   await el
     .animate(frames, {

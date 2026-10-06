@@ -5,14 +5,14 @@
   },
   "files": {
     "includes": [
-      "**",
       "!src/**/*.astro",
       "!public/fonts",
       "!public/ort",
       "!public/models",
       "!worker-configuration.d.ts",
       "!fonts-src",
-      "!wrangler.jsonc"
+      "!wrangler.jsonc",
+      "!**/*.svg"
     ]
   },
   "linter": {
@@ -24,8 +24,31 @@
       "!public/models",
       "!worker-configuration.d.ts",
       "!fonts-src",
-      "!wrangler.jsonc"
-    ]
+      "!wrangler.jsonc",
+      "!**/*.svg"
+    ],
+    "rules": {
+      "suspicious": {
+        // Biome's inference reads a class field's initial value and misses
+        // later assignments (this.closed, this.member…), and calls `?? 0`
+        // after an index read unnecessary. Every hit here was wrong.
+        "noUnnecessaryConditions": "off"
+      }
+    }
   },
-  "extends": ["ultracite"]
+  "extends": ["ultracite/biome/core"],
+  "overrides": [
+    {
+      // Tests insert rows and replay requests one by one on purpose (rate
+      // limits, races), so awaiting inside a loop is the point there.
+      "includes": ["tests/**"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noAwaitInLoops": "off"
+          }
+        }
+      }
+    }
+  ]
 }

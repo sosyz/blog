@@ -37,7 +37,11 @@ const STICKY = "#fbe7a1";
 
 const asset = (...parts: string[]) => join(PUBLIC, ...parts);
 
-type Placed = { input: Buffer; cx: number; cy: number };
+interface Placed {
+  cx: number;
+  cy: number;
+  input: Buffer;
+}
 type Layer = Placed & { angle: number };
 
 type Font = Extract<ReturnType<typeof create>, { isCollection: false }>;
@@ -94,7 +98,7 @@ const lettering = (text: string, size: number, color: string) => {
 /** Rotate around the centre, keeping transparency. */
 const rotated = (input: Buffer, degrees: number) =>
   sharp(input)
-    .rotate(degrees, { background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .rotate(degrees, { background: { alpha: 0, b: 0, g: 0, r: 0 } })
     .png()
     .toBuffer();
 
@@ -123,10 +127,10 @@ const desk = async () => {
     .png()
     .toBuffer();
   return sharp({
-    create: { width: WIDTH, height: HEIGHT, channels: 4, background: DESK },
+    create: { background: DESK, channels: 4, height: HEIGHT, width: WIDTH },
   })
     .composite([
-      { input: texture, tile: true, blend: "multiply" },
+      { blend: "multiply", input: texture, tile: true },
       { input: Buffer.from(dots) },
     ])
     .png()
@@ -156,10 +160,10 @@ const indexCard = async () => {
     lettering("blog.sonui.cn", 28, PENCIL),
   ]);
   return sharp({
-    create: { width: CARD_W, height: CARD_H, channels: 4, background: DOC },
+    create: { background: DOC, channels: 4, height: CARD_H, width: CARD_W },
   })
     .composite([
-      { input: paper, blend: "multiply" },
+      { blend: "multiply", input: paper },
       { input: Buffer.from(lines) },
       { input: owner, left: 92, top: 40 },
       { input: name, left: 90, top: 106 },
@@ -227,23 +231,23 @@ const build = async () => {
     shadow(STICKY_SIZE, STICKY_SIZE, 0.4, 10),
   ]);
 
-  const card = { x: 440, y: 318, angle: -2 };
-  const note = { x: 935, y: 260, angle: 4 };
+  const card = { angle: -2, x: 440, y: 318 };
+  const note = { angle: 4, x: 935, y: 260 };
 
   const layers: Layer[] = [
-    { input: cardShadow, angle: card.angle, cx: card.x + 4, cy: card.y + 14 },
-    { input: cardImage, angle: card.angle, cx: card.x, cy: card.y },
-    { input: washi, angle: 3, cx: card.x + 10, cy: card.y - CARD_H / 2 - 4 },
-    { input: noteShadow, angle: note.angle, cx: note.x + 8, cy: note.y + 12 },
-    { input: noteImage, angle: note.angle, cx: note.x, cy: note.y },
-    { input: laptop, angle: 8, cx: 150, cy: 540 },
-    { input: dog, angle: -6, cx: 1010, cy: 500 },
+    { angle: card.angle, cx: card.x + 4, cy: card.y + 14, input: cardShadow },
+    { angle: card.angle, cx: card.x, cy: card.y, input: cardImage },
+    { angle: 3, cx: card.x + 10, cy: card.y - CARD_H / 2 - 4, input: washi },
+    { angle: note.angle, cx: note.x + 8, cy: note.y + 12, input: noteShadow },
+    { angle: note.angle, cx: note.x, cy: note.y, input: noteImage },
+    { angle: 8, cx: 150, cy: 540, input: laptop },
+    { angle: -6, cx: 1010, cy: 500, input: dog },
   ];
   const placed = await Promise.all(
     layers.map(async ({ input, angle, cx, cy }) => ({
-      input: await rotated(input, angle),
       cx,
       cy,
+      input: await rotated(input, angle),
     }))
   );
   const overlays = await Promise.all(placed.map(centred));

@@ -28,7 +28,10 @@ import {
 } from "./cutout-assets";
 import { cleanMatteAlpha } from "./die-cut";
 
-export type CutoutRequest = { id: number; bitmap: ImageBitmap };
+export interface CutoutRequest {
+  bitmap: ImageBitmap;
+  id: number;
+}
 export type CutoutMessage =
   | { id: number; type: "loading"; loaded: number; total: number }
   | { id: number; type: "processing" }
@@ -78,7 +81,7 @@ env.customCache = {
   },
   put: () => Promise.resolve(),
 };
-const onnx = env.backends.onnx;
+const { onnx } = env.backends;
 if (onnx.wasm) {
   onnx.wasm.wasmPaths = { mjs: ORT_MJS_URL, wasm: ORT_WASM_URL };
   // No cross-origin isolation on this site, so no SharedArrayBuffer threads.
@@ -89,7 +92,9 @@ const post = (message: CutoutMessage, transfer: Transferable[] = []) =>
   self.postMessage(message, { transfer });
 
 type Model = Awaited<ReturnType<typeof AutoModel.from_pretrained>>;
-type Output = { data: Float32Array };
+interface Output {
+  data: Float32Array;
+}
 type Run = (inputs: Record<string, Tensor>) => Promise<Record<string, Output>>;
 
 /** Fetches a file, reporting bytes as they arrive. */
@@ -134,7 +139,7 @@ const loadModel = async (id: number) => {
     for (const bytes of loaded.values()) {
       sum += bytes;
     }
-    post({ id, type: "loading", loaded: sum, total: CUTOUT_DOWNLOAD_BYTES });
+    post({ id, loaded: sum, total: CUTOUT_DOWNLOAD_BYTES, type: "loading" });
   };
   report();
   const bytes = await Promise.all(
@@ -188,8 +193,8 @@ const prepare = (bitmap: ImageBitmap) => {
     }
   }
   return {
+    box: { height, left, top, width },
     tensor: new Tensor("float32", input, [1, 3, INPUT, INPUT]),
-    box: { left, top, width, height },
   };
 };
 
@@ -261,11 +266,11 @@ self.addEventListener("message", async (event: MessageEvent<CutoutRequest>) => {
     const alpha = await cutOut(model, bitmap);
     post(
       {
+        alpha: alpha.buffer,
+        height: bitmap.height,
         id,
         type: "result",
-        alpha: alpha.buffer,
         width: bitmap.width,
-        height: bitmap.height,
       },
       [alpha.buffer]
     );
@@ -273,8 +278,8 @@ self.addEventListener("message", async (event: MessageEvent<CutoutRequest>) => {
     modelPromise = null;
     post({
       id,
-      type: "error",
       message: error instanceof Error ? error.message : String(error),
+      type: "error",
     });
   } finally {
     bitmap.close();

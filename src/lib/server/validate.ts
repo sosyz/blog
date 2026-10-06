@@ -10,21 +10,21 @@ import { EDIT_TOKEN } from "./edit-token";
 import { STICKER_PLACEMENT } from "./sticker-limits";
 
 export const LIMITS = {
-  name: 24,
-  email: 254,
-  site: 200,
   body: 800,
-  inlineBody: 300,
+  email: 254,
+  exactMax: 200,
   /** Highlighted text for inline comments, in characters (design.md: 2–200). */
   exactMin: 2,
-  exactMax: 200,
+  inlineBody: 300,
+  name: 24,
   /** Text before the highlight (~12 characters are sent; allow some slack). */
   prefix: 40,
-  token: 2048,
+  site: 200,
   /** Sticker upload. */
   /** 300 KB. */
   stickerBytes: 307_200,
   stickerSide: 512,
+  token: 2048,
   /** World box, rotation and scale range (shared with the client). */
   ...STICKER_PLACEMENT,
 } as const;
@@ -117,8 +117,8 @@ const siteField = z.preprocess(
   blankToUndefined,
   z
     .url({
-      protocol: HTTP_URL,
       error: "网址要以 http:// 或 https:// 开头。",
+      protocol: HTTP_URL,
     })
     .max(LIMITS.site, "网址太长了。")
     .optional()
@@ -169,14 +169,14 @@ const anchorField = z.object(
 );
 
 const commentPlace = {
-  slug: slugField,
   parentId: z.preprocess(blankToUndefined, idField.optional()),
+  slug: slugField,
 };
 
 /** Nickname, optional e-mail and site, and the Turnstile token. */
 const anonymousFields = {
-  name: nameField,
   email: emailField,
+  name: nameField,
   site: siteField,
   turnstile: tokenField,
 };
@@ -193,8 +193,8 @@ const commentSchema = <T extends z.ZodRawShape>(common: T) =>
       z.object({
         kind: z.literal("inline"),
         ...common,
-        body: bodyField(LIMITS.inlineBody),
         anchor: anchorField,
+        body: bodyField(LIMITS.inlineBody),
       }),
     ],
     { error: "不知道这是哪种留言。" }
@@ -238,8 +238,6 @@ const requiredNumber = (message: string, min: number, max: number) =>
 
 /** Where a new sticker goes (upload form fields, as strings). */
 const stickerPlacementFields = {
-  x: requiredNumber("贴纸的位置不对。", -LIMITS.world, LIMITS.world),
-  y: requiredNumber("贴纸的位置不对。", -LIMITS.world, LIMITS.world),
   rotation: z.preprocess(
     (value) => blankToUndefined(value) ?? 0,
     finiteNumber("贴纸的角度不对。", -LIMITS.rotation, LIMITS.rotation)
@@ -248,6 +246,8 @@ const stickerPlacementFields = {
     (value) => blankToUndefined(value) ?? 1,
     finiteNumber("贴纸的大小不对。", LIMITS.scaleMin, LIMITS.scaleMax)
   ),
+  x: requiredNumber("贴纸的位置不对。", -LIMITS.world, LIMITS.world),
+  y: requiredNumber("贴纸的位置不对。", -LIMITS.world, LIMITS.world),
 };
 
 /** Text fields of the sticker upload form (the image is checked separately). */
@@ -282,10 +282,10 @@ const jsonNumber = (message: string, min: number, max: number) =>
 
 /** Position of a moved sticker: all four fields are required. */
 const placementFields = {
-  x: jsonNumber("贴纸的位置不对。", -LIMITS.world, LIMITS.world),
-  y: jsonNumber("贴纸的位置不对。", -LIMITS.world, LIMITS.world),
   rotation: jsonNumber("贴纸的角度不对。", -LIMITS.rotation, LIMITS.rotation),
   scale: jsonNumber("贴纸的大小不对。", LIMITS.scaleMin, LIMITS.scaleMax),
+  x: jsonNumber("贴纸的位置不对。", -LIMITS.world, LIMITS.world),
+  y: jsonNumber("贴纸的位置不对。", -LIMITS.world, LIMITS.world),
 };
 
 /**
@@ -330,17 +330,17 @@ export type AdminMoveInput = z.infer<typeof adminMoveInput>;
  */
 export const decisionInput = z
   .object({
-    type: z.enum(["comment", "sticker"], { error: "不知道要审核什么。" }),
-    id: idField,
     decision: z.enum(["approve", "reject", "hold", "reply"], {
       error: "只能通过、拒绝、放回待审或回复。",
     }),
+    id: idField,
     /** Owner reply (comments only). An empty string removes the reply. */
     reply: z
       .string()
       .transform(cleanText)
       .pipe(z.string().max(LIMITS.body, `回复最多 ${LIMITS.body} 个字。`))
       .optional(),
+    type: z.enum(["comment", "sticker"], { error: "不知道要审核什么。" }),
   })
   .refine((input) => input.decision !== "reply" || input.reply !== undefined, {
     message: "回复的内容还没写。",
@@ -355,23 +355,23 @@ export type DecisionInput = z.infer<typeof decisionInput>;
  * data-sticker-key (src/lib/builtin-stickers.ts).
  */
 export const builtinToggleInput = z.object({
+  hidden: z.boolean({ error: "要说明是收起还是放回。" }),
   key: z
     .string({ error: "不知道是哪张自带贴纸。" })
     .max(BUILTIN_KEY_MAX, "不知道是哪张自带贴纸。")
     .regex(BUILTIN_KEY, "不知道是哪张自带贴纸。"),
-  hidden: z.boolean({ error: "要说明是收起还是放回。" }),
 });
 
 export type BuiltinToggleInput = z.infer<typeof builtinToggleInput>;
 
 /** GET /api/auth/dev-login?login=&id= (localhost testing only). */
 export const devLoginInput = z.object({
-  login: z.string().regex(GITHUB_LOGIN, "login 不对。"),
   id: z
     .string()
     .regex(GITHUB_ID, "id 要是正整数。")
     .transform((value) => Number.parseInt(value, 10))
     .refine((value) => value > 0, "id 要是正整数。"),
+  login: z.string().regex(GITHUB_LOGIN, "login 不对。"),
 });
 
 /** Comma-separated ids the visitor submitted (for their own 审核中 state). */

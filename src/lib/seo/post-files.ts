@@ -15,11 +15,11 @@ const FRONT_MATTER = /^---\r?\n(?<yaml>[\s\S]*?)\r?\n---/;
 const DATE_LINE =
   /^(?<key>pubDate|updatedDate):\s*["']?(?<value>[^"'\n]+?)["']?\s*$/gm;
 
-export type PostFile = {
-  slug: string;
+export interface PostFile {
   pubDate?: Date;
+  slug: string;
   updatedDate?: Date;
-};
+}
 
 const parseDate = (value: string | undefined) => {
   if (!value) {
@@ -41,8 +41,8 @@ const readPostFile = (fileName: string, slug: string): PostFile => {
     }
   }
   return {
-    slug,
     pubDate: parseDate(dates.get("pubDate")),
+    slug,
     updatedDate: parseDate(dates.get("updatedDate")),
   };
 };

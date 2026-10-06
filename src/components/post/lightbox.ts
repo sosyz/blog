@@ -17,7 +17,10 @@ const PHOTO = ".post-body p.pic img";
 const OPEN_MS = 320;
 const CLOSE_MS = 240;
 
-type Open = { overlay: HTMLDialogElement; source: HTMLImageElement };
+interface Open {
+  overlay: HTMLDialogElement;
+  source: HTMLImageElement;
+}
 let open: Open | null = null;
 
 const flipFrom = (from: DOMRect, to: DOMRect) => {

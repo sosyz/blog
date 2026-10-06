@@ -32,6 +32,7 @@ import {
 import { type StickerBucket, storeSticker } from "@/lib/server/sticker-store";
 import type { ItemStatus } from "@/lib/server/types";
 import { createTestDb, type TestDb } from "./support/d1";
+import { rejectionMessage } from "./support/rejection";
 
 const NOW = 1_700_000_000_000;
 const IP = "ip-hash-0000000000000000000000000";
@@ -53,11 +54,11 @@ const countOf = (sql: string) =>
     ?.n ?? 0;
 
 const logFor = (itemType: "comment" | "sticker", itemId: string): LogEntry => ({
-  itemType,
-  itemId,
-  decision: "hold",
   actor: "moderator:manual",
   createdAt: NOW,
+  decision: "hold",
+  itemId,
+  itemType,
 });
 
 /* ---------- comments ---------- */
@@ -67,18 +68,18 @@ const commentRow = (
   { ipHash, userId }: { ipHash: string; userId: string | null },
   createdAt = NOW
 ): NewComment => ({
-  id,
-  slug: "go-context",
-  parentId: null,
-  kind: "comment",
   anchor: null,
-  name: "racer",
-  emailHash: null,
-  site: null,
   body: "hello",
-  status: "pending",
   createdAt,
+  emailHash: null,
+  id,
   ipHash,
+  kind: "comment",
+  name: "racer",
+  parentId: null,
+  site: null,
+  slug: "go-context",
+  status: "pending",
   ua: null,
   userId,
 });
@@ -89,7 +90,7 @@ const postComment = async (
   who: { ipHash: string; userId: string | null },
   prechecks: (string | null)[]
 ) => {
-  const window = { table: "comments" as const, now: NOW, hour: HOUR, day: DAY };
+  const window = { day: DAY, hour: HOUR, now: NOW, table: "comments" as const };
   const [byIp, byUser] = await Promise.all([
     recentCounts(db.d1, { ...window, ipHash: who.ipHash }),
     who.userId
@@ -204,8 +205,11 @@ type FakeBucket = StickerBucket & {
 
 const fakeBucket = (): FakeBucket => {
   const bucket: FakeBucket = {
+    delete: (key) => {
+      bucket.keys.delete(key);
+      return Promise.resolve();
+    },
     keys: new Set(),
-    puts: [],
     put: (key) => {
       bucket.puts.push(key);
       bucket.onPut?.(key);
@@ -215,10 +219,7 @@ const fakeBucket = (): FakeBucket => {
       bucket.keys.add(key);
       return Promise.resolve(null);
     },
-    delete: (key) => {
-      bucket.keys.delete(key);
-      return Promise.resolve();
-    },
+    puts: [],
   };
   return bucket;
 };
@@ -231,22 +232,22 @@ const stickerRow = (
     userId: null,
   }
 ): NewSticker => ({
-  id,
-  r2Key: `stickers/${id}.webp`,
-  mime: "image/webp",
   bytes: 3,
-  width: 100,
+  createdAt: NOW,
+  editTokenHash: null,
   height: 80,
-  x: 10,
-  y: -20,
+  id,
+  ipHash,
+  mime: "image/webp",
+  name: null,
+  r2Key: `stickers/${id}.webp`,
   rotation: 5,
   scale: 1,
-  name: null,
-  editTokenHash: null,
   status,
-  createdAt: NOW,
-  ipHash,
   userId,
+  width: 100,
+  x: 10,
+  y: -20,
 });
 
 const BYTES = new Uint8Array([1, 2, 3]);
@@ -268,18 +269,18 @@ describe("stickers: D1 row first, then R2", () => {
     const stored = await Promise.all(
       Array.from({ length: 10 }, async (_, n) => {
         const [lastHour, lastDay] = await recentCounts(db.d1, {
-          table: "stickers",
+          day: DAY,
+          hour: HOUR,
           ipHash: IP,
           now: NOW,
-          hour: HOUR,
-          day: DAY,
+          table: "stickers",
         });
         expect(rateLimitMessage("sticker", lastHour, lastDay)).toBeNull();
         return storeSticker(db.d1, bucket, {
           bytes: BYTES,
-          row: stickerRow(`s-${n}`, "pending"),
-          log: logFor("sticker", `s-${n}`),
           limits: stickerLimits(),
+          log: logFor("sticker", `s-${n}`),
+          row: stickerRow(`s-${n}`, "pending"),
         });
       })
     );
@@ -303,9 +304,9 @@ describe("stickers: D1 row first, then R2", () => {
         const who = { ipHash: `ip-${n}`, userId: USER };
         return storeSticker(db.d1, bucket, {
           bytes: BYTES,
-          row: stickerRow(`s-${n}`, "pending", who),
-          log: logFor("sticker", `s-${n}`),
           limits: stickerLimits(who),
+          log: logFor("sticker", `s-${n}`),
+          row: stickerRow(`s-${n}`, "pending", who),
         });
       })
     );
@@ -321,15 +322,15 @@ describe("stickers: D1 row first, then R2", () => {
     };
     await storeSticker(db.d1, bucket, {
       bytes: BYTES,
-      row: stickerRow("s-1", "approved"),
-      log: logFor("sticker", "s-1"),
       limits: stickerLimits(),
+      log: logFor("sticker", "s-1"),
+      row: stickerRow("s-1", "approved"),
     });
-    expect(during).toEqual([{ status: "pending", decided_at: null }]);
+    expect(during).toEqual([{ decided_at: null, status: "pending" }]);
     // Then it gets the moderated status, decided when it was created.
     expect(stickerState("s-1")).toEqual({
-      status: "approved",
       decided_at: NOW,
+      status: "approved",
     });
     expect(bucket.keys.has("stickers/s-1.webp")).toBe(true);
   });
@@ -338,27 +339,29 @@ describe("stickers: D1 row first, then R2", () => {
     const bucket = fakeBucket();
     await storeSticker(db.d1, bucket, {
       bytes: BYTES,
-      row: stickerRow("s-1", "pending"),
-      log: logFor("sticker", "s-1"),
       limits: stickerLimits(),
+      log: logFor("sticker", "s-1"),
+      row: stickerRow("s-1", "pending"),
     });
     expect(stickerState("s-1")).toEqual({
-      status: "pending",
       decided_at: null,
+      status: "pending",
     });
   });
 
   test("a failed R2 put removes the row and its log again", async () => {
     const bucket = fakeBucket();
     bucket.failPut = true;
-    await expect(
-      storeSticker(db.d1, bucket, {
-        bytes: BYTES,
-        row: stickerRow("s-1", "pending"),
-        log: logFor("sticker", "s-1"),
-        limits: stickerLimits(),
-      })
-    ).rejects.toThrow("R2 is down");
+    expect(
+      await rejectionMessage(
+        storeSticker(db.d1, bucket, {
+          bytes: BYTES,
+          limits: stickerLimits(),
+          log: logFor("sticker", "s-1"),
+          row: stickerRow("s-1", "pending"),
+        })
+      )
+    ).toContain("R2 is down");
     expect(countOf("stickers")).toBe(0);
     expect(countOf("moderation_log")).toBe(0);
   });
@@ -367,15 +370,15 @@ describe("stickers: D1 row first, then R2", () => {
     const bucket = fakeBucket();
     const stored = await storeSticker(db.d1, bucket, {
       bytes: BYTES,
-      row: stickerRow("s-1", "rejected"),
-      log: { ...logFor("sticker", "s-1"), decision: "reject" },
       limits: stickerLimits(),
+      log: { ...logFor("sticker", "s-1"), decision: "reject" },
+      row: stickerRow("s-1", "rejected"),
     });
     expect(stored).toBe(true);
     expect(bucket.puts).toEqual([]);
     expect(stickerState("s-1")).toEqual({
-      status: "rejected",
       decided_at: NOW,
+      status: "rejected",
     });
   });
 
@@ -384,17 +387,17 @@ describe("stickers: D1 row first, then R2", () => {
     for (let n = 0; n < RATE_LIMITS.sticker.perHour; n += 1) {
       await storeSticker(db.d1, bucket, {
         bytes: BYTES,
-        row: stickerRow(`s-${n}`, "pending"),
-        log: logFor("sticker", `s-${n}`),
         limits: stickerLimits(),
+        log: logFor("sticker", `s-${n}`),
+        row: stickerRow(`s-${n}`, "pending"),
       });
     }
     bucket.puts.length = 0;
     const stored = await storeSticker(db.d1, bucket, {
       bytes: BYTES,
-      row: stickerRow("late", "pending"),
-      log: logFor("sticker", "late"),
       limits: stickerLimits(),
+      log: logFor("sticker", "late"),
+      row: stickerRow("late", "pending"),
     });
     expect(stored).toBe(false);
     expect(bucket.puts).toEqual([]);
@@ -411,9 +414,9 @@ describe("stickers: D1 row first, then R2", () => {
     };
     await storeSticker(db.d1, bucket, {
       bytes: BYTES,
-      row: stickerRow("s-1", "approved"),
-      log: logFor("sticker", "s-1"),
       limits: stickerLimits(),
+      log: logFor("sticker", "s-1"),
+      row: stickerRow("s-1", "approved"),
     });
     expect(bucket.keys.size).toBe(0);
     expect(stickerState("s-1")?.status).toBe("rejected");
@@ -428,12 +431,12 @@ describe("stickers: D1 row first, then R2", () => {
     };
     await storeSticker(db.d1, bucket, {
       bytes: BYTES,
-      row: stickerRow("s-1", "pending"),
-      log: logFor("sticker", "s-1"),
       limits: stickerLimits(),
+      log: logFor("sticker", "s-1"),
+      row: stickerRow("s-1", "pending"),
     });
     expect(bucket.keys.has("stickers/s-1.webp")).toBe(true);
-    expect(stickerState("s-1")).toEqual({ status: "approved", decided_at: 1 });
+    expect(stickerState("s-1")).toEqual({ decided_at: 1, status: "approved" });
   });
 });
 
@@ -455,12 +458,12 @@ const moveLimits = (): LimitKey[] => [
 ];
 
 const moveLog = (decision: "move" | "reject", ipHash: string | null) => ({
-  itemType: "sticker" as const,
-  itemId: STICKER,
-  decision,
   actor: "visitor:owner",
   createdAt: NOW,
+  decision,
   ipHash,
+  itemId: STICKER,
+  itemType: "sticker" as const,
 });
 
 describe("moves and tear-offs: the move limit is checked in the batch", () => {
@@ -469,16 +472,16 @@ describe("moves and tear-offs: the move limit is checked in the batch", () => {
     const results = await Promise.all(
       Array.from({ length: 70 }, async (_, n) => {
         const [lastHour, lastDay] = await recentMoves(db.d1, {
+          day: DAY,
+          hour: HOUR,
           ipHash: IP,
           now: NOW,
-          hour: HOUR,
-          day: DAY,
         });
         expect(rateLimitMessage("move", lastHour, lastDay)).toBeNull();
         return moveStickerWithinLimit(db.d1, STICKER, {
-          to: { x: n, y: 0, rotation: 0, scale: 1 },
-          log: moveLog("move", IP),
           limits: moveLimits(),
+          log: moveLog("move", IP),
+          to: { rotation: 0, scale: 1, x: n, y: 0 },
         });
       })
     );
@@ -501,9 +504,9 @@ describe("moves and tear-offs: the move limit is checked in the batch", () => {
     const results = await Promise.all(
       Array.from({ length: 70 }, (_, n) =>
         moveStickerWithinLimit(db.d1, STICKER, {
-          to: { x: n, y: 0, rotation: 0, scale: 1 },
-          log: moveLog("move", null),
           limits: [],
+          log: moveLog("move", null),
+          to: { rotation: 0, scale: 1, x: n, y: 0 },
         })
       )
     );
@@ -516,16 +519,16 @@ describe("moves and tear-offs: the move limit is checked in the batch", () => {
     addSticker();
     for (let n = 0; n < RATE_LIMITS.move.perHour; n += 1) {
       await moveStickerWithinLimit(db.d1, STICKER, {
-        to: { x: n, y: 0, rotation: 0, scale: 1 },
-        log: moveLog("move", IP),
         limits: moveLimits(),
+        log: moveLog("move", IP),
+        to: { rotation: 0, scale: 1, x: n, y: 0 },
       });
     }
     const torn = await tearOffStickerWithinLimit(db.d1, STICKER, {
-      log: moveLog("reject", IP),
       limits: moveLimits(),
+      log: moveLog("reject", IP),
     });
-    expect(torn).toEqual({ limited: true, changed: false });
+    expect(torn).toEqual({ changed: false, limited: true });
     expect(stickerState(STICKER)?.status).toBe("approved");
     expect(countOf("moderation_log WHERE decision = 'reject'")).toBe(0);
   });
@@ -533,15 +536,15 @@ describe("moves and tear-offs: the move limit is checked in the batch", () => {
   test("under the limit a tear-off works; again it is unchanged, not limited", async () => {
     addSticker();
     const first = await tearOffStickerWithinLimit(db.d1, STICKER, {
-      log: moveLog("reject", IP),
       limits: moveLimits(),
+      log: moveLog("reject", IP),
     });
-    expect(first).toEqual({ limited: false, changed: true });
+    expect(first).toEqual({ changed: true, limited: false });
     const again = await tearOffStickerWithinLimit(db.d1, STICKER, {
-      log: moveLog("reject", IP),
       limits: moveLimits(),
+      log: moveLog("reject", IP),
     });
-    expect(again).toEqual({ limited: false, changed: false });
+    expect(again).toEqual({ changed: false, limited: false });
     // The unlimited wrapper keeps its boolean contract.
     expect(await tearOffSticker(db.d1, STICKER, moveLog("reject", null))).toBe(
       false

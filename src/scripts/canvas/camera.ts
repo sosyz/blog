@@ -12,7 +12,11 @@
  */
 import { type Camera, prefersReducedMotion } from "./api";
 
-export type Cam = { x: number; y: number; s: number };
+export interface Cam {
+  s: number;
+  x: number;
+  y: number;
+}
 
 const MIN_SCALE = 0.3;
 const MAX_SCALE = 1.8;
@@ -45,7 +49,7 @@ export const createCamera = (
   world: HTMLElement,
   percentEl: HTMLElement | null
 ) => {
-  const cam: Cam = { x: 0, y: 0, s: 1 };
+  const cam: Cam = { s: 1, x: 0, y: 0 };
   const listeners = new Set<(camera: Camera) => void>();
   let raf = 0;
   let deskScale = 0;
@@ -68,7 +72,7 @@ export const createCamera = (
     const dx = tileOffset(cam.x, TILE_W * cam.s);
     const dy = tileOffset(cam.y, TILE_H * cam.s);
     desk.style.transform = `translate(${dx}px, ${dy}px)`;
-    const snapshot = { x: cam.x, y: cam.y, scale: cam.s };
+    const snapshot = { scale: cam.s, x: cam.x, y: cam.y };
     for (const listener of listeners) {
       listener(snapshot);
     }
@@ -113,7 +117,7 @@ export const createCamera = (
     const s = clampScale(cam.s * factor);
     const wx = (px - cam.x) / cam.s;
     const wy = (py - cam.y) / cam.s;
-    const to = { x: px - wx * s, y: py - wy * s, s };
+    const to = { s, x: px - wx * s, y: py - wy * s };
     if (animate) {
       glide(to, GLIDE_MS / 2);
     } else {
@@ -160,14 +164,14 @@ export const createCamera = (
   };
 
   return {
-    get: (): Cam => ({ ...cam }),
-    set,
-    glide,
-    zoomAt,
-    panBy,
-    coast,
-    stop,
     apply,
+    coast,
+    get: (): Cam => ({ ...cam }),
+    glide,
     onChange,
+    panBy,
+    set,
+    stop,
+    zoomAt,
   };
 };

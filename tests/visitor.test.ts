@@ -14,16 +14,16 @@ const OTHER_USER = 7;
 describe("listCacheHeaders", () => {
   test("only the plain anonymous list is shared", () => {
     expect(
-      listCacheHeaders({ mine: false, me: false, session: false }, PUBLIC)
+      listCacheHeaders({ me: false, mine: false, session: false }, PUBLIC)
     ).toEqual({ "cache-control": PUBLIC, vary: "Cookie" });
   });
 
   test("mine=, me=1 or a session make it private", () => {
     const cases = [
-      { mine: true, me: false, session: false },
-      { mine: false, me: true, session: false },
-      { mine: false, me: false, session: true },
-      { mine: true, me: true, session: true },
+      { me: false, mine: true, session: false },
+      { me: true, mine: false, session: false },
+      { me: false, mine: false, session: true },
+      { me: true, mine: true, session: true },
     ];
     for (const input of cases) {
       expect(listCacheHeaders(input, PUBLIC)).toEqual({
@@ -36,22 +36,22 @@ describe("listCacheHeaders", () => {
 
 describe("commentAuthor", () => {
   const user = {
-    login: "octocat",
-    name: "The Octocat",
     avatarUrl: "https://avatars.githubusercontent.com/u/1",
     htmlUrl: "https://github.com/octocat",
+    login: "octocat",
+    name: "The Octocat",
   };
   const form = {
+    email: "a@example.com",
     name: "冒充者",
     site: "https://evil.example",
-    email: "a@example.com",
   };
 
   test("logged in: the account is the author, form fields are ignored", () => {
     expect(commentAuthor(user, form)).toEqual({
+      email: null,
       name: "The Octocat",
       site: "https://github.com/octocat",
-      email: null,
     });
   });
 
@@ -62,14 +62,14 @@ describe("commentAuthor", () => {
 
   test("anonymous: the nickname form", () => {
     expect(commentAuthor(null, form)).toEqual({
+      email: "a@example.com",
       name: "冒充者",
       site: "https://evil.example",
-      email: "a@example.com",
     });
     expect(commentAuthor(null, { name: "路人" })).toEqual({
+      email: null,
       name: "路人",
       site: null,
-      email: null,
     });
   });
 });
@@ -101,32 +101,32 @@ describe("moveActor", () => {
 describe("toPublicComment", () => {
   const OWNER = 42;
   const base: CommentRow = {
-    id: "c1",
-    kind: "comment",
-    parent_id: null,
-    name: "路人",
-    site: "https://example.com",
-    body: "你好",
     anchor_exact: null,
     anchor_prefix: null,
-    created_at: 1000,
-    owner_reply: null,
-    owner_reply_at: null,
+    author_avatar: null,
     author_github_id: null,
+    author_html: null,
     author_login: null,
     author_name: null,
-    author_avatar: null,
-    author_html: null,
+    body: "你好",
+    created_at: 1000,
+    id: "c1",
+    kind: "comment",
+    name: "路人",
+    owner_reply: null,
+    owner_reply_at: null,
+    parent_id: null,
+    site: "https://example.com",
   };
   const withUser = (githubId: number, name: string | null): CommentRow => ({
     ...base,
-    name: "stored",
-    site: null,
+    author_avatar: "https://avatars.githubusercontent.com/u/1",
     author_github_id: githubId,
+    author_html: "https://github.com/octocat",
     author_login: "octocat",
     author_name: name,
-    author_avatar: "https://avatars.githubusercontent.com/u/1",
-    author_html: "https://github.com/octocat",
+    name: "stored",
+    site: null,
   });
 
   test("a nickname comment has no user and is never the owner", () => {
@@ -140,10 +140,10 @@ describe("toPublicComment", () => {
   test("a GitHub comment carries the current public profile", () => {
     const comment = toPublicComment(withUser(OTHER_USER, "The Octocat"), OWNER);
     expect(comment.user).toEqual({
-      login: "octocat",
-      name: "The Octocat",
       avatarUrl: "https://avatars.githubusercontent.com/u/1",
       htmlUrl: "https://github.com/octocat",
+      login: "octocat",
+      name: "The Octocat",
     });
     expect(comment.isOwner).toBe(false);
     expect(comment.name).toBe("The Octocat");

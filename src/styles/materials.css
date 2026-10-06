@@ -30,8 +30,8 @@
 
 /* Kraft paper: file-name labels on code slips, related/same-topic tags. */
 .kraft-paper {
-  background: var(--kraft) center / 300px auto;
   color: var(--kraft-ink);
+  background: var(--kraft) center / 300px auto;
 }
 
 /* Desk: the dotted canvas background (20px dot pitch). */
@@ -58,9 +58,9 @@
   position: absolute;
   width: var(--tape-w, 108px);
   height: auto;
-  rotate: var(--tr, 2deg);
   pointer-events: none;
   user-select: none;
+  rotate: var(--tr, 2deg);
 }
 
 /* Paperclip: <img class="clip" src="/journal/paperclip.svg" alt="">. */
@@ -68,9 +68,9 @@
   position: absolute;
   width: 20px;
   height: auto;
-  rotate: -8deg;
   pointer-events: none;
   filter: drop-shadow(1px 2px 1px rgb(40 30 10 / 0.3));
+  rotate: -8deg;
 }
 
 /* ---------- stamps ---------- */
@@ -87,27 +87,27 @@
   place-content: center;
   width: var(--stamp-size, 58px);
   height: var(--stamp-size, 58px);
-  border: var(--stamp-border, 2.2px) solid var(--stamp-ink);
-  border-radius: 50%;
   font-family: var(--hand);
   font-size: var(--stamp-font, 15px);
   line-height: 1.05;
-  text-align: center;
   color: var(--stamp-ink);
-  rotate: var(--stamp-rotate, -12deg);
+  text-align: center;
+  border: var(--stamp-border, 2.2px) solid var(--stamp-ink);
+  border-radius: 50%;
   -webkit-mask:
     var(--speckle) center / 130% auto,
     linear-gradient(#000, #000);
-  -webkit-mask-composite: xor;
   mask:
     var(--speckle) center / 130% auto exclude,
     linear-gradient(#000, #000);
+  -webkit-mask-composite: xor;
+  rotate: var(--stamp-rotate, -12deg);
 }
 
 .stamp.is-open {
+  color: var(--pencil);
   border-color: color-mix(in srgb, var(--pencil) 60%, transparent);
   border-style: dashed;
-  color: var(--pencil);
 }
 
 /* Small stamp on index cards. */
@@ -123,14 +123,14 @@
 .date-stamp {
   display: inline-block;
   padding: 0 5px;
+  font-family: var(--code);
+  font-size: 10.5px;
+  font-feature-settings: "calt" 0;
+  color: var(--stamp-blue);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
   border: 1.3px solid color-mix(in srgb, currentColor 60%, transparent);
   border-radius: 2px;
-  font-family: var(--code);
-  font-feature-settings: "calt" 0;
-  font-size: 10.5px;
-  letter-spacing: 0.08em;
-  color: var(--stamp-blue);
-  white-space: nowrap;
   rotate: -3deg;
 }
 
@@ -138,14 +138,14 @@
 .stamp-btn {
   position: relative;
   padding: 6px 18px;
-  border: 2px solid var(--stamp);
-  border-radius: 4px;
-  background: transparent;
-  color: var(--stamp-ink);
   font-family: var(--hand);
   font-size: 17px;
+  color: var(--stamp-ink);
   letter-spacing: 0.2em;
   cursor: pointer;
+  background: transparent;
+  border: 2px solid var(--stamp);
+  border-radius: 4px;
   rotate: -3deg;
   transition:
     rotate 0.2s var(--out),
@@ -154,8 +154,8 @@
 }
 
 .stamp-btn:hover {
-  rotate: 0deg;
   background: rgb(191 63 54 / 0.06);
+  rotate: 0deg;
 }
 
 .stamp-btn:active {
@@ -163,8 +163,8 @@
 }
 
 .stamp-btn:disabled {
-  opacity: 0.45;
   cursor: not-allowed;
+  opacity: 0.45;
 }
 
 /* ---------- photos and stickers ---------- */
@@ -186,8 +186,8 @@
 
 .polaroid .cap {
   position: absolute;
-  left: 10px;
   bottom: 1px;
+  left: 10px;
   font-family: var(--hand);
   font-size: 12px;
   color: var(--pencil);

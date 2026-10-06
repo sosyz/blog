@@ -51,7 +51,11 @@ const DEFAULT_CHROME =
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const FORCE = process.argv.includes("--force");
 
-type Diagram = { post: string; source: string; hash: string };
+interface Diagram {
+  hash: string;
+  post: string;
+  source: string;
+}
 
 /* ---------- finding the blocks ---------- */
 
@@ -69,7 +73,7 @@ const findDiagrams = async () => {
     const sources: string[] = [];
     await markdownToHtml(body, { hastPlugins: [collectMermaid(sources)] });
     for (const source of sources) {
-      diagrams.push({ post: file, source, hash: diagramHash(source) });
+      diagrams.push({ hash: diagramHash(source), post: file, source });
     }
   }
   return diagrams.sort((a, b) => a.post.localeCompare(b.post));
@@ -89,8 +93,6 @@ window.ready = true;
 /** A local page that loads mermaid's ESM build and the 小赖 TTF. */
 const serve = () =>
   Bun.serve({
-    hostname: "127.0.0.1",
-    port: 0,
     fetch(request) {
       const { pathname } = new URL(request.url);
       if (pathname === "/") {
@@ -114,9 +116,15 @@ const serve = () =>
       }
       return new Response("not found", { status: 404 });
     },
+    hostname: "127.0.0.1",
+    port: 0,
   });
 
-type RenderArgs = { config: typeof MERMAID_CONFIG; source: string; id: string };
+interface RenderArgs {
+  config: typeof MERMAID_CONFIG;
+  id: string;
+  source: string;
+}
 
 const render = (page: Page, source: string, id: string) =>
   page.evaluate(
@@ -128,7 +136,7 @@ const render = (page: Page, source: string, id: string) =>
       const { svg } = await mermaid.render(svgId, text);
       return svg;
     },
-    { config: MERMAID_CONFIG, source, id }
+    { config: MERMAID_CONFIG, id, source }
   );
 
 /* ---------- post-processing ---------- */
@@ -175,8 +183,8 @@ const sizeRoot = (svg: string) => {
 
 const minify = (svg: string) =>
   optimize(svg, {
-    multipass: true,
     floatPrecision: 1,
+    multipass: true,
     plugins: [
       {
         name: "preset-default",
@@ -188,8 +196,8 @@ const minify = (svg: string) =>
             convertShapeToPath: false,
             inlineStyles: false,
             minifyStyles: false,
-            removeUnknownsAndDefaults: false,
             removeDesc: false,
+            removeUnknownsAndDefaults: false,
           },
         },
       },
@@ -234,6 +242,7 @@ const renderAll = async (todo: readonly Diagram[]) => {
     await page.goto(`http://127.0.0.1:${server.port}/`);
     await page.waitForFunction(() => "ready" in globalThis);
     for (const diagram of todo) {
+      // biome-ignore lint/performance/noAwaitInLoops: one browser page renders one diagram at a time
       const raw = await render(page, diagram.source, diagramId(diagram.hash));
       await Bun.write(
         join(OUT_DIR, `${diagram.hash}.svg`),
@@ -248,13 +257,10 @@ const renderAll = async (todo: readonly Diagram[]) => {
 };
 
 const removeUnused = async (used: Set<string>) => {
-  const removed: string[] = [];
-  for (const file of await readdir(OUT_DIR)) {
-    if (DIAGRAM_FILE.test(file) && !used.has(file)) {
-      await rm(join(OUT_DIR, file));
-      removed.push(file);
-    }
-  }
+  const removed = (await readdir(OUT_DIR)).filter(
+    (file) => DIAGRAM_FILE.test(file) && !used.has(file)
+  );
+  await Promise.all(removed.map((file) => rm(join(OUT_DIR, file))));
   return removed;
 };
 

@@ -72,23 +72,23 @@ const NEED_LOGIN =
 const NOT_FOUND =
   '这张贴纸不在待审里了，可能已经处理过。<a href="/admin/" data-astro-reload>回后台</a>';
 
-type ReviewState = {
-  mode: "review";
-  id: string;
-  el: HTMLElement;
+interface ReviewState {
   busy: boolean;
+  el: HTMLElement;
   error: string;
-};
-
-type DoneState = {
-  mode: "done";
   id: string;
-  text: string;
-  next: ReviewLink | null;
+  mode: "review";
+}
+
+interface DoneState {
   /** World px of the note's anchor, and which side of it the note is on. */
   at: Point;
+  id: string;
+  mode: "done";
+  next: ReviewLink | null;
   side: "below" | "above";
-};
+  text: string;
+}
 
 type CardState = ReviewState | DoneState;
 
@@ -118,8 +118,8 @@ const adminJson = async <T>(
 ): Promise<AdminResult<T>> => {
   try {
     const response = await fetch(url, {
-      credentials: "same-origin",
       cache: "no-store",
+      credentials: "same-origin",
       redirect: "manual",
       ...init,
     });
@@ -128,21 +128,21 @@ const adminJson = async <T>(
       | null;
     const { status } = response;
     if (isAuthLost(status, response.type === "opaqueredirect")) {
-      return { ok: false, lost: true, status, message: "" };
+      return { lost: true, message: "", ok: false, status };
     }
     if (!response.ok) {
       const message =
         data?.error ?? `服务器出了点问题（${status}），稍后再试。`;
-      return { ok: false, lost: false, status, message };
+      return { lost: false, message, ok: false, status };
     }
     if (data === null) {
       const message = "服务器返回的内容看不懂，稍后再试。";
-      return { ok: false, lost: false, status, message };
+      return { lost: false, message, ok: false, status };
     }
-    return { ok: true, data };
+    return { data, ok: true };
   } catch {
     const message = "网络好像断了，检查一下再试。";
-    return { ok: false, lost: false, status: 0, message };
+    return { lost: false, message, ok: false, status: 0 };
   }
 };
 
@@ -282,9 +282,9 @@ const anchorOf = (el: HTMLElement) => {
   const viewport = canvas.viewportEl.getBoundingClientRect();
   const rect = el.getBoundingClientRect();
   const side = cardSide({
-    top: rect.top - viewport.top,
     bottom: rect.bottom - viewport.top,
     cardHeight: card.offsetHeight,
+    top: rect.top - viewport.top,
     viewportHeight: viewport.height,
   });
   const edge = side === "below" ? rect.bottom + CARD_GAP : rect.top - CARD_GAP;
@@ -408,12 +408,12 @@ const finish = (
     return;
   }
   state = {
-    mode: "done",
-    id,
-    text: decidedText("approve", false),
-    next,
     at: anchor?.at ?? { x: 0, y: 0 },
+    id,
+    mode: "done",
+    next,
     side: anchor?.side ?? "below",
+    text: decidedText("approve", false),
   };
   // Let go first, so the re-rendered layer does not select it again.
   deselectSticker();
@@ -431,13 +431,13 @@ const approve = async (current: ReviewState) => {
   renderCard();
   const anchor = anchorOf(current.el);
   const result = await adminJson<DecideResponse>("/api/admin/decide", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      type: "sticker",
-      id: current.id,
       decision: "approve",
+      id: current.id,
+      type: "sticker",
     }),
+    headers: { "content-type": "application/json" },
+    method: "POST",
   });
   if (!result.ok) {
     if (result.lost) {
@@ -462,17 +462,17 @@ const approve = async (current: ReviewState) => {
 const rejectSticker: Remover = async (id, keepalive) => {
   const wasApproved = reviewKind(id) === "approved";
   const result = await adminJson<DecideResponse>("/api/admin/decide", {
-    method: "POST",
+    body: JSON.stringify({ decision: "reject", id, type: "sticker" }),
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ type: "sticker", id, decision: "reject" }),
     keepalive,
+    method: "POST",
   });
   if (!result.ok) {
     if (result.lost) {
       lostAccess();
-      return { ok: false, message: "需要先在 /admin/ 登录，贴纸没扔掉。" };
+      return { message: "需要先在 /admin/ 登录，贴纸没扔掉。", ok: false };
     }
-    return { ok: false, message: result.message };
+    return { message: result.message, ok: false };
   }
   pending.delete(id);
   forgetReviewLink(id);
@@ -480,12 +480,12 @@ const rejectSticker: Remover = async (id, keepalive) => {
   const text = decidedText("reject", wasApproved);
   const { next } = result.data;
   if (!next) {
-    return { ok: true, note: wasApproved ? text : `${text}，都审完了` };
+    return { note: wasApproved ? text : `${text}，都审完了`, ok: true };
   }
   return {
-    ok: true,
-    note: text,
     link: { href: next.href, label: nextLabel(next) },
+    note: text,
+    ok: true,
   };
 };
 
@@ -582,11 +582,11 @@ const onSelection = (selection: { id: string; el: HTMLElement } | null) => {
     return;
   }
   showCard({
-    mode: "review",
-    id: selection.id,
-    el: selection.el,
     busy: false,
+    el: selection.el,
     error: "",
+    id: selection.id,
+    mode: "review",
   });
 };
 

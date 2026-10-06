@@ -63,7 +63,7 @@ describe("withOffset", () => {
 
   test("forgets the oldest beyond the cap", () => {
     let offsets = {};
-    for (let i = 0; i <= MAX_OFFSETS; i++) {
+    for (let i = 0; i <= MAX_OFFSETS; i += 1) {
       offsets = withOffset(offsets, `outer:s${i}`, { dx: 1, dy: 1 });
     }
     expect(Object.keys(offsets)).toHaveLength(MAX_OFFSETS);

@@ -27,7 +27,7 @@ describe("copyright years", () => {
       [new Date("2021-05-01"), new Date("2019-03-02"), new Date("2025-10-08")],
       NOW
     );
-    expect(years).toEqual({ first: 2019, current: 2026 });
+    expect(years).toEqual({ current: 2026, first: 2019 });
     expect(yearRange(years)).toBe("2019–2026");
     expect(copyrightLine(years)).toBe("© 2019–2026 Sonui");
   });
@@ -67,14 +67,14 @@ describe("licence", () => {
 
   test("BlogPosting fields: licence, holder and year", () => {
     expect(licenseFields(new Date("2025-10-08"))).toEqual({
-      license: LICENSE.url,
       copyrightHolder: { "@id": PERSON_ID },
       copyrightYear: 2025,
+      license: LICENSE.url,
     });
   });
 
   test("RSS channel and item notices", () => {
-    const channel = feedCopyright({ first: 2019, current: 2026 });
+    const channel = feedCopyright({ current: 2026, first: 2019 });
     expect(channel).toStartWith("© 2019–2026 Sonui");
     expect(channel).toContain(LICENSE.url);
     const item = noteRights(new Date("2025-10-08"));
@@ -100,11 +100,11 @@ describe("licence", () => {
 describe(".md front matter", () => {
   test("license, url and dates, strings quoted", () => {
     const yaml = noteFrontMatter({
-      title: 'Go: context "取消"',
       description: "一句话",
-      url: "https://blog.sonui.cn/notes/go-context/",
       published: "2025-10-08",
+      title: 'Go: context "取消"',
       updated: "2025-10-09",
+      url: "https://blog.sonui.cn/notes/go-context/",
     });
     const lines = yaml.split("\n");
     expect(lines.at(0)).toBe("---");
@@ -119,12 +119,12 @@ describe(".md front matter", () => {
 
   test("no updated line when unchanged; based_on for translations", () => {
     const yaml = noteFrontMatter({
-      title: "t",
-      description: "d",
-      url: "https://blog.sonui.cn/notes/t/",
-      published: "2025-10-08",
-      updated: "2025-10-08",
       basedOn: "https://example.com/original",
+      description: "d",
+      published: "2025-10-08",
+      title: "t",
+      updated: "2025-10-08",
+      url: "https://blog.sonui.cn/notes/t/",
     });
     expect(yaml).not.toContain("updated:");
     expect(yaml).toContain('based_on: "https://example.com/original"');

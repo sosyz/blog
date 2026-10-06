@@ -16,8 +16,8 @@ let keySet: JWTVerifyGetKey;
 
 beforeAll(async () => {
   const pair = await generateKeyPair("RS256");
-  privateKey = pair.privateKey;
-  const jwk = { ...(await exportJWK(pair.publicKey)), kid: "k1", alg: "RS256" };
+  ({ privateKey } = pair);
+  const jwk = { ...(await exportJWK(pair.publicKey)), alg: "RS256", kid: "k1" };
   keySet = createLocalJWKSet({ keys: [jwk] });
 });
 
@@ -45,9 +45,9 @@ describe("checkAdmin", () => {
       devBypass: true,
     });
     expect(local).toEqual({
-      ok: true,
-      email: "dev-bypass@localhost",
       bypass: true,
+      email: "dev-bypass@localhost",
+      ok: true,
     });
     const prod = await checkAdmin(request("https://blog.sonui.cn/admin/"), {
       devBypass: true,
@@ -61,12 +61,12 @@ describe("checkAdmin", () => {
       request("https://blog.sonui.cn/admin/", {
         "cf-access-jwt-assertion": token,
       }),
-      { teamDomain: TEAM, aud: AUD, keySet }
+      { aud: AUD, keySet, teamDomain: TEAM }
     );
     expect(result).toEqual({
-      ok: true,
-      email: "owner@example.com",
       bypass: false,
+      email: "owner@example.com",
+      ok: true,
     });
   });
 
@@ -79,16 +79,16 @@ describe("checkAdmin", () => {
     expect(
       (
         await checkAdmin(req, {
-          teamDomain: `https://${TEAM}/`,
           aud: AUD,
           keySet,
+          teamDomain: `https://${TEAM}/`,
         })
       ).ok
     ).toBe(true);
   });
 
   test("missing token → 401; wrong audience or issuer → 403", async () => {
-    const config = { teamDomain: TEAM, aud: AUD, keySet };
+    const config = { aud: AUD, keySet, teamDomain: TEAM };
     expect(
       await checkAdmin(request("https://blog.sonui.cn/admin/"), config)
     ).toMatchObject({ status: 401 });

@@ -88,9 +88,9 @@ export const GET: APIRoute = async ({ url, request }) => {
     statusesByIds(db, "comments", mineIds),
     viewer
       ? listOwnPendingComments(db, {
+          ownerId,
           slug: slug.data,
           userId: viewer.userId,
-          ownerId,
         })
       : [],
   ]);
@@ -104,8 +104,8 @@ export const GET: APIRoute = async ({ url, request }) => {
   // who asks (mine=, me=1, a GitHub session) is private.
   const headers = listCacheHeaders(
     {
-      mine: mineIds.length > 0,
       me: url.searchParams.has("me"),
+      mine: mineIds.length > 0,
       session: viewer !== null,
     },
     "public, max-age=30, s-maxage=60"
@@ -141,7 +141,7 @@ const readComment = async (
   if (!noteSlugs.has(parsed.data.slug)) {
     return { ok: false, response: fail(STATUS.badRequest, UNKNOWN_NOTE) };
   }
-  return { ok: true, input: parsed.data };
+  return { input: parsed.data, ok: true };
 };
 
 /**
@@ -157,7 +157,7 @@ const rateLimited = async (
     now,
   }: { ipHash: string; viewer: Viewer | null; now: number }
 ) => {
-  const window = { table: "comments" as const, now, hour: HOUR, day: DAY };
+  const window = { day: DAY, hour: HOUR, now, table: "comments" as const };
   const [byIp, byUser] = await Promise.all([
     recentCounts(db, { ...window, ipHash }),
     viewer
@@ -200,11 +200,11 @@ const humanCheck = async (
     return null;
   }
   const human = await verifyTurnstile({
-    secret: turnstileSecret(),
-    token: token ?? "",
-    remoteip: ip === "unknown" ? undefined : ip,
     action,
     hostname,
+    remoteip: ip === "unknown" ? undefined : ip,
+    secret: turnstileSecret(),
+    token: token ?? "",
   });
   return human.ok ? null : fail(human.status, human.message);
 };
@@ -225,16 +225,16 @@ export const POST: APIRoute = async ({ request, url }) => {
   const salt = ipSalt();
   const ipHash = await hashIp(ip, salt);
 
-  const limited = await rateLimited(db, { ipHash, viewer, now });
+  const limited = await rateLimited(db, { ipHash, now, viewer });
   if (limited) {
     return fail(STATUS.tooManyRequests, limited);
   }
 
   const refused = await humanCheck(viewer, {
-    token: input.turnstile,
-    ip,
     action: input.kind,
     hostname: url.hostname,
+    ip,
+    token: input.turnstile,
   });
   if (refused) {
     return refused;
@@ -249,41 +249,41 @@ export const POST: APIRoute = async ({ request, url }) => {
   const author = await authorFields(input, viewer, salt);
   // Everyone is pre-moderated, logged in or not (the owner too).
   const result = await moderate(moderator(), {
-    type: "comment",
+    body: input.body,
     id,
-    slug: input.slug,
     kind: input.kind,
     name: author.name,
-    site: author.site ?? undefined,
-    body: input.body,
     quote: anchor?.exact,
+    site: author.site ?? undefined,
+    slug: input.slug,
+    type: "comment",
   });
 
   const inserted = await insertComment(
     db,
     {
-      id,
-      slug: input.slug,
-      parentId: input.parentId ?? null,
-      kind: input.kind,
       anchor,
-      name: author.name,
-      emailHash: author.emailHash,
-      site: author.site,
       body: input.body,
-      status: result.status,
       createdAt: now,
+      emailHash: author.emailHash,
+      id,
       ipHash,
+      kind: input.kind,
+      name: author.name,
+      parentId: input.parentId ?? null,
+      site: author.site,
+      slug: input.slug,
+      status: result.status,
       ua: request.headers.get("user-agent")?.slice(0, UA_LENGTH) ?? null,
       userId: viewer?.userId ?? null,
     },
     {
-      itemType: "comment",
-      itemId: id,
-      decision: result.decision,
       actor: result.actor,
-      note: result.note,
       createdAt: now,
+      decision: result.decision,
+      itemId: id,
+      itemType: "comment",
+      note: result.note,
     },
     visitorLimits(limitWindow("comment", now), {
       ipHash,

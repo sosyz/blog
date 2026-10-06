@@ -80,7 +80,7 @@ const 变量 = 2;
   });
 
   test("common, body-only and hand sets", () => {
-    const sets = siteSets({ ui: ["<p>搜索笔记</p>"], posts: [post] });
+    const sets = siteSets({ posts: [post], ui: ["<p>搜索笔记</p>"] });
     // UI copy, frontmatter and the base ranges are on every page.
     for (const char of "搜索踩坑网A，。—") {
       expect(sets.common.has(cp(char))).toBe(true);
@@ -118,10 +118,10 @@ describe("second layer", () => {
 describe("@font-face rules", () => {
   test("writes descriptors and an optional range", () => {
     const rule = faceRule({
-      family: "Z",
-      src: ['url("/a.woff2") format("woff2")'],
-      range: "U+41",
       descriptors: { "size-adjust": "95%" },
+      family: "Z",
+      range: "U+41",
+      src: ['url("/a.woff2") format("woff2")'],
     });
     expect(rule).toBe(
       '@font-face{font-family:"Z";src:url("/a.woff2") format("woff2");font-style:normal;font-weight:400;font-display:swap;size-adjust:95%;unicode-range:U+41}'
@@ -132,10 +132,10 @@ describe("@font-face rules", () => {
 
 describe("fallback metrics", () => {
   const metrics = {
-    unitsPerEm: 1000,
     ascent: 1050,
     descent: -150,
     lineGap: 200,
+    unitsPerEm: 1000,
   };
 
   test("line box overrides follow the web font, scaled by size-adjust", () => {

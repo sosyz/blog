@@ -11,7 +11,7 @@ describe("locateAnchor", () => {
   test("finds text inside one node", () => {
     const texts = ["gatewayId：直接给网关名称就好"];
     const parts = locateAnchor(texts, "直接给网关名称就好", "gatewayId：");
-    expect(parts).toEqual([{ index: 0, start: 10, end: 19 }]);
+    expect(parts).toEqual([{ end: 19, index: 0, start: 10 }]);
   });
 
   test("spans several text nodes (inline code, links)", () => {
@@ -27,16 +27,16 @@ describe("locateAnchor", () => {
   test("uses the prefix to pick the right occurrence", () => {
     const texts = ["A 说：好的。B 说：好的。"];
     const parts = locateAnchor(texts, "好的", "B 说：");
-    expect(parts).toEqual([{ index: 0, start: 11, end: 13 }]);
+    expect(parts).toEqual([{ end: 13, index: 0, start: 11 }]);
   });
 
   test("falls back to a shorter prefix, then to the text alone", () => {
     const texts = ["（已修改）前面改了很多 B 说：好的。"];
     expect(locateAnchor(texts, "好的", "原来的文字 B 说：")).toEqual([
-      { index: 0, start: 16, end: 18 },
+      { end: 18, index: 0, start: 16 },
     ]);
     expect(locateAnchor(["完全不同的前文，好的。"], "好的", "B 说：")).toEqual([
-      { index: 0, start: 8, end: 10 },
+      { end: 10, index: 0, start: 8 },
     ]);
   });
 
@@ -54,7 +54,7 @@ describe("locateAnchor", () => {
   test("surrogate pairs keep DOM (UTF-16) offsets", () => {
     const texts = ["🐶 小狗很可爱"];
     expect(locateAnchor(texts, "小狗", "🐶 ")).toEqual([
-      { index: 0, start: 3, end: 5 },
+      { end: 5, index: 0, start: 3 },
     ]);
   });
 });

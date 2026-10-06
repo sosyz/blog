@@ -47,20 +47,20 @@ import {
 } from "./sticker-transform";
 import { esc, requestJson } from "./util";
 
-export type Shown = {
-  id: string;
-  x: number;
-  y: number;
-  rotation: number;
-  scale: number;
-  width: number;
+export interface Shown {
   height: number;
+  id: string;
   name: string | null;
-  src: string;
   pending: boolean;
   /** Pending and shown to the owner for review (待审). */
   review?: boolean;
-};
+  rotation: number;
+  scale: number;
+  src: string;
+  width: number;
+  x: number;
+  y: number;
+}
 
 /** At most this many ids in `mine=` (the server reads 50). */
 const MAX_MINE = 50;
@@ -85,10 +85,10 @@ export const isTidy = () => tidy;
 /** The logged-in GitHub account uploaded this sticker. */
 export const isAccountOwned = (id: string) => accountOwned.has(id);
 
-type Context = {
-  owned: Set<string>;
+interface Context {
   offsets: ReturnType<typeof readOffsets>;
-};
+  owned: Set<string>;
+}
 
 /** Everyone who can select a visitor sticker may also throw it away. */
 const THROW_HELP = "Delete 扔进垃圾桶";
@@ -151,7 +151,7 @@ const stickerHtml = (item: Shown, context: Context) => {
 };
 
 const pendingShown = (items: PendingSticker[]): Shown[] =>
-  items.map((item) => ({ ...item, src: item.dataUrl, pending: true }));
+  items.map((item) => ({ ...item, pending: true, src: item.dataUrl }));
 
 const render = (layer: HTMLElement) => {
   const local = pendingShown(readPendingStickers());
@@ -162,11 +162,11 @@ const render = (layer: HTMLElement) => {
     [...reviewPending, ...approved].map((item) => item.id)
   );
   const context: Context = {
+    offsets: readOffsets(),
     owned: new Set([
       ...readOwnedStickers().map((item) => item.id),
       ...accountOwned,
     ]),
-    offsets: readOffsets(),
   };
   layer.innerHTML = [...approved, ...mine, ...reviewPending]
     .filter((item) => !thrown.has(item.id))
@@ -221,17 +221,17 @@ export const findShown = (id: string) =>
 /** Access session present: show these pending stickers; null hides them. */
 export const setReviewPending = (items: AdminSticker[] | null) => {
   reviewPending = (items ?? []).map((item) => ({
-    id: item.id,
-    x: item.x,
-    y: item.y,
-    rotation: item.rotation,
-    scale: item.scale,
-    width: item.width,
     height: item.height,
+    id: item.id,
     name: item.name,
-    src: item.src,
     pending: true,
     review: true,
+    rotation: item.rotation,
+    scale: item.scale,
+    src: item.src,
+    width: item.width,
+    x: item.x,
+    y: item.y,
   }));
   if (!items) {
     reviewFocus = null;

@@ -33,11 +33,11 @@ export const finishLogin = async (
   const token = randomToken();
   const previous = readSessionToken(request.headers.get("cookie"));
   await createSession(db, {
-    id: await hashSessionToken(token),
-    userId,
-    now,
     expiresAt: now + SESSION_TTL,
+    id: await hashSessionToken(token),
+    now,
     replaces: previous ? await hashSessionToken(previous) : null,
+    userId,
   });
   const secure = secureCookies(new URL(request.url));
   return redirectWithCookies(safeNext(options.next), [

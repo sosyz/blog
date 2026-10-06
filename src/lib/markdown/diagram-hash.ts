@@ -12,16 +12,16 @@ import { createHash } from "node:crypto";
  * `bun run diagrams` renders it again. Palette and layout changes in
  * MERMAID_CONFIG change the names by themselves.
  */
-export const DIAGRAM_CONFIG_VERSION = "1";
+export const DIAGRAM_CONFIG_VERSION = "2";
 
 /** Committed SVGs, relative to the repository root. */
 export const DIAGRAM_DIR = "src/assets/diagrams";
 
 /** Paper and ink from src/styles/tokens.css (a test keeps them in sync). */
 export const DIAGRAM_PALETTE = {
+  doc: "#f6edd6",
   ink: "#2d2822",
   pencil: "#524a3e",
-  doc: "#f6edd6",
   slip: "#fdfaf2",
 } as const;
 
@@ -32,25 +32,25 @@ export const DIAGRAM_PALETTE = {
  * mermaid 12 defaults to ELK and a new theme, so layout and theme are set.
  */
 export const MERMAID_CONFIG = {
-  startOnLoad: false,
-  securityLevel: "strict",
-  theme: "base",
-  look: "handDrawn",
-  handDrawnSeed: 7,
-  layout: "dagre",
-  htmlLabels: false,
   flowchart: { htmlLabels: false },
+  handDrawnSeed: 7,
+  htmlLabels: false,
+  layout: "dagre",
+  look: "handDrawn",
+  securityLevel: "strict",
+  startOnLoad: false,
+  theme: "base",
   themeVariables: {
+    background: "transparent",
+    edgeLabelBackground: DIAGRAM_PALETTE.doc,
     fontFamily: '"Xiaolai", "Xiaolai Fallback", cursive',
     fontSize: "15px",
-    background: "transparent",
+    lineColor: DIAGRAM_PALETTE.pencil,
     mainBkg: "transparent",
+    primaryBorderColor: DIAGRAM_PALETTE.ink,
     primaryColor: DIAGRAM_PALETTE.slip,
     primaryTextColor: DIAGRAM_PALETTE.ink,
-    primaryBorderColor: DIAGRAM_PALETTE.ink,
     textColor: DIAGRAM_PALETTE.ink,
-    lineColor: DIAGRAM_PALETTE.pencil,
-    edgeLabelBackground: DIAGRAM_PALETTE.doc,
   },
 } as const;
 

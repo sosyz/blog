@@ -11,8 +11,6 @@ const VIRTUAL_ID = "virtual:note-slugs";
 const RESOLVED_ID = `\0${VIRTUAL_ID}`;
 
 export const noteSlugsPlugin = () => ({
-  name: "journal-note-slugs",
-  resolveId: (id: string) => (id === VIRTUAL_ID ? RESOLVED_ID : undefined),
   load: (id: string) => {
     if (id !== RESOLVED_ID) {
       return;
@@ -20,4 +18,6 @@ export const noteSlugsPlugin = () => ({
     const slugs = readPostFiles().map((post) => post.slug);
     return `export const noteSlugs = new Set(${JSON.stringify(slugs)});`;
   },
+  name: "journal-note-slugs",
+  resolveId: (id: string) => (id === VIRTUAL_ID ? RESOLVED_ID : undefined),
 });

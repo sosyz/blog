@@ -58,36 +58,36 @@ import {
   woff2,
 } from "./font-chars";
 
-type Fallback = {
+interface Fallback {
   /** local() names (PostScript and full names) for CJK text. */
   cjk: readonly string[];
   /** local() names for Latin text. */
   latin: readonly string[];
   /** Average Latin advance per em of the first `latin` font (LATIN_SAMPLE). */
   latinAverage: number;
-};
+}
 
-type FontJob = {
-  /** Source file inside fonts-src/. */
-  source: string;
-  /** Output folder inside public/fonts/. */
-  outDir: string;
+interface FontJob {
+  /** Copyright lines for OFL.txt (src/data/licenses.ts). */
+  copyright: readonly string[];
+  fallback: Fallback;
   /** CSS font-family name; tokens.css refers to it. */
   family: string;
-  /** The site subsets, in order; each becomes one woff2. */
-  site: (sets: SiteSets) => Set<number>[];
   /**
    * Keep OpenType layout features in the site files. Zhuque's GSUB pulls
    * ~800 accented Latin, Greek and Cyrillic glyphs into the file (+47 KB)
    * for kerning and ligatures; Xiaolai's costs nothing.
    */
   features: boolean;
+  /** Output folder inside public/fonts/. */
+  outDir: string;
   /** Preload the first site file (the body text font). */
   preload: boolean;
-  fallback: Fallback;
-  /** Copyright lines for OFL.txt (src/data/licenses.ts). */
-  copyright: readonly string[];
-};
+  /** The site subsets, in order; each becomes one woff2. */
+  site: (sets: SiteSets) => Set<number>[];
+  /** Source file inside fonts-src/. */
+  source: string;
+}
 
 const ROOT = join(import.meta.dir, "..");
 const SOURCE_DIR = join(ROOT, "fonts-src");
@@ -115,12 +115,6 @@ const LATIN_RANGE = "U+0-24F";
 
 const JOBS: FontJob[] = [
   {
-    source: "xiaolai-regular.ttf",
-    outDir: "xiaolai",
-    family: "Xiaolai",
-    site: (sets) => [sets.hand],
-    features: true,
-    preload: false,
     copyright: FONT_COPYRIGHT.xiaolai,
     fallback: {
       cjk: [
@@ -136,14 +130,14 @@ const JOBS: FontJob[] = [
       latin: ["ArialMT", "Arial"],
       latinAverage: ARIAL_AVERAGE,
     },
+    family: "Xiaolai",
+    features: true,
+    outDir: "xiaolai",
+    preload: false,
+    site: (sets) => [sets.hand],
+    source: "xiaolai-regular.ttf",
   },
   {
-    source: "zhuque-fangsong-regular.ttf",
-    outDir: "zhuque",
-    family: "Zhuque Fangsong",
-    site: (sets) => [sets.common, sets.body],
-    features: false,
-    preload: true,
     copyright: FONT_COPYRIGHT.zhuque,
     fallback: {
       cjk: [
@@ -158,6 +152,12 @@ const JOBS: FontJob[] = [
       latin: ["TimesNewRomanPSMT", "Times New Roman"],
       latinAverage: TIMES_AVERAGE,
     },
+    family: "Zhuque Fangsong",
+    features: false,
+    outDir: "zhuque",
+    preload: true,
+    site: (sets) => [sets.common, sets.body],
+    source: "zhuque-fangsong-regular.ttf",
   },
 ];
 
@@ -175,52 +175,52 @@ const readAll = async (pattern: string, skip: (file: string) => boolean) => {
 
 const collectSets = async () =>
   siteSets({
+    posts: await readAll("src/posts/**/*.{md,mdx}", () => false),
     ui: await readAll(
       "src/**/*.{astro,ts,tsx,js,mjs,css}",
       (file) => file.startsWith("src/posts/") || file.includes(".generated.")
     ),
-    posts: await readAll("src/posts/**/*.{md,mdx}", () => false),
   });
 
 /* ---------- splitting ---------- */
 
-type SplitOptions = {
+interface SplitOptions {
+  family: string;
+  features: boolean;
   input: Uint8Array;
   outDir: string;
-  family: string;
-  subsets: number[][];
   site: boolean;
-  features: boolean;
-};
+  subsets: number[][];
+}
 
 const split = async (options: SplitOptions) => {
   await fontSplit({
+    css: {
+      compress: true,
+      fontDisplay: "swap",
+      fontFamily: options.family,
+      fontStyle: "normal",
+      fontWeight: "400",
+      localFamily: [],
+    },
     input: options.input,
     outDir: options.outDir,
     subsets: options.subsets,
-    css: {
-      fontFamily: options.family,
-      fontWeight: "400",
-      fontStyle: "normal",
-      fontDisplay: "swap",
-      localFamily: [],
-      compress: true,
-    },
     // Site files: exactly one woff2 per subset and nothing else.
     ...(options.site
       ? {
           autoSubset: false,
-          subsetRemainChars: false,
+          chunkSize: SITE_CHUNK_SIZE,
           languageAreas: false,
           reduceMins: false,
-          chunkSize: SITE_CHUNK_SIZE,
+          subsetRemainChars: false,
         }
       : {}),
     fontFeature: options.features,
-    testHtml: false,
-    reporter: false,
     previewImage: undefined,
+    reporter: false,
     silent: true,
+    testHtml: false,
   });
   const css = await Bun.file(join(options.outDir, "result.css")).text();
   return parseChunks(css);
@@ -242,20 +242,20 @@ const chunkFor = (chunks: readonly Chunk[], subset: Set<number>) => {
   return best;
 };
 
-type JobResult = {
+interface JobResult {
   /** Inline @font-face rules: site files and fallback faces. */
   faces: string[];
+  preload: string | null;
   /** Second-layer @font-face rules (public/fonts/rest.*.css). */
   rest: string[];
-  preload: string | null;
-};
+}
 
 const fallbackFaces = (job: FontJob, font: Font) => {
   const metrics = {
-    unitsPerEm: font.unitsPerEm,
     ascent: font.ascent,
     descent: font.descent,
     lineGap: font.lineGap,
+    unitsPerEm: font.unitsPerEm,
   };
   const webAverage = averageAdvance(
     LATIN_SAMPLE,
@@ -266,19 +266,19 @@ const fallbackFaces = (job: FontJob, font: Font) => {
   const family = `${job.family} Fallback`;
   return [
     faceRule({
-      family,
-      src: job.fallback.cjk.map(local),
-      range: CJK_RANGE,
       descriptors: lineOverrides(metrics),
+      family,
+      range: CJK_RANGE,
+      src: job.fallback.cjk.map(local),
     }),
     faceRule({
-      family,
-      src: job.fallback.latin.map(local),
-      range: LATIN_RANGE,
       descriptors: {
         "size-adjust": pct(adjust),
         ...lineOverrides(metrics, adjust),
       },
+      family,
+      range: LATIN_RANGE,
+      src: job.fallback.latin.map(local),
     }),
   ];
 };
@@ -306,6 +306,7 @@ const placeSiteFiles = async (
         `${job.family}: cn-font-split did not give subset ${index} its own file`
       );
     }
+    // biome-ignore lint/performance/noAwaitInLoops: a handful of files; keeps the subset checks in order
     await rename(join(outDir, SITE_TMP, chunk.file), join(outDir, chunk.file));
     siteFiles.push(chunk.file);
     const url = `/fonts/${job.outDir}/${chunk.file}`;
@@ -313,8 +314,8 @@ const placeSiteFiles = async (
     faces.push(
       faceRule({
         family: job.family,
-        src: [woff2(url)],
         range: index === 0 ? undefined : toUnicodeRange(own),
+        src: [woff2(url)],
       })
     );
     for (const cp of chunk.codePoints) {
@@ -327,7 +328,7 @@ const placeSiteFiles = async (
       `${job.family} site file ${index + 1}: ${chunk.codePoints.size} characters`
     );
   }
-  return { faces, siteFiles, covered, preload };
+  return { covered, faces, preload, siteFiles };
 };
 
 const buildJob = async (job: FontJob, sets: SiteSets): Promise<JobResult> => {
@@ -339,7 +340,7 @@ const buildJob = async (job: FontJob, sets: SiteSets): Promise<JobResult> => {
   }
   const outDir = join(PUBLIC_FONTS, job.outDir);
   const siteDir = join(outDir, SITE_TMP);
-  await rm(outDir, { recursive: true, force: true });
+  await rm(outDir, { force: true, recursive: true });
   await mkdir(siteDir, { recursive: true });
 
   const buffer = new Uint8Array(await Bun.file(input).arrayBuffer());
@@ -352,36 +353,35 @@ const buildJob = async (job: FontJob, sets: SiteSets): Promise<JobResult> => {
 
   // 1. Site files.
   const siteChunks = await split({
+    family: job.family,
+    features: job.features,
     input: buffer,
     outDir: siteDir,
-    family: job.family,
-    subsets: subsets.map(sortNumbers),
     site: true,
-    features: job.features,
+    subsets: subsets.map(sortNumbers),
   });
   const { faces, siteFiles, covered, preload } = await placeSiteFiles(
     job,
     subsets,
     siteChunks
   );
-  await rm(siteDir, { recursive: true, force: true });
+  await rm(siteDir, { force: true, recursive: true });
 
   // 2. The rest, in small chunks, minus what the site files cover.
   const chunks = await split({
+    family: job.family,
+    features: true,
     input: buffer,
     outDir,
-    family: job.family,
-    subsets: [sortNumbers(covered)],
     site: false,
-    features: true,
+    subsets: [sortNumbers(covered)],
   });
   const rest = restChunks(chunks, covered);
   const keep = new Set([...siteFiles, ...rest.map((chunk) => chunk.file)]);
-  for (const file of await readdir(outDir)) {
-    if (!keep.has(file)) {
-      await rm(join(outDir, file), { force: true });
-    }
-  }
+  const stale = (await readdir(outDir)).filter((file) => !keep.has(file));
+  await Promise.all(
+    stale.map((file) => rm(join(outDir, file), { force: true }))
+  );
   await Bun.write(join(outDir, LICENSE_FILE), oflFile(job.copyright));
 
   consola.success(
@@ -389,25 +389,24 @@ const buildJob = async (job: FontJob, sets: SiteSets): Promise<JobResult> => {
   );
   return {
     faces: [...faces, ...fallbackFaces(job, font)],
+    preload,
     rest: rest.map((chunk) =>
       faceRule({
         family: job.family,
-        src: [woff2(`/fonts/${job.outDir}/${chunk.file}`)],
         range: toUnicodeRange(chunk.codePoints),
+        src: [woff2(`/fonts/${job.outDir}/${chunk.file}`)],
       })
     ),
-    preload,
   };
 };
 
 /* ---------- output ---------- */
 
 const writeRestCss = async (rules: string[]) => {
-  for (const file of await readdir(PUBLIC_FONTS)) {
-    if (file.startsWith("rest.") && file.endsWith(".css")) {
-      await rm(join(PUBLIC_FONTS, file));
-    }
-  }
+  const old = (await readdir(PUBLIC_FONTS)).filter(
+    (file) => file.startsWith("rest.") && file.endsWith(".css")
+  );
+  await Promise.all(old.map((file) => rm(join(PUBLIC_FONTS, file))));
   const css = `/* Generated by scripts/build-fonts.ts. Glyphs the site files lack. */\n${rules.join("\n")}\n`;
   const hash = new Bun.CryptoHasher("sha256")
     .update(css)
@@ -446,7 +445,7 @@ const main = async () => {
   const rest: string[] = [];
   const preloads: string[] = [];
   for (const job of JOBS) {
-    // Sequential on purpose: each split already uses all cores.
+    // biome-ignore lint/performance/noAwaitInLoops: each split already uses all cores
     const result = await buildJob(job, sets);
     faces.push(...result.faces);
     rest.push(...result.rest);

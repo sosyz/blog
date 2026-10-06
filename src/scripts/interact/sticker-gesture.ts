@@ -32,7 +32,12 @@ export const unrotate = (dx: number, dy: number, degrees: number) => {
   return { dx: dx * cos - dy * sin, dy: dx * sin + dy * cos };
 };
 
-export type Box = { left: number; top: number; right: number; bottom: number };
+export interface Box {
+  bottom: number;
+  left: number;
+  right: number;
+  top: number;
+}
 
 /** Pointer over the trash can, with a little slack around it. */
 export const isOver = (
@@ -46,16 +51,16 @@ export const isOver = (
   point.y >= box.top - slack &&
   point.y <= box.bottom + slack;
 
-export type ThrowRights = {
-  /** Cloudflare Access session (owner.ts canModerate). */
-  moderating: boolean;
-  /** This browser has the sticker's edit token. */
-  hasToken: boolean;
+export interface ThrowRights {
   /** The logged-in GitHub account uploaded it. */
   accountOwned: boolean;
+  /** This browser has the sticker's edit token. */
+  hasToken: boolean;
+  /** Cloudflare Access session (owner.ts canModerate). */
+  moderating: boolean;
   /** Logged in with GitHub as the blog owner. */
   sessionOwner: boolean;
-};
+}
 
 /**
  * Who may throw a visitor sticker away, and how: the owner with Access
@@ -79,9 +84,9 @@ export const throwRoute = (rights: ThrowRights): "admin" | "own" | null => {
  * With reduced motion the sticker only fades.
  */
 export const CRUMPLE_STOPS = [
-  { offset: 0, way: 0, hop: 0, scale: "1", turn: 0, opacity: 1 },
-  { offset: 0.35, way: 0.2, hop: 12, scale: "0.7 0.55", turn: 25, opacity: 1 },
-  { offset: 1, way: 1, hop: 0, scale: "0.12 0.1", turn: 80, opacity: 0 },
+  { hop: 0, offset: 0, opacity: 1, scale: "1", turn: 0, way: 0 },
+  { hop: 12, offset: 0.35, opacity: 1, scale: "0.7 0.55", turn: 25, way: 0.2 },
+  { hop: 0, offset: 1, opacity: 0, scale: "0.12 0.1", turn: 80, way: 1 },
 ] as const;
 
 /** Aim a third of the way down the can, into its mouth. */
@@ -89,10 +94,16 @@ export const BIN_MOUTH = 0.33;
 
 /* ---------- the WebGL curl (sticker-peel.ts drives peel-gl.ts) ---------- */
 
-export type Vec = { x: number; y: number };
+export interface Vec {
+  x: number;
+  y: number;
+}
 
 /** Where a press landed, in the sticker's own unit square: (0, 0) top left. */
-export type Grab = { u: number; v: number };
+export interface Grab {
+  u: number;
+  v: number;
+}
 
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 const HALF = 0.5;
@@ -158,7 +169,10 @@ export const PULL_CONE = -0.22;
 export const CSS_DETACH = 0.6;
 
 /** Where a pull is aimed: the first direction and the current one (unit). */
-export type PullAim = { base: Vec | null; dir: Vec | null };
+export interface PullAim {
+  base: Vec | null;
+  dir: Vec | null;
+}
 
 export const NO_AIM: PullAim = { base: null, dir: null };
 
@@ -199,20 +213,20 @@ export const cssDetached = (distance: number, width: number, height: number) =>
  * Time constants (ms) that smooth the curl frame by frame (`approach`).
  */
 export const PEEL_TAU = {
-  /** The pointer's speed. */
-  velocity: 60,
-  /** While it is peeled the curl stays close to the pull (a little smoothing for sparse events). */
-  pull: 35,
-  /** The carried curl (faster, more; over the trash). */
-  progress: 90,
-  /** The curl's direction while it is peeled. */
-  direction: 80,
   /**
    * The curl's direction once it is off: from the way it was pulled round
    * to the grabbed corner (`inwardAngle`), slowly, so the sheet swings
    * instead of turning at once.
    */
   carryDirection: 280,
+  /** The curl's direction while it is peeled. */
+  direction: 80,
+  /** The carried curl (faster, more; over the trash). */
+  progress: 90,
+  /** While it is peeled the curl stays close to the pull (a little smoothing for sparse events). */
+  pull: 35,
+  /** The pointer's speed. */
+  velocity: 60,
 } as const;
 
 /** Pointer speed (screen px per ms) at which the drag curl is fullest. */
@@ -238,16 +252,16 @@ export const bendDirection = (inward: number, velocity: Vec) => {
 
 /** How far the sticker is peeled at each step (renderer: 0 flat … 1 off). */
 export const PEEL = {
+  /** Just popped off: the curl it settles to while carried. */
+  carry: 0.35,
   /**
    * While it is being peeled (still stuck at its place), the pull's curl
    * reaching this counts as off: it pops into the hand and can move.
    */
   detach: 0.96,
-  /** Just popped off: the curl it settles to while carried. */
-  carry: 0.35,
+  dragMax: 0.45,
   /** While carried slowly … fast. */
   dragMin: 0.3,
-  dragMax: 0.45,
   /** Hovering over the trash. */
   trash: 0.7,
 } as const;
@@ -327,6 +341,8 @@ const mix = (from: number, to: number, t: number) => from + (to - from) * t;
 
 /** How long each move of the curl takes (ms). */
 export const PEEL_MS = {
+  /** 贴回去: laid back down with a little press. */
+  layBack: 220,
   /**
    * Fully peeled: it comes off the desk into the hand, the curl relaxing
    * to the carried one and the lift shadow rising.
@@ -338,19 +354,17 @@ export const PEEL_MS = {
    * off) is taken up over this long.
    */
   settle: 200,
-  /** 贴回去: laid back down with a little press. */
-  layBack: 220,
   /** Into the trash. */
   throw: 300,
 } as const;
 
 /** The curl's state that the timelines move. */
-export type PeelPose = {
-  progress: number;
+export interface PeelPose {
   lift: number;
+  progress: number;
   /** Size factor on top of the sticker's own (the press, the fall). */
   size: number;
-};
+}
 
 /**
  * Popping off at `t` (0 … 1 of PEEL_MS.pop), from the fully peeled curl
@@ -362,8 +376,8 @@ export type PeelPose = {
 export const popPose = (t: number, from: PeelPose): PeelPose => {
   const eased = softEase(t);
   return {
-    progress: mix(from.progress, PEEL.carry, eased),
     lift: mix(from.lift, 1, eased),
+    progress: mix(from.progress, PEEL.carry, eased),
     size: 1,
   };
 };
@@ -394,8 +408,8 @@ export const layBackPose = (
   const flat = t / FLAT_AT;
   const press = clamp01((t - FLAT_AT) / (1 - FLAT_AT));
   return {
-    progress: from.progress * (1 - easeOutCubic(flat)),
     lift: from.lift * (1 - easeInOutCubic(flat)),
+    progress: from.progress * (1 - easeOutCubic(flat)),
     size: 1 - PRESS_DEPTH * Math.sin(Math.PI * press),
   };
 };
@@ -417,8 +431,8 @@ export const throwPose = (
 ): PeelPose & Vec => {
   const way = easeInCubic(t);
   return {
-    progress: mix(from, 1, easeOutCubic(t)),
     lift: 1,
+    progress: mix(from, 1, easeOutCubic(t)),
     size: mix(1, THROW_SIZE, way),
     x: mix(start.x, bin.x, way),
     y: mix(start.y, bin.y, way) - THROW_HOP * Math.sin(Math.PI * clamp01(t)),
@@ -429,8 +443,8 @@ const HALF_TURN_DEG = 180;
 /** Degrees per CSS angle unit. */
 const ANGLE_UNITS: Record<string, number> = {
   deg: 1,
-  rad: HALF_TURN_DEG / Math.PI,
   grad: 0.9,
+  rad: HALF_TURN_DEG / Math.PI,
   turn: 360,
 };
 const ANGLE_AT_END = /(-?\d*\.?\d+(?:e-?\d+)?)(deg|rad|grad|turn)\s*$/i;

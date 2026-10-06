@@ -21,12 +21,15 @@ export const RECENT_MS = 360_000;
 /** At most this many keys kept (the canvas has 16). */
 const MAX_KEYS = 200;
 
-export type RecentChange = { hidden: boolean; at: number };
+export interface RecentChange {
+  at: number;
+  hidden: boolean;
+}
 
-export type HiddenCache = {
+export interface HiddenCache {
   keys: string[];
   recent: Record<string, RecentChange>;
-};
+}
 
 export const EMPTY_CACHE: HiddenCache = { keys: [], recent: {} };
 
@@ -120,7 +123,7 @@ export const withChange = (
     keys: hidden ? [...keys, key] : keys,
     recent: {
       ...freshRecent(cache.recent, now),
-      [key]: { hidden, at: now },
+      [key]: { at: now, hidden },
     },
   };
 };

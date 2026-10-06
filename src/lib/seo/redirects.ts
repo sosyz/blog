@@ -32,11 +32,11 @@ const HEXO_POSTS: Record<string, string> = {
   "/favorites/": "favorites",
   "/fitness-function-driven-development/":
     "fitness-function-driven-development",
-  "/go-context/": "go-context",
   "/Go%20Redis%20Lib%20Serialize%20Struct/": "go-redis-lib-serialize-struct",
-  "/how%20to%20set%20up%20cors/": "how-to-set-up-cors",
+  "/go-context/": "go-context",
   "/Hydro-2-Custom-Development-Notes-Frontend-Section/":
     "hydro-2-custom-development-notes-frontend-section",
+  "/how%20to%20set%20up%20cors/": "how-to-set-up-cors",
   "/Journey-to-Web-Development-Security/":
     "journey-to-web-development-security",
   "/k8s-install/": "k8s-install",
@@ -44,9 +44,9 @@ const HEXO_POSTS: Record<string, string> = {
     "kubesphere-extended-component-development-note",
   "/Linux-Error-Certificate-verification-failed-The-certificate-is-NOT-trusted/":
     "linux-certificate-not-trusted",
-  "/provide-idempotence-mechanisms/": "provide-idempotence-mechanisms",
   "/Python-Code-to-Convert-Chinese-Uppercase-Amounts-to-Lowercase-Numbers/":
     "python-chinese-amount-to-number",
+  "/provide-idempotence-mechanisms/": "provide-idempotence-mechanisms",
   "/Redis-Reading-Notes/": "redis-reading-notes",
   "/rename-pve-hostname/": "rename-pve-hostname",
   "/restricting-access-to-mapped-ports-in-docker-containers/":
@@ -73,8 +73,8 @@ const HEXO_LISTS = ["/archives/", "/page/2/", "/page/3/"];
 const notePath = (slug: string) => `/notes/${slug}/`;
 
 const permanent = (destination: string) => ({
-  status: 301 as const,
   destination,
+  status: 301 as const,
 });
 
 const buildRedirects = (): Redirects => {

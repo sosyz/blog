@@ -52,12 +52,21 @@ export const curlRadius = (
 };
 
 /** Where the silhouette starts and ends along a direction (local px). */
-export type Range = { min: number; max: number };
+export interface Range {
+  max: number;
+  min: number;
+}
 
 /** A width and height, CSS px. */
-export type Size = { width: number; height: number };
+export interface Size {
+  height: number;
+  width: number;
+}
 /** A unit direction (local). */
-export type Direction = { x: number; y: number };
+export interface Direction {
+  x: number;
+  y: number;
+}
 
 /**
  * Extent of the silhouette along `dir`. `hull` holds (u, v) pairs in the
@@ -90,41 +99,41 @@ export const supportRange = (
 };
 
 /** Everything the curl needs for one frame, in the sticker's local frame. */
-export type PeelGeometry = {
+export interface PeelGeometry {
   /** Unit direction the curl travels (local). */
   dirX: number;
   dirY: number;
   /** Fold line: points with along < front are lifted. */
   front: number;
-  radius: number;
+  maxAlong: number;
   maxAngle: number;
   /** Silhouette extent along the direction. */
   minAlong: number;
-  maxAlong: number;
-};
+  radius: number;
+}
 
 export const createGeometry = (): PeelGeometry => ({
   dirX: 1,
   dirY: 0,
   front: 0,
-  radius: 1,
+  maxAlong: 0,
   maxAngle: MAX_CURL_ANGLE,
   minAlong: 0,
-  maxAlong: 0,
+  radius: 1,
 });
 
 /** The inputs of `peelGeometry` (a subset of `PeelFrame`). */
-export type PeelInput = {
-  width: number;
-  height: number;
-  rotation: number;
+export interface PeelInput {
+  direction: number;
   grabU: number;
   grabV: number;
+  height: number;
   progress: number;
-  direction: number;
-};
+  rotation: number;
+  width: number;
+}
 
-const scratchRange: Range = { min: 0, max: 0 };
+const scratchRange: Range = { max: 0, min: 0 };
 const scratchDirection: Direction = { x: 1, y: 0 };
 
 /**
@@ -174,25 +183,25 @@ export const peelGeometry = (
 };
 
 /** A curled point: position (local px, z up) and unit normal of the front face. */
-export type CurlPoint = {
-  x: number;
-  y: number;
-  z: number;
+export interface CurlPoint {
+  /** How far round the cylinder the point went (0 = still flat). */
+  angle: number;
   nx: number;
   ny: number;
   nz: number;
-  /** How far round the cylinder the point went (0 = still flat). */
-  angle: number;
-};
+  x: number;
+  y: number;
+  z: number;
+}
 
 export const createCurlPoint = (): CurlPoint => ({
-  x: 0,
-  y: 0,
-  z: 0,
+  angle: 0,
   nx: 0,
   ny: 0,
   nz: 1,
-  angle: 0,
+  x: 0,
+  y: 0,
+  z: 0,
 });
 
 /**
@@ -242,7 +251,10 @@ export const curlPoint = (
 };
 
 /** Where a local point (after the curl) lands on screen, CSS px. */
-export type ScreenPoint = { x: number; y: number };
+export interface ScreenPoint {
+  x: number;
+  y: number;
+}
 
 /**
  * Rotates a local point by the sticker's rotation, adds a mild perspective
@@ -266,13 +278,13 @@ export const toScreen = (
 /* ---------- the held point (撕下来 and carrying it) ---------- */
 
 const pullInput: PeelInput = {
-  width: 0,
-  height: 0,
-  rotation: 0,
+  direction: 0,
   grabU: 0.5,
   grabV: 0.5,
+  height: 0,
   progress: 0,
-  direction: 0,
+  rotation: 0,
+  width: 0,
 };
 const pullGeometry = createGeometry();
 const pullPoint = createCurlPoint();
@@ -388,7 +400,10 @@ const cross = (o: Point, a: Point, b: Point) =>
   (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
 
 /** How the alpha values are laid out: one byte per pixel, or RGBA with `stride` 4 and `channel` 3. */
-export type AlphaLayout = { stride?: number; channel?: number };
+export interface AlphaLayout {
+  channel?: number;
+  stride?: number;
+}
 
 /** Corners of the leftmost and rightmost opaque pixel in each row: only these can be on the hull. */
 const rowExtremes = (

@@ -24,14 +24,14 @@ const NOW = 1_700_000_000_000;
 const id = (n: number) =>
   `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 
-type CommentSeed = {
+interface CommentSeed {
+  at?: number;
+  decidedAt?: number | null;
+  kind?: "comment" | "inline";
   n: number;
   slug?: string;
   status?: ItemStatus;
-  at?: number;
-  kind?: "comment" | "inline";
-  decidedAt?: number | null;
-};
+}
 
 const addComment = (
   { sqlite }: TestDb,
@@ -120,23 +120,23 @@ const run = (
   decision: "approve" | "reject" | "hold" | "reply",
   reply?: string
 ) =>
-  decide(db.d1, { type, id: itemId, decision, reply, actor: ACTOR, now: NOW });
+  decide(db.d1, { actor: ACTOR, decision, id: itemId, now: NOW, reply, type });
 
 describe("reviewHref", () => {
   test("comments open on their note, stickers on the canvas", () => {
-    expect(reviewHref({ type: "comment", id: id(1), slug: "go-context" })).toBe(
+    expect(reviewHref({ id: id(1), slug: "go-context", type: "comment" })).toBe(
       `/notes/go-context/?review=c:${id(1)}#comments`
     );
-    expect(reviewHref({ type: "sticker", id: id(2) })).toBe(
+    expect(reviewHref({ id: id(2), type: "sticker" })).toBe(
       `/?review=s:${id(2)}`
     );
   });
 
   test("reviewLink carries type, id and href", () => {
-    expect(reviewLink({ type: "sticker", id: id(3) })).toEqual({
-      type: "sticker",
-      id: id(3),
+    expect(reviewLink({ id: id(3), type: "sticker" })).toEqual({
       href: `/?review=s:${id(3)}`,
+      id: id(3),
+      type: "sticker",
     });
   });
 });
@@ -144,26 +144,26 @@ describe("reviewHref", () => {
 describe("admin comment shaping", () => {
   test("toAdminComment drops private columns even if they were selected", () => {
     const row = {
-      id: id(1),
-      kind: "inline",
-      parent_id: null,
-      name: "访客",
-      site: null,
-      body: "内容",
       anchor_exact: "被划的字",
       anchor_prefix: "前面",
-      created_at: 5,
-      owner_reply: null,
-      owner_reply_at: null,
+      author_avatar: null,
       author_github_id: 42,
+      author_html: null,
       author_login: null,
       author_name: null,
-      author_avatar: null,
-      author_html: null,
-      status: "pending",
-      fingerprint: IP_HASH,
+      body: "内容",
+      created_at: 5,
       email_hash: "secret-email-hash",
+      fingerprint: IP_HASH,
+      id: id(1),
       ip_hash: IP_HASH,
+      kind: "inline",
+      name: "访客",
+      owner_reply: null,
+      owner_reply_at: null,
+      parent_id: null,
+      site: null,
+      status: "pending",
       ua: "Mozilla/5.0",
       user_id: "u1",
     } as AdminCommentRow;
@@ -180,21 +180,21 @@ describe("admin comment shaping", () => {
   });
 
   test("listAdminComments: pending oldest first, rejected newest first, per note", async () => {
-    const first = addComment(db, { n: 1, at: 10 });
-    const inline = addComment(db, { n: 2, at: 20, kind: "inline" });
-    addComment(db, { n: 3, at: 5, slug: "other-note" });
-    addComment(db, { n: 4, at: 1, status: "approved" });
+    const first = addComment(db, { at: 10, n: 1 });
+    const inline = addComment(db, { at: 20, kind: "inline", n: 2 });
+    addComment(db, { at: 5, n: 3, slug: "other-note" });
+    addComment(db, { at: 1, n: 4, status: "approved" });
     const oldReject = addComment(db, {
-      n: 5,
       at: 1,
-      status: "rejected",
       decidedAt: 100,
+      n: 5,
+      status: "rejected",
     });
     const newReject = addComment(db, {
-      n: 6,
       at: 2,
-      status: "rejected",
       decidedAt: 200,
+      n: 6,
+      status: "rejected",
     });
     const { pending, hidden } = await listAdminComments(
       db.d1,
@@ -209,7 +209,7 @@ describe("admin comment shaping", () => {
     expect(hidden.map((c) => c.id)).toEqual([newReject, oldReject]);
     expect(hidden.every((c) => c.status === "rejected")).toBe(true);
     expect(pending.at(0)?.fingerprint).toBe("abcdef01");
-    const text = JSON.stringify({ pending, hidden });
+    const text = JSON.stringify({ hidden, pending });
     expect(text).not.toMatch(PRIVATE_FIELDS);
     expect(text).not.toContain(IP_HASH);
     expect(text).not.toContain("secret-email-hash");
@@ -218,24 +218,24 @@ describe("admin comment shaping", () => {
 
 describe("listPendingStickers", () => {
   test("pending only, oldest first, public fields plus review ones", async () => {
-    const later = addSticker(db, { n: 1, at: 20 });
-    const earlier = addSticker(db, { n: 2, at: 10 });
+    const later = addSticker(db, { at: 20, n: 1 });
+    const earlier = addSticker(db, { at: 10, n: 2 });
     addSticker(db, { n: 3, status: "approved" });
     const stickers = await listPendingStickers(db.d1);
     expect(stickers.map((s) => s.id)).toEqual([earlier, later]);
     expect(stickers.at(0)).toEqual({
-      id: earlier,
-      x: 10,
-      y: -20,
-      rotation: 5,
-      scale: 1,
-      width: 100,
-      height: 80,
-      name: null,
-      src: `/api/stickers/${earlier}/image`,
-      status: "pending",
       createdAt: 10,
       fingerprint: "abcdef01",
+      height: 80,
+      id: earlier,
+      name: null,
+      rotation: 5,
+      scale: 1,
+      src: `/api/stickers/${earlier}/image`,
+      status: "pending",
+      width: 100,
+      x: 10,
+      y: -20,
     });
     expect(JSON.stringify(stickers)).not.toMatch(PRIVATE_FIELDS);
   });
@@ -245,31 +245,31 @@ describe("decide: comments", () => {
   test("pending → approved logs once; approving again changes nothing", async () => {
     const c = addComment(db, { n: 1 });
     expect(await run("comment", c, "approve")).toEqual({
+      changed: true,
       found: true,
       gone: false,
-      status: "approved",
-      changed: true,
       r2Key: null,
+      status: "approved",
     });
     expect(commentRow(db, c)?.decided_at).toBe(NOW);
     const again = await run("comment", c, "approve");
-    expect(again).toMatchObject({ status: "approved", changed: false });
+    expect(again).toMatchObject({ changed: false, status: "approved" });
     expect(logRows(db, c).map((row) => row.decision)).toEqual(["approve"]);
   });
 
   test("approved → rejected takes it down; rejected → approved restores it", async () => {
     const c = addComment(db, { n: 1, status: "approved" });
     expect(await run("comment", c, "reject")).toMatchObject({
-      status: "rejected",
       changed: true,
+      status: "rejected",
     });
     expect(await listApprovedComments(db.d1, "go-context", null)).toEqual([]);
     const { hidden } = await listAdminComments(db.d1, "go-context", null);
     expect(hidden.map((h) => h.id)).toEqual([c]);
     expect(await run("comment", c, "reject")).toMatchObject({ changed: false });
     expect(await run("comment", c, "approve")).toMatchObject({
-      status: "approved",
       changed: true,
+      status: "approved",
     });
     const visible = await listApprovedComments(db.d1, "go-context", null);
     expect(visible.map((v) => v.id)).toEqual([c]);
@@ -282,14 +282,14 @@ describe("decide: comments", () => {
   test("reply only sets the owner reply, never the status", async () => {
     const c = addComment(db, { n: 1 });
     expect(await run("comment", c, "reply", "谢谢")).toMatchObject({
-      status: "pending",
       changed: true,
+      status: "pending",
     });
     expect(commentRow(db, c)).toEqual({
-      status: "pending",
       decided_at: null,
       owner_reply: "谢谢",
       owner_reply_at: NOW,
+      status: "pending",
     });
     expect(await run("comment", c, "reply", "谢谢")).toMatchObject({
       changed: false,
@@ -309,8 +309,8 @@ describe("decide: comments", () => {
     const c = addComment(db, { n: 1 });
     await run("comment", c, "approve", "欢迎");
     expect(commentRow(db, c)).toMatchObject({
-      status: "approved",
       owner_reply: "欢迎",
+      status: "approved",
     });
     expect(logRows(db, c).map((row) => row.decision)).toEqual([
       "approve",
@@ -328,11 +328,11 @@ describe("decide: stickers", () => {
   test("reject hands back the image key; a rejected sticker cannot come back", async () => {
     const s = addSticker(db, { n: 1 });
     expect(await run("sticker", s, "reject")).toEqual({
+      changed: true,
       found: true,
       gone: false,
-      status: "rejected",
-      changed: true,
       r2Key: `stickers/${s}.webp`,
+      status: "rejected",
     });
     expect(await run("sticker", s, "approve")).toEqual({
       found: true,
@@ -354,8 +354,8 @@ describe("decide: stickers", () => {
     const s = addSticker(db, { n: 1 });
     await run("sticker", s, "approve");
     expect(await run("sticker", s, "approve")).toMatchObject({
-      status: "approved",
       changed: false,
+      status: "approved",
     });
     expect(logRows(db, s)).toHaveLength(1);
   });
@@ -363,18 +363,18 @@ describe("decide: stickers", () => {
 
 describe("nextPending", () => {
   test("oldest pending item across comments and stickers, not the decided one", async () => {
-    const sticker = addSticker(db, { n: 1, at: 5 });
-    const comment = addComment(db, { n: 2, at: 10 });
-    addComment(db, { n: 3, at: 1, status: "approved" });
+    const sticker = addSticker(db, { at: 5, n: 1 });
+    const comment = addComment(db, { at: 10, n: 2 });
+    addComment(db, { at: 1, n: 3, status: "approved" });
     expect(await nextPending(db.d1, id(99))).toEqual({
-      type: "sticker",
-      id: sticker,
       href: `/?review=s:${sticker}`,
+      id: sticker,
+      type: "sticker",
     });
     expect(await nextPending(db.d1, sticker)).toEqual({
-      type: "comment",
-      id: comment,
       href: `/notes/go-context/?review=c:${comment}#comments`,
+      id: comment,
+      type: "comment",
     });
   });
 
@@ -387,8 +387,8 @@ describe("nextPending", () => {
   });
 
   test("equal times fall back to id order", async () => {
-    addComment(db, { n: 2, at: 7 });
-    addSticker(db, { n: 1, at: 7 });
+    addComment(db, { at: 7, n: 2 });
+    addSticker(db, { at: 7, n: 1 });
     expect((await nextPending(db.d1, id(99)))?.id).toBe(id(1));
   });
 });
@@ -396,7 +396,7 @@ describe("nextPending", () => {
 describe("adminQueue", () => {
   test("every item links to its review place; counts are pending totals", async () => {
     const c = addComment(db, { n: 1 });
-    const approved = addComment(db, { n: 2, status: "approved", decidedAt: 3 });
+    const approved = addComment(db, { decidedAt: 3, n: 2, status: "approved" });
     const s = addSticker(db, { n: 3 });
     addSticker(db, { n: 4, status: "rejected" });
     const queue = await adminQueue(db.d1);
@@ -408,17 +408,17 @@ describe("adminQueue", () => {
       `/notes/go-context/?review=c:${approved}#comments`,
     ]);
     expect(queue.stickers.at(0)).toMatchObject({
-      id: s,
-      src: `/api/stickers/${s}/image`,
       href: `/?review=s:${s}`,
+      id: s,
       moves: 0,
+      src: `/api/stickers/${s}/image`,
     });
   });
 });
 
 describe("decisionInput: reply", () => {
   test("reply needs the reply field; an empty reply removes it", () => {
-    const base = { type: "comment", id: id(1), decision: "reply" };
+    const base = { decision: "reply", id: id(1), type: "comment" };
     expect(decisionInput.safeParse(base).success).toBe(false);
     expect(decisionInput.parse({ ...base, reply: "" }).reply).toBe("");
     expect(decisionInput.parse({ ...base, reply: " 好 " }).reply).toBe("好");

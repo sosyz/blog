@@ -139,64 +139,68 @@ const ARROW_Y = 26;
 
 /** Shape of the pencil leader line (values from the prototype). */
 const LEADER = {
-  jitter: 12,
-  curveStart: 0.35,
+  centre: 0.5,
   curveEnd: 0.72,
-  tail: 9,
-  ghostY: 1.2,
+  curveStart: 0.35,
   ghostC1: 2,
   ghostC2y: 1.5,
-  lengthSlack: 1.3,
   ghostDelay: 80,
-  mainDelay: 60,
+  ghostY: 1.2,
   headDelay: 520,
   headLength: 20,
+  jitter: 12,
+  lengthSlack: 1.3,
+  mainDelay: 60,
   ring: 8.5,
+  tail: 9,
   textDy: 0.5,
-  centre: 0.5,
 } as const;
 
 type ItemState = "approved" | "own" | "review";
 
-type Item = {
-  id: string;
-  exact: string;
-  prefix: string;
-  name: string;
+interface Item {
   body: string;
   createdAt: number;
+  exact: string;
+  id: string;
+  name: string;
   /** Not public yet: the visitor's own (审核中) or, for the owner, 待审. */
   pending: boolean;
+  prefix: string;
+  reply: string;
   state: ItemState;
   /** Owner only (待审 items): fingerprint / GitHub line and saved reply. */
   who: string;
-  reply: string;
-};
+}
 
-type Group = {
+interface Group {
   exact: string;
-  prefix: string;
   items: Item[];
   marks: HTMLElement[];
   /** 1-based, in document order; 0 when the text was not found. */
   no: number;
-};
+  prefix: string;
+}
 
-type Selected = { exact: string; prefix: string; rect: DOMRect };
+interface Selected {
+  exact: string;
+  prefix: string;
+  rect: DOMRect;
+}
 
 type Source = PublicComment | PendingComment;
 
 const itemOf = (c: Source, state: ItemState, who = ""): Item => ({
-  id: c.id,
-  exact: c.anchor?.exact ?? "",
-  prefix: c.anchor?.prefix ?? "",
-  name: c.name,
   body: c.body,
   createdAt: c.createdAt,
+  exact: c.anchor?.exact ?? "",
+  id: c.id,
+  name: c.name,
   pending: state !== "approved",
+  prefix: c.anchor?.prefix ?? "",
+  reply: ("reply" in c && c.reply?.body) || "",
   state,
   who,
-  reply: ("reply" in c && c.reply?.body) || "",
 });
 
 /** Approved, then (owner) 待审, then the visitor's own; each id once. */
@@ -323,14 +327,14 @@ const arrowHead = (ex: number, ey: number, fromX: number, fromY: number) => {
   return `M${p1[0]} ${p1[1]} L${ex} ${ey} L${p2[0]} ${p2[1]}`;
 };
 
-type Leader = {
+interface Leader {
+  ex: number;
+  ey: number;
   key: string;
   no: number;
   sx: number;
   sy: number;
-  ex: number;
-  ey: number;
-};
+}
 
 /** Double pencil stroke from the margin ring to the note, plus arrowhead. */
 const leaderSvg = (leader: Leader, index: number, animate: boolean) => {
@@ -406,8 +410,6 @@ class InlineSession {
     this.cleanups.push(subscribeAuth(() => this.refreshPopForm()));
     this.cleanups.push(
       watchThrows({
-        slug: this.slug,
-        root: this.layer,
         anywhere: true,
         cardOf: (target) =>
           target.closest<HTMLElement>(".ann-note[data-throw]"),
@@ -416,13 +418,12 @@ class InlineSession {
             `.ann-note[data-throw="${CSS.escape(id)}"]`
           ),
         focusKeys: (keys) => this.focusAfterThrow(keys),
+        root: this.layer,
+        slug: this.slug,
       })
     );
     this.cleanups.push(
       watchThrows({
-        slug: this.slug,
-        root: this.bodyEl,
-        ghostClass: "is-row",
         cardOf: (target) =>
           target.closest<HTMLElement>(".ann-pop li[data-throw]"),
         findCard: (id) =>
@@ -430,6 +431,9 @@ class InlineSession {
             `li[data-throw="${CSS.escape(id)}"]`
           ) ?? null,
         focusKeys: (keys) => this.focusAfterThrow(keys),
+        ghostClass: "is-row",
+        root: this.bodyEl,
+        slug: this.slug,
       })
     );
     loadThread(this.slug);
@@ -474,7 +478,7 @@ class InlineSession {
     );
     this.on(this.layer, "click", (event) => this.onNoteClick(event));
     this.on(this.layer, "keydown", (event) => {
-      const key = (event as KeyboardEvent).key;
+      const { key } = event as KeyboardEvent;
       if (key === "Enter" || key === " ") {
         event.preventDefault();
         this.onNoteClick(event);
@@ -497,7 +501,7 @@ class InlineSession {
     this.on(window, "resize", () => this.schedule());
     this.on(window, REVIEW_FOCUS, (event) => this.onReviewFocus(event));
     this.on(window, JUMP_EVENT, (event) => {
-      const detail = (event as CustomEvent<JumpDetail>).detail;
+      const { detail } = event as CustomEvent<JumpDetail>;
       if (detail.slug === this.slug) {
         this.jumpTo(detail.exact);
       }
@@ -550,10 +554,10 @@ class InlineSession {
     for (const item of itemsOf(threadNow(this.slug), this.review)) {
       const group = groups.get(item.exact) ?? {
         exact: item.exact,
-        prefix: item.prefix,
         items: [],
         marks: [],
         no: 0,
+        prefix: item.prefix,
       };
       group.items.push(item);
       groups.set(item.exact, group);
@@ -576,7 +580,7 @@ class InlineSession {
 
   /** After a thrown comment was sent: focus back in the popover, if open. */
   focusAfterThrow(keys: string[]) {
-    const pop = this.pop;
+    const { pop } = this;
     if (pop && !focusKey(pop, keys)) {
       pop
         .querySelector<HTMLElement>(".more, .x")
@@ -731,7 +735,7 @@ class InlineSession {
     let still = 0;
     const tick = (now: number) => {
       this.layout();
-      const left = this.drawerEl.getBoundingClientRect().left;
+      const { left } = this.drawerEl.getBoundingClientRect();
       still = Math.abs(left - lastLeft) < STILL_EPSILON_PX ? still + 1 : 0;
       lastLeft = left;
       const settled = now - start >= ms && still >= STILL_FRAMES;
@@ -746,7 +750,7 @@ class InlineSession {
   visibleRows() {
     const view =
       this.scrollEl === document.documentElement
-        ? { top: 0, bottom: window.innerHeight }
+        ? { bottom: window.innerHeight, top: 0 }
         : this.scrollEl.getBoundingClientRect();
     const rows: { group: Group; rect: DOMRect }[] = [];
     for (const group of this.groups.values()) {
@@ -795,12 +799,12 @@ class InlineSession {
       leaders.push(
         leaderSvg(
           {
+            ex: x + NOTE_W + ARROW_GAP,
+            ey: y + ARROW_Y,
             key: group.exact,
             no: group.no,
             sx: drawer.left + RING_X,
             sy: rect.top + rect.height * RING_Y,
-            ex: x + NOTE_W + ARROW_GAP,
-            ey: y + ARROW_Y,
           },
           index,
           this.animateNext
@@ -863,7 +867,7 @@ class InlineSession {
       return null;
     }
     const exact = collapseSpace(selection.toString()).trim();
-    const length = [...exact].length;
+    const { length } = [...exact];
     if (length < EXACT_MIN || length > EXACT_MAX) {
       return null;
     }
@@ -973,7 +977,7 @@ class InlineSession {
   }
 
   refreshPop() {
-    const pop = this.pop;
+    const { pop } = this;
     const exact = pop?.dataset.ann;
     const list = pop?.querySelector<HTMLElement>("[data-ann-items]");
     if (!(pop && list && exact !== undefined)) {
@@ -1169,7 +1173,7 @@ class InlineSession {
     const user = auth?.user ?? null;
     const member = Boolean(user);
     const token = turnstile?.token() ?? "";
-    const problem = inlineProblem({ member, name, body, token });
+    const problem = inlineProblem({ body, member, name, token });
     say(problem);
     if (problem) {
       return;
@@ -1181,14 +1185,14 @@ class InlineSession {
       submit.disabled = true;
     }
     const common = {
-      slug: this.slug,
-      kind: "inline" as const,
-      body,
       anchor: { exact, prefix },
+      body,
+      kind: "inline" as const,
+      slug: this.slug,
     };
     const result = await submitComment(
       member ? common : { ...common, name, turnstile: token },
-      { user, isOwner: auth?.isOwner ?? false }
+      { isOwner: auth?.isOwner ?? false, user }
     );
     if (submit) {
       submit.disabled = false;
@@ -1246,7 +1250,7 @@ class InlineSession {
     if (!mark) {
       return;
     }
-    mark.scrollIntoView({ block, behavior: scrollBehavior() });
+    mark.scrollIntoView({ behavior: scrollBehavior(), block });
     this.openPop(exact);
   }
 }
@@ -1296,10 +1300,10 @@ const discover = () => {
     bodyEl.parentElement ??
     bodyEl;
   bind({
-    slug: host.dataset.slug ?? bodyEl.dataset.slug ?? "",
     bodyEl,
     drawerEl,
     scrollEl: scrollParent(bodyEl),
+    slug: host.dataset.slug ?? bodyEl.dataset.slug ?? "",
   });
 };
 

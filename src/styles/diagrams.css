@@ -18,10 +18,10 @@
  * scrolls instead of shrinking further.
  */
 .post-body .diagram-sheet {
-  overflow-x: auto;
   padding: 4px 2px 8px;
-  scrollbar-width: thin;
+  overflow-x: auto;
   scrollbar-color: var(--edge) transparent;
+  scrollbar-width: thin;
 }
 
 .post-body .diagram-sheet:focus-visible {
@@ -47,10 +47,10 @@
 .post-body .diagram-source summary {
   display: inline-block;
   padding: 2px 8px;
-  color: var(--pencil);
   font-family: var(--hand);
   font-size: 14px;
   line-height: 1.6;
+  color: var(--pencil);
   cursor: pointer;
   list-style: none;
 }
@@ -60,8 +60,8 @@
 }
 
 .post-body .diagram-source summary::before {
-  content: "▸ ";
   color: var(--faint-mark);
+  content: "▸ ";
 }
 
 .post-body .diagram-source[open] summary::before {
@@ -69,27 +69,27 @@
 }
 
 .post-body .diagram-source pre {
-  margin: 6px 0 0;
   padding: 12px 14px;
+  margin: 6px 0 0;
   overflow-x: auto;
-  border: 1px dashed var(--edge);
-  background: var(--slip);
-  text-align: left;
   font-family: var(--code);
-  font-feature-settings: "calt" 0;
   font-size: 13px;
+  font-feature-settings: "calt" 0;
   line-height: 1.65;
+  text-align: left;
   tab-size: 4;
-  scrollbar-width: thin;
   scrollbar-color: var(--edge) transparent;
+  scrollbar-width: thin;
+  background: var(--slip);
+  border: 1px dashed var(--edge);
 }
 
 .post-body .diagram-source pre code {
   padding: 0;
-  border-radius: 0;
-  background: none;
   font-size: inherit;
   overflow-wrap: normal;
+  background: none;
+  border-radius: 0;
 }
 
 @media (max-width: 520px) {

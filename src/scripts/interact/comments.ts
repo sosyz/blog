@@ -106,12 +106,15 @@ const tailHtml = (row: Row, owner: boolean) => {
 
 const ROW_CLASS: Record<Row["kind"], string> = {
   approved: "cmt",
+  hidden: "cmt pending review is-hidden",
   own: "cmt pending",
   review: "cmt pending review",
-  hidden: "cmt pending review is-hidden",
 };
 
-type RowContext = { owner: boolean; targetId: string };
+interface RowContext {
+  owner: boolean;
+  targetId: string;
+}
 
 /**
  * The owner can throw 待审 and approved cards into the trash: focusable,
@@ -155,34 +158,34 @@ const rowsOf = (thread: Thread, review: ReviewView): Row[] =>
       )
     : visitorRows(thread.approved, thread.pending);
 
-type Refs = {
-  section: HTMLElement;
-  slug: string;
-  list: HTMLOListElement;
+interface Refs {
+  count: HTMLElement;
+  countdown: HTMLElement;
+  deniedNote: HTMLElement | null;
   empty: HTMLElement;
   emptyText: HTMLElement;
-  count: HTMLElement;
-  form: HTMLFormElement;
-  textarea: HTMLTextAreaElement;
-  countdown: HTMLElement;
   error: HTMLElement;
-  /** Screen-reader confirmation after sending (role="status"). */
-  status: HTMLElement;
-  replying: HTMLElement;
-  replyingText: HTMLElement;
-  parentInput: HTMLInputElement;
+  form: HTMLFormElement;
+  /** 已撤下 is unfolded. */
+  hiddenOpen: boolean;
+  hiddenSlot: HTMLElement | null;
+  list: HTMLOListElement;
   /** Logged in with GitHub: no name fields, no Turnstile. */
   member: boolean;
   /** Owner review: 下一条待审, 已撤下, 需要先在 /admin/ 登录. */
   nextSlot: HTMLElement | null;
-  hiddenSlot: HTMLElement | null;
-  deniedNote: HTMLElement | null;
-  /** 已撤下 is unfolded. */
-  hiddenOpen: boolean;
+  parentInput: HTMLInputElement;
+  replying: HTMLElement;
+  replyingText: HTMLElement;
+  section: HTMLElement;
+  slug: string;
+  /** Screen-reader confirmation after sending (role="status"). */
+  status: HTMLElement;
   /** The `?review=` comment was handled (once per page). */
   targetDone: boolean;
   targetId: string;
-};
+  textarea: HTMLTextAreaElement;
+}
 
 const refsOf = (section: HTMLElement): Refs | null => {
   const q = <T extends Element>(selector: string) =>
@@ -193,18 +196,18 @@ const refsOf = (section: HTMLElement): Refs | null => {
   const parentInput =
     form?.querySelector<HTMLInputElement>('[name="parentId"]');
   const parts = {
-    list,
+    count: q<HTMLElement>("[data-cmt-count]"),
+    countdown: q<HTMLElement>("[data-cmt-countdown]"),
     empty: q<HTMLElement>("[data-cmt-empty]"),
     emptyText: q<HTMLElement>("[data-cmt-empty-text]"),
-    count: q<HTMLElement>("[data-cmt-count]"),
-    form,
-    textarea,
-    countdown: q<HTMLElement>("[data-cmt-countdown]"),
     error: q<HTMLElement>("[data-cmt-error]"),
-    status: q<HTMLElement>("[data-cmt-status]"),
+    form,
+    list,
+    parentInput,
     replying: q<HTMLElement>("[data-cmt-replying]"),
     replyingText: q<HTMLElement>("[data-cmt-replying-text]"),
-    parentInput,
+    status: q<HTMLElement>("[data-cmt-status]"),
+    textarea,
   };
   for (const value of Object.values(parts)) {
     if (!value) {
@@ -212,13 +215,13 @@ const refsOf = (section: HTMLElement): Refs | null => {
     }
   }
   return {
-    section,
-    slug: section.dataset.slug ?? "",
-    member: false,
-    nextSlot: q<HTMLElement>("[data-rv-next-slot]"),
-    hiddenSlot: q<HTMLElement>("[data-rv-hidden-slot]"),
     deniedNote: q<HTMLElement>("[data-rv-note]"),
     hiddenOpen: false,
+    hiddenSlot: q<HTMLElement>("[data-rv-hidden-slot]"),
+    member: false,
+    nextSlot: q<HTMLElement>("[data-rv-next-slot]"),
+    section,
+    slug: section.dataset.slug ?? "",
     targetDone: false,
     targetId: "",
     ...parts,
@@ -257,7 +260,7 @@ const renderHidden = (refs: Refs, review: ReviewView, context: RowContext) => {
       : `<details class="rv-hidden"${refs.hiddenOpen ? " open" : ""}>
       <summary data-key="rv-hidden-summary">已撤下 ${hidden.length} 条</summary>
       <ol class="cmt-list">${hidden
-        .map((item, index) => rowHtml({ kind: "hidden", item }, index, context))
+        .map((item, index) => rowHtml({ item, kind: "hidden" }, index, context))
         .join("")}</ol>
     </details>`;
 };
@@ -303,17 +306,17 @@ const render = (refs: Refs) => {
 
 /** Let inline.ts show a highlight comment at its text; false = not placed. */
 const placedInline = (slug: string, id: string) => {
-  const detail: ReviewFocusDetail = { slug, id };
+  const detail: ReviewFocusDetail = { id, slug };
   return !window.dispatchEvent(
-    new CustomEvent(REVIEW_FOCUS, { detail, cancelable: true })
+    new CustomEvent(REVIEW_FOCUS, { cancelable: true, detail })
   );
 };
 
 const showTarget = async (refs: Refs, id: string) => {
   const hit = matchTarget(reviewTarget(), {
     approved: threadNow(refs.slug).approved,
-    pending: reviewNow(refs.slug).pending,
     hidden: reviewNow(refs.slug).hidden,
+    pending: reviewNow(refs.slug).pending,
   });
   if (!hit) {
     return;
@@ -334,7 +337,7 @@ const showTarget = async (refs: Refs, id: string) => {
   if (!row) {
     return;
   }
-  row.scrollIntoView({ block: "center", behavior: scrollBehavior() });
+  row.scrollIntoView({ behavior: scrollBehavior(), block: "center" });
   pulse(row);
   const button = row.querySelector<HTMLElement>(
     `[data-key="${CSS.escape(`${id}:${hit.focus}`)}"]`
@@ -380,15 +383,15 @@ const onListClick = (refs: Refs, event: MouseEvent) => {
   const reply = target?.closest<HTMLElement>("[data-reply]");
   if (reply) {
     setReply(refs, reply.dataset.reply ?? "", reply.dataset.replyName ?? "");
-    refs.form.scrollIntoView({ block: "center", behavior: scrollBehavior() });
+    refs.form.scrollIntoView({ behavior: scrollBehavior(), block: "center" });
     refs.textarea.focus({ preventScroll: true });
     return;
   }
   const jump = target?.closest<HTMLElement>("[data-jump]");
   if (jump) {
     const detail: JumpDetail = {
-      slug: refs.slug,
       exact: jump.dataset.jump ?? "",
+      slug: refs.slug,
     };
     window.dispatchEvent(new CustomEvent(JUMP_EVENT, { detail }));
   }
@@ -418,11 +421,11 @@ const localProblem = (name: string, body: string, token: string | null) => {
 };
 
 /** Turnstile for one comment form: mounted lazily, only while logged out. */
-type Human = {
+interface Human {
+  handle: TurnstileHandle | null;
   /** The form came near the viewport or got focus. */
   near: boolean;
-  handle: TurnstileHandle | null;
-};
+}
 
 const mountHuman = (refs: Refs, human: Human) => {
   const wrap = refs.form.querySelector<HTMLElement>("[data-turnstile]");
@@ -457,22 +460,22 @@ const onSubmit = async (
   }
   submit.disabled = true;
   const common = {
-    slug: refs.slug,
-    kind: "comment" as const,
     body,
+    kind: "comment" as const,
     parentId: field("parentId") || undefined,
+    slug: refs.slug,
   };
   const result = await submitComment(
     user
       ? common
       : {
           ...common,
-          name,
           email: field("email") || undefined,
+          name,
           site: field("site") || undefined,
           turnstile: token ?? "",
         },
-    { user, isOwner: auth?.isOwner ?? false }
+    { isOwner: auth?.isOwner ?? false, user }
   );
   submit.disabled = false;
   turnstile?.reset();
@@ -481,7 +484,7 @@ const onSubmit = async (
     return;
   }
   if (!user) {
-    saveProfile({ name, email: field("email"), site: field("site") });
+    saveProfile({ email: field("email"), name, site: field("site") });
   }
   refs.textarea.value = "";
   setReply(refs, "", "");
@@ -490,7 +493,7 @@ const onSubmit = async (
     `#c-${CSS.escape(result.data.id)}`
   );
   mine?.classList.add("flash");
-  mine?.scrollIntoView({ block: "center", behavior: scrollBehavior() });
+  mine?.scrollIntoView({ behavior: scrollBehavior(), block: "center" });
 };
 
 /**
@@ -566,7 +569,7 @@ const setup = (section: HTMLElement) => {
   if (!refs?.slug) {
     return;
   }
-  const human: Human = { near: false, handle: null };
+  const human: Human = { handle: null, near: false };
   let seen: AuthState | null = null;
   const unsubscribeAuth = subscribeAuth((state) => {
     applyAuth(refs, human, state);
@@ -612,14 +615,14 @@ const setup = (section: HTMLElement) => {
   const unsubscribe = subscribe(refs.slug, () => render(refs));
   const unwatch = watchReview(refs.slug, () => render(refs));
   const unwatchThrows = watchThrows({
-    slug: refs.slug,
-    root: refs.list,
     cardOf: (target) => target.closest<HTMLElement>("li.cmt[data-throw]"),
     findCard: (id) =>
       refs.list.querySelector<HTMLElement>(
         `li.cmt[data-throw="${CSS.escape(id)}"]`
       ),
     focusKeys: (keys) => focusKey(section, keys),
+    root: refs.list,
+    slug: refs.slug,
   });
   document.addEventListener(
     "astro:before-swap",

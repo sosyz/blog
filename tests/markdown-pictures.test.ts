@@ -16,13 +16,13 @@ const render = async (markdown: string) => {
     hastPlugins: [
       responsivePictures,
       {
-        name: "spy",
         element: {
           filter: ["img"],
           visit(node) {
             seen.push({ ...node.properties });
           },
         },
+        name: "spy",
       },
     ],
   });

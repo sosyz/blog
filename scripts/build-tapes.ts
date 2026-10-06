@@ -18,7 +18,7 @@ await Promise.all(
   files.map((name) =>
     sharp(new URL(name, SOURCE).pathname)
       .resize({ width: WIDTH })
-      .webp({ quality: QUALITY, alphaQuality: 90, effort: 6 })
+      .webp({ alphaQuality: 90, effort: 6, quality: QUALITY })
       .toFile(new URL(name, TARGET).pathname)
   )
 );

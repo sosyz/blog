@@ -7,8 +7,8 @@
 .auth-bar {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
   gap: 4px 10px;
+  align-items: center;
   margin: 0;
   font-family: var(--hand);
   font-size: 14.5px;
@@ -20,12 +20,12 @@
 }
 .auth-in {
   display: inline-flex;
-  align-items: center;
   gap: 6px;
+  align-items: center;
   padding: 3px 10px;
+  text-decoration: none;
   border: 1px dashed var(--faint-mark);
   border-radius: 8px;
-  text-decoration: none;
   transition:
     border-color var(--dur) var(--out),
     background-color var(--dur) var(--out);
@@ -34,8 +34,8 @@
   color: var(--ink);
 }
 .auth-in:hover {
-  border-color: var(--pencil);
   background-color: rgb(94 78 52 / 0.05);
+  border-color: var(--pencil);
 }
 .auth-in:focus-visible,
 .auth-out:focus-visible {
@@ -57,38 +57,38 @@
   width: 24px;
   height: 24px;
   object-fit: cover;
+  background: var(--doc);
   border: 1.4px solid var(--pencil);
   border-radius: 52% 46% 55% 45% / 48% 55% 45% 52%;
-  background: var(--doc);
   rotate: -5deg;
 }
 .auth-out {
   padding: 0;
-  border: 0;
-  background: none;
   font: inherit;
   color: var(--faint);
-  cursor: pointer;
   text-decoration: underline dotted var(--faint-mark);
   text-underline-offset: 4px;
+  cursor: pointer;
+  background: none;
+  border: 0;
 }
 .auth-out:hover {
   color: var(--stamp);
 }
 .auth-skip {
   display: inline-flex;
-  align-items: center;
   gap: 6px;
+  align-items: center;
   margin: 0;
   font-family: var(--hand);
   font-size: 13.5px;
   color: var(--stamp-blue);
 }
 .auth-skip::before {
-  content: "";
   flex: none;
   width: 16px;
   height: 16px;
+  content: "";
   background: currentColor;
   -webkit-mask:
     url("/journal/doodle/check-rough.svg") center / contain no-repeat;

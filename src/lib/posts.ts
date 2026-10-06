@@ -10,13 +10,13 @@ export type Post = CollectionEntry<"blog">;
 export type PostType = Post["data"]["type"];
 export type PostStatus = NonNullable<Post["data"]["status"]>;
 
-export type Topic = {
+export interface Topic {
+  /** Latest `updatedDate ?? pubDate` in the topic. */
+  latest: Date;
   name: string;
   /** Posts in this topic, most recently updated first. */
   posts: Post[];
-  /** Latest `updatedDate ?? pubDate` in the topic. */
-  latest: Date;
-};
+}
 
 /** Dates are written and shown in China time, whatever the build machine's zone. */
 const TIME_ZONE = "Asia/Shanghai";
@@ -27,14 +27,14 @@ const YEAR_LENGTH = 4;
 
 const dateParts = (date: Date) => {
   const parts = new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
     timeZone: TIME_ZONE,
     year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
   }).formatToParts(date);
   const get = (type: Intl.DateTimeFormatPartTypes) =>
     parts.find((part) => part.type === type)?.value ?? "";
-  return { year: get("year"), month: get("month"), day: get("day") };
+  return { day: get("day"), month: get("month"), year: get("year") };
 };
 
 /** 2025-10-08 */
@@ -63,17 +63,17 @@ const byNewest = (a: Post, b: Post) =>
 const byRecentlyUpdated = (a: Post, b: Post) =>
   lastUpdated(b).valueOf() - lastUpdated(a).valueOf() || byNewest(a, b);
 
-type Index = {
-  /** Newest first by pubDate. */
-  posts: Post[];
+interface Index {
   bySlug: Map<string, Post>;
   /** Journal number: 1 = oldest post, by pubDate. */
   numbers: Map<string, number>;
-  /** Topics, most recently updated topic first. */
-  topics: Topic[];
+  /** Newest first by pubDate. */
+  posts: Post[];
   /** Bidirectional `related`, in declaration order then back-links. */
   related: Map<string, string[]>;
-};
+  /** Topics, most recently updated topic first. */
+  topics: Topic[];
+}
 
 let indexPromise: Promise<Index> | undefined;
 
@@ -96,9 +96,9 @@ const buildIndex = async (): Promise<Index> => {
     const sorted = [...list].sort(byRecentlyUpdated);
     const first = sorted.at(0);
     return {
+      latest: first ? lastUpdated(first) : new Date(0),
       name,
       posts: sorted,
-      latest: first ? lastUpdated(first) : new Date(0),
     };
   });
   topics.sort(
@@ -130,7 +130,7 @@ const buildIndex = async (): Promise<Index> => {
     }
   }
 
-  return { posts, bySlug, numbers, topics, related };
+  return { bySlug, numbers, posts, related, topics };
 };
 
 const getIndex = () => {
@@ -185,8 +185,8 @@ export const getTopicNeighbours = async (slug: string) => {
     index.topics.find((t) => t.name === post?.data.topic)?.posts ?? [];
   const i = list.findIndex((p) => p.id === slug);
   return {
-    previous: i > 0 ? list[i - 1] : undefined,
     next: i >= 0 ? list[i + 1] : undefined,
+    previous: i > 0 ? list[i - 1] : undefined,
   };
 };
 
@@ -199,7 +199,7 @@ export const getPostsByYear = async () => {
     list.push(post);
     groups.set(year, list);
   }
-  return [...groups].map(([year, posts]) => ({ year, posts }));
+  return [...groups].map(([year, posts]) => ({ posts, year }));
 };
 
 /** Canonical path of a post page. */
@@ -209,37 +209,37 @@ export const notePath = (slug: string) => `/notes/${slug}/`;
  * Plain, JSON-safe summary of a post for client scripts (canvas layout,
  * search). Keep it small: it is inlined into every canvas page.
  */
-export type NoteSummary = {
-  slug: string;
-  no: number;
-  title: string;
-  description: string;
-  type: PostType;
-  topic: string;
-  tags: string[];
-  status?: PostStatus;
-  related: string[];
+export interface NoteSummary {
   /** yyyy-mm-dd */
   date: string;
+  description: string;
+  href: string;
+  no: number;
+  related: string[];
+  slug: string;
+  status?: PostStatus;
+  tags: string[];
+  title: string;
+  topic: string;
+  type: PostType;
   /** yyyy-mm-dd, updatedDate ?? pubDate */
   updated: string;
-  href: string;
-};
+}
 
 export const getNoteSummaries = async (): Promise<NoteSummary[]> => {
   const index = await getIndex();
   return index.posts.map((post) => ({
-    slug: post.id,
-    no: index.numbers.get(post.id) ?? 0,
-    title: post.data.title,
-    description: post.data.description,
-    type: post.data.type,
-    topic: post.data.topic,
-    tags: post.data.tags,
-    status: post.data.status,
-    related: index.related.get(post.id) ?? [],
     date: isoDate(post.data.pubDate),
-    updated: isoDate(lastUpdated(post)),
+    description: post.data.description,
     href: notePath(post.id),
+    no: index.numbers.get(post.id) ?? 0,
+    related: index.related.get(post.id) ?? [],
+    slug: post.id,
+    status: post.data.status,
+    tags: post.data.tags,
+    title: post.data.title,
+    topic: post.data.topic,
+    type: post.data.type,
+    updated: isoDate(lastUpdated(post)),
   }));
 };

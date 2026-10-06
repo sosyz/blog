@@ -45,15 +45,15 @@ export const upsertUser = async (
   return row.id;
 };
 
-export type NewSession = {
+export interface NewSession {
+  expiresAt: number;
   /** sha256 of the token (see auth.ts). */
   id: string;
-  userId: string;
   now: number;
-  expiresAt: number;
   /** The session this browser had before logging in again (fixation). */
   replaces: string | null;
-};
+  userId: string;
+}
 
 /**
  * Stores a new session; in the same batch drops the browser's previous
@@ -85,16 +85,16 @@ export const createSession = async (db: Db, session: NewSession) => {
   await db.batch(statements);
 };
 
-export type SessionRow = {
-  user_id: string;
+export interface SessionRow {
+  avatar_url: string;
   expires_at: number;
-  last_seen_at: number;
   github_id: number;
+  html_url: string;
+  last_seen_at: number;
   login: string;
   name: string | null;
-  avatar_url: string;
-  html_url: string;
-};
+  user_id: string;
+}
 
 /** The session and its user, or null. Expiry is checked by the caller. */
 export const findSession = (db: Db, id: string) =>
@@ -109,10 +109,10 @@ export const findSession = (db: Db, id: string) =>
     .first<SessionRow>();
 
 export const toPublicUser = (row: SessionRow): PublicUser => ({
-  login: row.login,
-  name: row.name,
   avatarUrl: row.avatar_url,
   htmlUrl: row.html_url,
+  login: row.login,
+  name: row.name,
 });
 
 /** Sliding expiry (at most once a day, see auth.ts sessionStatus). */

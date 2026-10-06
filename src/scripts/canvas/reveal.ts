@@ -6,13 +6,21 @@
 import type { Cam } from "./camera";
 
 /** A screen rectangle, as from getBoundingClientRect(). */
-export type Box = { left: number; top: number; right: number; bottom: number };
+export interface Box {
+  bottom: number;
+  left: number;
+  right: number;
+  top: number;
+}
 
 /**
  * The part of the screen that shows the desk, from the top-left corner: the
  * whole viewport, or the strip left of an open drawer.
  */
-export type Area = { width: number; height: number };
+export interface Area {
+  height: number;
+  width: number;
+}
 
 /** True when any edge of `box` lies outside the visible desk. */
 export const isOutside = (box: Box, area: Area) =>
@@ -27,7 +35,7 @@ export const fitsIn = (box: Box, area: Area) =>
 
 /** The camera moved, at the same scale, so `box` sits in the middle of `area`. */
 export const panToShow = (cam: Cam, box: Box, area: Area): Cam => ({
+  s: cam.s,
   x: cam.x + area.width / 2 - (box.left + box.right) / 2,
   y: cam.y + area.height / 2 - (box.top + box.bottom) / 2,
-  s: cam.s,
 });

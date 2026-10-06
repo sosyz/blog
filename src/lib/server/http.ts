@@ -3,15 +3,15 @@
  */
 
 export const STATUS = {
-  created: 201,
+  badGateway: 502,
   badRequest: 400,
-  unauthorized: 401,
+  conflict: 409,
+  created: 201,
   forbidden: 403,
   notFound: 404,
-  conflict: 409,
   tooLarge: 413,
   tooManyRequests: 429,
-  badGateway: 502,
+  unauthorized: 401,
   unavailable: 503,
 } as const;
 
@@ -60,14 +60,14 @@ export const CONTENT_SECURITY_POLICY_REPORT_ONLY = [
  * tests/security-headers.test.ts keeps the three in sync.
  */
 export const SECURITY_HEADERS = {
-  "x-content-type-options": "nosniff",
-  "referrer-policy": "strict-origin-when-cross-origin",
-  "permissions-policy":
-    "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()",
-  "x-frame-options": "DENY",
-  "cross-origin-opener-policy": "same-origin",
   "content-security-policy": CONTENT_SECURITY_POLICY,
   "content-security-policy-report-only": CONTENT_SECURITY_POLICY_REPORT_ONLY,
+  "cross-origin-opener-policy": "same-origin",
+  "permissions-policy":
+    "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()",
+  "referrer-policy": "strict-origin-when-cross-origin",
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
 } as const;
 
 const setMissingSecurityHeaders = (headers: Headers) => {
@@ -134,11 +134,11 @@ const FOUND = 302;
  * headers, so it cannot carry Set-Cookie).
  */
 export const redirectWithCookies = (location: string, cookies: string[]) => {
-  const headers = new Headers({ location, "cache-control": "no-store" });
+  const headers = new Headers({ "cache-control": "no-store", location });
   for (const cookie of cookies) {
     headers.append("set-cookie", cookie);
   }
-  return new Response(null, { status: FOUND, headers });
+  return new Response(null, { headers, status: FOUND });
 };
 
 const NO_CONTENT = 204;
@@ -149,15 +149,15 @@ export const noContent = (cookies: string[] = []) => {
   for (const cookie of cookies) {
     headers.append("set-cookie", cookie);
   }
-  return new Response(null, { status: NO_CONTENT, headers });
+  return new Response(null, { headers, status: NO_CONTENT });
 };
 
 const HTML_ESCAPES: Record<string, string> = {
+  "'": "&#39;",
+  '"': "&quot;",
   "&": "&amp;",
   "<": "&lt;",
   ">": "&gt;",
-  '"': "&quot;",
-  "'": "&#39;",
 };
 const HTML_SPECIAL = /[&<>"']/g;
 
@@ -175,16 +175,16 @@ export const htmlMessage = (
   cookies: string[] = []
 ) => {
   const headers = new Headers({
-    "content-type": "text/html; charset=utf-8",
     "cache-control": "no-store",
-    "x-robots-tag": "noindex",
     "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'",
+    "content-type": "text/html; charset=utf-8",
+    "x-robots-tag": "noindex",
   });
   for (const cookie of cookies) {
     headers.append("set-cookie", cookie);
   }
   const body = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>登录没有完成 · Sonui 的手账</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#eee2c6;color:#2d2822;font:17px/1.7 system-ui,sans-serif;padding:16px}main{max-width:26rem;background:#fbe7a1;padding:24px 22px;box-shadow:0 10px 18px -12px rgb(60 40 20/.45);rotate:-1deg}a{color:#3d5f8f}</style></head><body><main><h1 style="font-size:20px;margin:0 0 8px">登录没有完成</h1><p style="margin:0 0 12px">${escapeHtml(message)}</p><p style="margin:0"><a href="${escapeHtml(back)}">回到刚才的页面</a></p></main></body></html>`;
-  return new Response(body, { status, headers });
+  return new Response(body, { headers, status });
 };
 
 export const clientIp = (request: Request) =>
@@ -282,7 +282,7 @@ export const readBodyBytes = async (
   const chunks: Uint8Array[] = [];
   let total = 0;
   for (;;) {
-    // Chunks must be read one after another.
+    // biome-ignore lint/performance/noAwaitInLoops: chunks must be read one after another
     const { done, value } = await reader.read();
     if (done) {
       break;
@@ -305,7 +305,7 @@ export const readBodyBytes = async (
 
 const PLUS = /\+/g;
 const SLASH = /\//g;
-const PADDING = /=+$/;
+const PADDING = /[=]+$/;
 
 export const base64url = (bytes: Uint8Array) => {
   let binary = "";
@@ -333,7 +333,6 @@ export const readCookie = (header: string | null, name: string) => {
       return rest.join("=");
     }
   }
-  return;
 };
 
 /** Reads a JSON body; null when it is not valid JSON or too large. */

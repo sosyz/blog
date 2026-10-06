@@ -14,7 +14,7 @@ Astro 7 renders Markdown with Sätteri by default. `unified()` from `@astrojs/ma
 
 | Source | HTML | Plugin |
 | --- | --- | --- |
-| A fenced code block | `<figure class="slip" data-lang data-no-annotate style="--tape --tr --sr"><pre class="astro-code" data-language>…</pre><button type="button" class="slip-copy" aria-label="复制代码">复制</button><span class="slip-said" role="status"></span><figcaption class="fname">label</figcaption></figure>` | `codeSlips` (hast) |
+| A fenced code block | `<figure class="slip" data-lang data-no-annotate style="--tape --tr --sr"><pre class="astro-code" data-language>…</pre><button aria-label="复制代码" class="slip-copy" type="button">复制</button><span class="slip-said" role="status"></span><figcaption class="fname">label</figcaption></figure>` | `codeSlips` (hast) |
 | `ts title="gateway.ts"` (or `file=`) | That file name as the label (`data-title` on the `<pre>`). Without one: `terminal` for shell languages, `code` for blocks with no language, otherwise the language | `fenceMeta` (Shiki transformer) |
 | `ts collapse` | The `<pre>` folded into `<details class="slip-fold"><summary>展开代码（N 行）…</summary><pre>…</pre></details>` inside the slip | `fenceMeta` + `codeSlips` |
 | `ts showLineNumbers` | `data-line-numbers` on the `<pre>`; prose.css numbers the lines with a CSS counter | `fenceMeta` |

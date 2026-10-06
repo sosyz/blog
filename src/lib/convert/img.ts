@@ -8,12 +8,23 @@ const PNG_COMPRESSION_LEVEL_DEFAULT = 3;
 
 type ImageFormat = "png" | "webp";
 
-export type ConvertOptions = {
+export interface ConvertOptions {
+  // 可选：是否返回完整的 ffmpeg stdout/stderr 输出用于调试
+  captureOutput?: boolean;
+
+  // 可选：额外的原样传给 ffmpeg 的参数（高阶用法）
+  extraArgs?: string[];
   // 目标格式
   format: ImageFormat;
 
   // 可选：输出路径（不传则根据输入和 format 自动推导）
   outPath?: string;
+
+  // 可选：是否覆盖已存在的 outPath 文件，默认 true
+  overwrite?: boolean;
+
+  // 可选：png 压缩级别（0-9），默认 3；数值越大越慢压缩更高
+  pngCompressionLevel?: number;
 
   // 可选：对于 webp 的有损质量（0-100），默认 80
   // 对 png 忽略（png 一般无损，可用 -compression_level 控制）
@@ -22,29 +33,17 @@ export type ConvertOptions = {
   // 可选：是否对 webp 使用无损（等价于 -lossless 1）
   // 若为 true，则忽略 quality
   webpLossless?: boolean;
+}
 
-  // 可选：png 压缩级别（0-9），默认 3；数值越大越慢压缩更高
-  pngCompressionLevel?: number;
-
-  // 可选：是否覆盖已存在的 outPath 文件，默认 true
-  overwrite?: boolean;
-
-  // 可选：是否返回完整的 ffmpeg stdout/stderr 输出用于调试
-  captureOutput?: boolean;
-
-  // 可选：额外的原样传给 ffmpeg 的参数（高阶用法）
-  extraArgs?: string[];
-};
-
-export type ConvertResult = {
-  success: boolean;
+export interface ConvertResult {
+  exitCode: number;
+  format: ImageFormat;
   inPath: string;
   outPath: string;
-  format: ImageFormat;
-  exitCode: number;
-  stdout?: string;
   stderr?: string;
-};
+  stdout?: string;
+  success: boolean;
+}
 
 /**
  * 根据输入路径推导输出路径（替换扩展名为目标格式）
@@ -119,8 +118,8 @@ function buildFfmpegArgs(
 /**
  * 检查 ffmpeg 可用性
  */
-async function ensureFfmpegAvailable(): Promise<void> {
-  const ff = await Bun.which("ffmpeg");
+function ensureFfmpegAvailable(): void {
+  const ff = Bun.which("ffmpeg");
   if (!ff) {
     throw new Error(
       "ffmpeg 未找到。请确保已安装并加入 PATH，例如: " +
@@ -146,9 +145,9 @@ export async function convertImage(
   if (!inPath) {
     throw new Error("inPath 不能为空");
   }
-  await ensureFfmpegAvailable();
+  ensureFfmpegAvailable();
 
-  const format = options.format;
+  const { format } = options;
   if (format !== "png" && format !== "webp") {
     throw new Error("format 仅支持 'png' 或 'webp'");
   }
@@ -156,18 +155,18 @@ export async function convertImage(
   const outPath = options.outPath ?? deriveOutPath(inPath, format);
 
   const args = buildFfmpegArgs(inPath, outPath, {
+    extraArgs: options.extraArgs,
     format,
-    quality: options.quality ?? QUALITY_DEFAULT,
-    webpLossless: options.webpLossless ?? false,
+    overwrite: options.overwrite ?? true,
     pngCompressionLevel:
       options.pngCompressionLevel ?? PNG_COMPRESSION_LEVEL_DEFAULT,
-    overwrite: options.overwrite ?? true,
-    extraArgs: options.extraArgs,
+    quality: options.quality ?? QUALITY_DEFAULT,
+    webpLossless: options.webpLossless ?? false,
   });
 
   const proc = Bun.spawn(["ffmpeg", ...args], {
-    stdout: options.captureOutput ? "pipe" : "ignore",
     stderr: options.captureOutput ? "pipe" : "pipe",
+    stdout: options.captureOutput ? "pipe" : "ignore",
   });
 
   const [exitCode, stdoutStr, stderrStr] = await Promise.all([
@@ -186,12 +185,12 @@ export async function convertImage(
   }
 
   return {
-    success,
+    exitCode,
+    format,
     inPath,
     outPath,
-    format,
-    exitCode,
-    stdout: options.captureOutput ? stdoutStr : undefined,
     stderr: stderrStr,
+    stdout: options.captureOutput ? stdoutStr : undefined,
+    success,
   };
 }

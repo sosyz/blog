@@ -31,8 +31,8 @@
  */
 .desk {
   position: absolute;
-  left: 0;
   top: 0;
+  left: 0;
   width: calc(100% + var(--tile-w, 480px));
   height: calc(100% + var(--tile-h, 280px));
   pointer-events: none;
@@ -43,9 +43,9 @@
  * re-rasterises a moving layer's own background image every frame, but not
  * its contents. */
 .desk::before {
-  content: "";
   position: absolute;
   inset: 0;
+  content: "";
   background-image:
     radial-gradient(circle, rgb(110 95 70 / 0.3) 1px, transparent 1.4px),
     var(--paper-desk);
@@ -57,12 +57,12 @@
 /* The desk darkens a little while a note is open. Kept light: text on the
  * shaded desk and cards still needs 4.5:1 (docs/design.md 对比度). */
 .viewport::after {
-  content: "";
   position: absolute;
   inset: 0;
+  pointer-events: none;
+  content: "";
   background: rgb(70 50 20 / 0.06);
   opacity: 0;
-  pointer-events: none;
   transition: opacity 0.3s var(--out);
 }
 
@@ -73,8 +73,8 @@ body.drawer-open .viewport::after {
 /* Its own layer: a pan moves it without repainting a single card. */
 .world {
   position: absolute;
-  left: 0;
   top: 0;
+  left: 0;
   transform-origin: 0 0;
   will-change: transform;
 }
@@ -91,8 +91,8 @@ body.drawer-open .viewport::after {
 
 .links {
   position: absolute;
-  left: 0;
   top: 0;
+  left: 0;
   width: 1px;
   height: 1px;
   overflow: visible;
@@ -100,12 +100,12 @@ body.drawer-open .viewport::after {
 }
 
 .links path {
+  opacity: 0.45;
   fill: none;
   stroke: var(--pencil);
   stroke-width: 1.3;
   stroke-linecap: round;
   stroke-dasharray: 1 5;
-  opacity: 0.45;
   transition:
     opacity 0.25s var(--out),
     stroke-width 0.25s var(--out);
@@ -121,14 +121,14 @@ body.drawer-open .viewport::after {
 
 .pile {
   position: absolute;
-  left: 0;
   top: 0;
+  left: 0;
 }
 
 .topic {
   position: absolute;
-  left: 0;
   top: 0;
+  left: 0;
   margin: 0;
   font-family: var(--hand);
   font-size: 27px;
@@ -140,9 +140,9 @@ body.drawer-open .viewport::after {
 
 .topic .ul {
   position: absolute;
-  left: -6px;
   right: -6px;
   bottom: -12px;
+  left: -6px;
   height: 14px;
   background: var(--pencil);
   -webkit-mask:
@@ -157,8 +157,8 @@ body.drawer-open .viewport::after {
   width: 24px;
   height: 24px;
   margin-left: 8px;
-  vertical-align: 4px;
   font-size: 13px;
+  vertical-align: 4px;
   color: var(--pencil);
   border: 1.4px solid var(--pencil);
   border-radius: 50%;
@@ -189,9 +189,9 @@ body.drawer-open .viewport::after {
 .card:hover,
 .card:focus-visible,
 .card.current {
+  z-index: 3;
   rotate: calc(var(--r, 0deg) * 0.25);
   translate: 0 -3px;
-  z-index: 3;
 }
 
 /* Search misses: faded and out of the Tab order (canvas.ts applySearch). */
@@ -225,18 +225,18 @@ body.drawer-open .viewport::after {
 .sticky h3 {
   margin: 0 0 6px;
   font-size: 19px;
-  line-height: 1.35;
   font-weight: 400;
+  line-height: 1.35;
 }
 
 .sticky p {
   display: -webkit-box;
+  -webkit-box-orient: vertical;
   margin: 0;
+  overflow: hidden;
+  -webkit-line-clamp: 6;
   font-size: 16px;
   line-height: 1.55;
-  -webkit-line-clamp: 6;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 /* Ruled index card (踩坑). */
@@ -275,33 +275,33 @@ body.drawer-open .viewport::after {
 
 .note h3 {
   position: relative;
-  margin: 0 0 6px;
   padding-right: 44px;
+  margin: 0 0 6px;
   font-family: var(--hand);
   font-size: 18px;
-  line-height: 24px;
   font-weight: 400;
+  line-height: 24px;
 }
 
 .note p {
   position: relative;
   display: -webkit-box;
+  -webkit-box-orient: vertical;
   margin: 0;
+  overflow: hidden;
+  -webkit-line-clamp: 4;
   font-family: var(--body);
   font-size: 14.5px;
   line-height: 24px;
   color: var(--pencil);
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 .note .foot {
   position: relative;
   display: flex;
+  gap: 8px;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
   margin-top: 10px;
 }
 
@@ -340,16 +340,16 @@ body.drawer-open .viewport::after {
 
 .intro {
   position: absolute;
-  left: 0;
   top: 0;
+  left: 0;
   width: 360px;
   padding: 26px 26px 22px;
+  cursor: default;
   border: 1px solid var(--edge);
   box-shadow:
     0 1px 2px rgb(80 60 30 / 0.1),
     0 14px 26px -14px rgb(80 60 30 / 0.45);
   rotate: var(--r, 0deg);
-  cursor: default;
 }
 
 .intro > .tape {
@@ -395,8 +395,8 @@ body.drawer-open .viewport::after {
 }
 
 .intro .intro-foot {
-  margin: 14px 0 0;
   padding-top: 8px;
+  margin: 14px 0 0;
   border-top: 1px dashed var(--edge);
 }
 
@@ -411,8 +411,8 @@ body.drawer-open .viewport::after {
 
 .world .sticker {
   position: absolute;
-  left: 0;
   top: 0;
+  left: 0;
   z-index: 2;
   transition:
     rotate 0.3s var(--out),
@@ -421,28 +421,28 @@ body.drawer-open .viewport::after {
 }
 
 .world .sticker:hover {
-  rotate: calc(var(--r, 0deg) * 0.4);
-  scale: 1.06;
   filter: drop-shadow(0 2px 2px rgb(60 40 10 / 0.2))
     drop-shadow(0 10px 10px rgb(60 40 10 / 0.18));
+  rotate: calc(var(--r, 0deg) * 0.4);
+  scale: 1.06;
 }
 
 .world .arrow {
+  --doodle: url("/journal/doodle/arrow-curved-brush.svg");
   position: absolute;
-  z-index: 2;
-  left: 0;
   top: 0;
+  left: 0;
+  z-index: 2;
   width: 120px;
   height: 70px;
   pointer-events: none;
-  --doodle: url("/journal/doodle/arrow-curved-brush.svg");
 }
 
 .scribble {
   position: absolute;
-  z-index: 2;
-  left: 0;
   top: 0;
+  left: 0;
+  z-index: 2;
   margin: 0;
   font-family: var(--hand);
   font-size: 17px;
@@ -512,16 +512,16 @@ body.drawer-open .viewport::after {
 
 .zoom {
   position: fixed;
-  z-index: 20;
   right: 14px;
   bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
+  z-index: 20;
   display: flex;
-  margin: 0;
   padding: 0;
+  margin: 0;
+  overflow: hidden;
   border: 1px solid var(--edge);
   border-radius: 10px;
   box-shadow: var(--shadow-float);
-  overflow: hidden;
   transition:
     opacity 0.2s var(--out),
     right var(--dur-drawer) var(--spring);
@@ -532,16 +532,16 @@ body.drawer-open .viewport::after {
   place-content: center;
   width: 38px;
   height: 36px;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
   font-size: 17px;
   color: var(--pencil);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
 }
 
 .zoom button:hover {
-  background: rgb(0 0 0 / 0.04);
   color: var(--ink);
+  background: rgb(0 0 0 / 0.04);
 }
 
 .zoom button:focus-visible {
@@ -553,8 +553,8 @@ body.drawer-open .viewport::after {
   place-content: center;
   min-width: 48px;
   font-size: 12px;
-  color: var(--faint);
   font-variant-numeric: tabular-nums;
+  color: var(--faint);
   border-inline: 1px solid var(--edge);
 }
 
@@ -564,10 +564,10 @@ body.drawer-open .viewport::after {
 
 .toolbar {
   position: fixed;
-  z-index: 20;
   top: calc(env(safe-area-inset-top, 0px) + 14px);
-  left: 14px;
   right: 14px;
+  left: 14px;
+  z-index: 20;
   display: flex;
   justify-content: center;
   pointer-events: none;
@@ -580,14 +580,14 @@ body.drawer-open .toolbar {
 .toolbar-in {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
   gap: 12px;
+  align-items: center;
   max-width: 100%;
   padding: 7px 8px 7px 16px;
+  pointer-events: auto;
   border: 1px solid var(--edge);
   border-radius: 12px;
   box-shadow: var(--shadow-float);
-  pointer-events: auto;
 }
 
 .brand {
@@ -606,12 +606,12 @@ body.drawer-open .toolbar {
 
 .search {
   display: flex;
-  align-items: center;
   gap: 6px;
+  align-items: center;
   padding: 3px 10px;
+  background: rgb(255 255 255 / 0.35);
   border: 1px solid var(--field-line);
   border-radius: 8px;
-  background: rgb(255 255 255 / 0.35);
   transition:
     border-color 0.2s var(--out),
     box-shadow 0.2s var(--out);
@@ -623,22 +623,22 @@ body.drawer-open .toolbar {
 }
 
 .search svg {
+  flex: none;
   width: 14px;
   height: 14px;
-  flex: none;
-  stroke: var(--faint-mark);
   fill: none;
+  stroke: var(--faint-mark);
   stroke-width: 2;
 }
 
 .search input {
   width: min(200px, 40vw);
-  border: 0;
-  outline: 0;
-  background: transparent;
   font-family: var(--hand);
   font-size: 15px;
   color: var(--ink);
+  outline: 0;
+  background: transparent;
+  border: 0;
 }
 
 .search input::placeholder {
@@ -664,12 +664,12 @@ body.drawer-open .toolbar {
 
 .seg a {
   padding: 3px 12px;
-  border-radius: 6px;
   font-family: var(--hand);
   font-size: 15px;
   line-height: 1.6;
   color: var(--pencil);
   text-decoration: none;
+  border-radius: 6px;
   transition:
     background 0.2s var(--out),
     color 0.2s var(--out);
@@ -680,8 +680,8 @@ body.drawer-open .toolbar {
 }
 
 .seg a.is-active {
-  background: var(--ink);
   color: var(--doc);
+  background: var(--ink);
 }
 
 /*
@@ -708,10 +708,10 @@ body.drawer-open .toolbar {
 
 .drawer {
   position: fixed;
-  z-index: 30;
   top: 18px;
   right: 12px;
   bottom: 12px;
+  z-index: 30;
   display: flex;
   flex-direction: column;
   width: min(600px, calc(100% - 24px));
@@ -727,19 +727,19 @@ body.drawer-open .toolbar {
 .drawer > .tape {
   top: -12px;
   left: 50%;
-  margin-left: -65px;
   z-index: 2;
+  margin-left: -65px;
 }
 
 .dtop {
   display: flex;
-  align-items: center;
   gap: 8px;
+  align-items: center;
   padding: 12px 12px 10px 20px;
-  border-bottom: 1px dashed var(--edge);
   font-family: var(--hand);
   font-size: 14px;
   color: var(--pencil);
+  border-bottom: 1px dashed var(--edge);
 }
 
 .dtop .sp {
@@ -748,16 +748,16 @@ body.drawer-open .toolbar {
 
 .dnav {
   padding: 2px 10px;
-  border: 1px solid var(--edge);
-  border-radius: 6px;
-  background: transparent;
   font-family: var(--hand);
   font-size: 14px;
   line-height: 1.6;
   color: var(--pencil);
-  text-decoration: none;
   white-space: nowrap;
+  text-decoration: none;
   cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
 }
 
 a.dnav:hover {
@@ -766,8 +766,8 @@ a.dnav:hover {
 }
 
 .dnav[aria-disabled="true"] {
-  opacity: 0.35;
   cursor: default;
+  opacity: 0.35;
 }
 
 .dscroll {
@@ -785,22 +785,22 @@ a.dnav:hover {
 
 /* Red margin line down the left of the page. */
 .dbody::before {
-  content: "";
   position: absolute;
   top: 0;
   bottom: 0;
   left: 26px;
   width: 1px;
+  content: "";
   background: var(--margin);
 }
 
 .dhead {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
   gap: 6px 18px;
-  margin: 0 0 14px;
+  align-items: baseline;
   padding-right: 76px;
+  margin: 0 0 14px;
   font-family: var(--hand);
   font-size: 14px;
   color: var(--pencil);
@@ -834,8 +834,8 @@ a.dnav:hover {
 }
 
 .dtitle {
-  margin: 0 0 18px;
   padding-right: 60px;
+  margin: 0 0 18px;
   font-family: var(--body);
   font-size: 27px;
   font-weight: 400;
@@ -847,8 +847,8 @@ a.dnav:hover {
   clear: both;
   display: grid;
   gap: 16px;
-  margin-top: 30px;
   padding-top: 16px;
+  margin-top: 30px;
   border-top: 1px dashed var(--edge);
 }
 
@@ -871,8 +871,8 @@ a.dnav:hover {
   display: flex;
   flex-wrap: wrap;
   gap: 10px 12px;
-  margin: 0;
   padding: 0;
+  margin: 0;
   list-style: none;
 }
 
@@ -893,15 +893,15 @@ a.dnav:hover {
 }
 
 .ktag::before {
-  content: "";
   position: absolute;
-  left: 9px;
   top: 50%;
+  left: 9px;
   width: 5px;
   height: 5px;
   margin-top: -2.5px;
-  border-radius: 50%;
+  content: "";
   background: var(--doc);
+  border-radius: 50%;
 }
 
 .ktag:hover {
@@ -924,8 +924,8 @@ a.dnav:hover {
 .list-in {
   position: relative;
   max-width: 720px;
-  margin: 0 auto;
   padding: 26px;
+  margin: 0 auto;
   border: 1px solid var(--edge);
   box-shadow: 0 14px 30px -18px rgb(80 60 30 / 0.45);
 }
@@ -936,8 +936,8 @@ a.dnav:hover {
 
 /* 友链 under the years: names in a row, then the link to /links/. */
 .lfriends {
-  margin: 26px 0 0;
   padding-top: 14px;
+  margin: 26px 0 0;
   border-top: 1px dashed var(--edge);
 }
 
@@ -953,11 +953,11 @@ a.dnav:hover {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 18px;
-  margin: 0;
   padding: 0;
-  list-style: none;
+  margin: 0;
   font-family: var(--body);
   font-size: 16px;
+  list-style: none;
 }
 
 .lfriends a {
@@ -978,15 +978,16 @@ a.dnav:hover {
   left: 40px;
 }
 
+/* biome-ignore lint/style/noDescendingSpecificity: `.world.enter .sticker` only sets the entrance animation, nothing here */
 .list-in > .sticker {
   position: absolute;
-  right: -26px;
   top: -30px;
+  right: -26px;
 }
 
 .list-title {
-  margin: 0 0 14px;
   padding-right: 60px;
+  margin: 0 0 14px;
   font-family: var(--hand);
   font-size: 28px;
   font-weight: 400;
@@ -995,26 +996,26 @@ a.dnav:hover {
 .lfilters {
   display: grid;
   gap: 8px;
-  margin: 0 0 18px;
   padding: 0 0 14px;
+  margin: 0 0 18px;
   border-bottom: 1px dashed var(--edge);
 }
 
 .lfilter {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
   gap: 6px;
-  margin: 0;
-  padding: 0;
-  border: 0;
+  align-items: baseline;
   min-width: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
 }
 
 .lfilter legend {
   float: left;
-  margin-right: 6px;
   padding: 0;
+  margin-right: 6px;
   font-family: var(--hand);
   font-size: 14px;
   color: var(--faint);
@@ -1022,13 +1023,13 @@ a.dnav:hover {
 
 .chip {
   padding: 1px 10px;
-  border: 1px solid var(--edge);
-  border-radius: 6px;
-  background: transparent;
   font-family: var(--hand);
   font-size: 14.5px;
   color: var(--pencil);
   cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
   transition:
     background 0.2s var(--out),
     color 0.2s var(--out);
@@ -1040,9 +1041,9 @@ a.dnav:hover {
 }
 
 .chip[aria-pressed="true"] {
+  color: var(--doc);
   background: var(--ink);
   border-color: var(--ink);
-  color: var(--doc);
 }
 
 .lyear :is(h2, h3) {
@@ -1058,8 +1059,8 @@ a.dnav:hover {
 }
 
 .lyear ul {
-  margin: 0;
   padding: 0;
+  margin: 0;
   list-style: none;
 }
 
@@ -1069,9 +1070,9 @@ a.dnav:hover {
   gap: 12px;
   align-items: baseline;
   padding: 10px 6px;
-  border-top: 1px dashed var(--edge);
   color: var(--ink);
   text-decoration: none;
+  border-top: 1px dashed var(--edge);
   transition:
     background 0.2s var(--out),
     opacity 0.2s var(--out);
@@ -1151,8 +1152,8 @@ a.dnav:hover {
     height: 1px;
     margin: -1px;
     overflow: hidden;
-    clip-path: inset(50%);
     white-space: nowrap;
+    clip-path: inset(50%);
   }
 
   .dbody {
@@ -1195,7 +1196,7 @@ a.dnav:hover {
   }
 
   .list-in > .sticker {
-    right: -8px;
     --w: 72px;
+    right: -8px;
   }
 }

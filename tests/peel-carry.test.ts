@@ -42,15 +42,15 @@ const HEIGHT = 120;
 const FRAME = 1000 / 60;
 const STUCK: Vec = { x: 600, y: 400 };
 
-type Frame = {
-  phase: "peeling" | "pop" | "held";
-  pointer: Vec;
+interface Frame {
   centre: ScreenPoint;
+  direction: number;
   /** Where the held edge is drawn (curled, on screen). */
   held: ScreenPoint;
-  direction: number;
+  phase: "peeling" | "pop" | "held";
+  pointer: Vec;
   progress: number;
-};
+}
 
 const geometry = createGeometry();
 const point = createCurlPoint();
@@ -88,20 +88,20 @@ const simulate = (
     y: STUCK.y + local.x * sin + local.y * cos,
   };
   const input = (progress: number, angle: number): PeelInput => ({
-    width: WIDTH,
-    height: HEIGHT,
-    rotation,
+    direction: angle,
     grabU: grab.u,
     grabV: grab.v,
+    height: HEIGHT,
     progress,
-    direction: angle,
+    rotation,
+    width: WIDTH,
   });
   let aim: PullAim = NO_AIM;
   let pull = 0;
   let off = false;
   let popStart = 0;
   let phase: Frame["phase"] = "peeling";
-  let pose: PeelPose = { progress: 0, lift: 0, size: 1 };
+  let pose: PeelPose = { lift: 0, progress: 0, size: 1 };
   let from = pose;
   let direction = inwardAngle(grab, WIDTH, HEIGHT, rotation);
   let velocity: Vec = { x: 0, y: 0 };
@@ -137,7 +137,7 @@ const simulate = (
         { x: pointer.x - press.x, y: pointer.y - press.y },
         aim
       );
-      aim = shaped.aim;
+      ({ aim } = shaped);
       pull = shaped.distance;
       if (pullProgress() >= PEEL.detach) {
         off = true;
@@ -154,8 +154,8 @@ const simulate = (
     // The frame (sticker-peel.ts `tick`).
     if (phase === "peeling") {
       pose = {
-        progress: approach(pose.progress, pullProgress(), FRAME, PEEL_TAU.pull),
         lift: 0,
+        progress: approach(pose.progress, pullProgress(), FRAME, PEEL_TAU.pull),
         size: 1,
       };
       if (aim.dir) {
@@ -174,13 +174,13 @@ const simulate = (
       }
     } else {
       pose = {
+        lift: 1,
         progress: approach(
           pose.progress,
           dragProgress(Math.hypot(velocity.x, velocity.y)),
           FRAME,
           PEEL_TAU.progress
         ),
-        lift: 1,
         size: 1,
       };
       direction = approachAngle(
@@ -214,11 +214,11 @@ const simulate = (
     drawn = centre;
     drawnPointer = pointer;
     frames.push({
+      centre,
+      direction,
+      held: heldPoint(input(pose.progress, direction), centre),
       phase,
       pointer,
-      centre,
-      held: heldPoint(input(pose.progress, direction), centre),
-      direction,
       progress: pose.progress,
     });
   }
@@ -254,27 +254,27 @@ const turn = (a: number, b: number) =>
 
 const CASES = [
   {
+    grab: { u: 0.92, v: 0.6 },
     name: "a straight pull across it",
     path: straight(Math.PI),
-    grab: { u: 0.92, v: 0.6 },
     rotation: 0,
   },
   {
+    grab: { u: 0.85, v: 0.9 },
     name: "a turned sticker pulled diagonally",
     path: straight(-Math.PI * 0.8, 1.4),
-    grab: { u: 0.85, v: 0.9 },
     rotation: 0.35,
   },
   {
+    grab: { u: 0.9, v: 0.3 },
     name: "a pull that bends round (the curl lags behind it)",
     path: curved(Math.PI * 0.9, 1.2),
-    grab: { u: 0.9, v: 0.3 },
     rotation: -0.2,
   },
   {
+    grab: { u: 0.95, v: 0.5 },
     name: "pulled outwards: the curl has far to turn once off",
     path: straight(0, 1),
-    grab: { u: 0.95, v: 0.5 },
     rotation: 0,
   },
 ] as const;
@@ -282,7 +282,7 @@ const CASES = [
 describe("撕下来 → carried", () => {
   for (const { name, path, grab, rotation } of CASES) {
     describe(name, () => {
-      const frames = simulate(path, { rotation, grab });
+      const frames = simulate(path, { grab, rotation });
       const detachAt = frames.findIndex((frame) => frame.phase !== "peeling");
 
       test("comes off during the pull", () => {
@@ -329,20 +329,20 @@ describe("撕下来 → carried", () => {
             frame.phase === "pop" &&
             (i - detachAt) * FRAME > PEEL_MS.settle
         );
-        const first = frames[0];
+        const [first] = frames;
         if (!(settled && first)) {
           throw new Error("no settled frame");
         }
         // Pinned: the held edge is where the pull put it relative to the pointer.
         const expected = heldPoint(
           {
-            width: WIDTH,
-            height: HEIGHT,
-            rotation,
+            direction: settled.direction,
             grabU: grab.u,
             grabV: grab.v,
+            height: HEIGHT,
             progress: 0,
-            direction: settled.direction,
+            rotation,
+            width: WIDTH,
           },
           {
             x: STUCK.x + settled.pointer.x - (first.pointer.x - path(FRAME).x),

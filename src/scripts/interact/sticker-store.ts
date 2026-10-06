@@ -57,7 +57,11 @@ export const movePendingSticker = (id: string, placement: EditPlacement) => {
   }
 };
 
-export type OwnedSticker = { id: string; token: string; createdAt: number };
+export interface OwnedSticker {
+  createdAt: number;
+  id: string;
+  token: string;
+}
 
 const OWNED_KEY = "interact:owned-stickers";
 /** Stickers the upload limit allows in a few weeks; oldest go first. */

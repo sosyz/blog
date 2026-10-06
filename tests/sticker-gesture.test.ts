@@ -74,7 +74,7 @@ describe("unrotate", () => {
 });
 
 describe("isOver", () => {
-  const box = { left: 100, top: 100, right: 160, bottom: 160 };
+  const box = { bottom: 160, left: 100, right: 160, top: 100 };
 
   test("inside, and just outside within the slack", () => {
     expect(isOver(box, { x: 130, y: 130 })).toBe(true);
@@ -90,9 +90,9 @@ describe("isOver", () => {
 
 describe("throwRoute", () => {
   const none = {
-    moderating: false,
-    hasToken: false,
     accountOwned: false,
+    hasToken: false,
+    moderating: false,
     sessionOwner: false,
   };
 
@@ -111,8 +111,8 @@ describe("throwRoute", () => {
     expect(
       throwRoute({
         ...none,
-        moderating: true,
         hasToken: true,
+        moderating: true,
         sessionOwner: true,
       })
     ).toBe("admin");
@@ -228,8 +228,8 @@ describe("shapePull", () => {
   });
 
   test("pulled back the other way: the last direction stays, only its part counts", () => {
-    let aim = shapePull({ x: 60, y: 0 }, NO_AIM).aim;
-    aim = shapePull({ x: 10, y: 60 }, aim).aim;
+    let { aim } = shapePull({ x: 60, y: 0 }, NO_AIM);
+    ({ aim } = shapePull({ x: 10, y: 60 }, aim));
     const back = shapePull({ x: -40, y: 20 }, aim);
     // dot((-40, 20)/|…|, (1, 0)) is well below the cone.
     expect(-40 / Math.hypot(40, 20)).toBeLessThan(PULL_CONE);
@@ -339,8 +339,8 @@ describe("easing", () => {
 
 describe("peel timelines", () => {
   test("popping off: from fully peeled to the carried curl, lifted, no snap", () => {
-    const from = { progress: 0.97, lift: 0, size: 1 };
-    expect(popPose(0, from)).toEqual({ progress: 0.97, lift: 0, size: 1 });
+    const from = { lift: 0, progress: 0.97, size: 1 };
+    expect(popPose(0, from)).toEqual({ lift: 0, progress: 0.97, size: 1 });
     const end = popPose(1, from);
     expect(end.progress).toBeCloseTo(PEEL.carry);
     expect(end.lift).toBeCloseTo(1);
@@ -397,8 +397,8 @@ describe("peel timelines", () => {
   });
 
   test("贴回去: flat and down, a small press, back to its size", () => {
-    const from = { progress: 0.4, lift: 1 };
-    expect(layBackPose(0, from)).toEqual({ progress: 0.4, lift: 1, size: 1 });
+    const from = { lift: 1, progress: 0.4 };
+    expect(layBackPose(0, from)).toEqual({ lift: 1, progress: 0.4, size: 1 });
     const end = layBackPose(1, from);
     expect(end.progress).toBeCloseTo(0);
     expect(end.lift).toBeCloseTo(0);

@@ -24,16 +24,16 @@ describe("hidden built-ins cache", () => {
         {
           keys: [TRAM, TRAM, "bad key", 3, PILE],
           recent: {
-            [DOG]: { hidden: true, at: NOW - 1000 },
-            [TRAM]: { hidden: false, at: NOW - RECENT_MS - 1 },
-            "outer:x": { hidden: "yes", at: NOW },
+            [DOG]: { at: NOW - 1000, hidden: true },
+            [TRAM]: { at: NOW - RECENT_MS - 1, hidden: false },
+            "outer:x": { at: NOW, hidden: "yes" },
           },
         },
         NOW
       )
     ).toEqual({
       keys: [TRAM, PILE],
-      recent: { [DOG]: { hidden: true, at: NOW - 1000 } },
+      recent: { [DOG]: { at: NOW - 1000, hidden: true } },
     });
     expect(normaliseCache(null, NOW)).toEqual(EMPTY_CACHE);
     expect(normaliseCache([TRAM], NOW)).toEqual(EMPTY_CACHE);

@@ -26,28 +26,28 @@ import { getAuth } from "./auth";
 import { hasOwnerFlag, reviewTarget } from "./owner";
 import { readStore, requestJson, writeStore } from "./util";
 
-export type PendingComment = {
-  id: string;
-  kind: CommentKind;
-  name: string;
-  site: string | null;
-  body: string;
+export interface PendingComment {
   anchor: Anchor | null;
-  parentId: string | null;
+  body: string;
   createdAt: number;
-  /** Written while logged in with GitHub. */
-  user?: PublicUser | null;
+  id: string;
   /** Written by the blog owner (博主 stamp). */
   isOwner?: boolean;
-};
+  kind: CommentKind;
+  name: string;
+  parentId: string | null;
+  site: string | null;
+  /** Written while logged in with GitHub. */
+  user?: PublicUser | null;
+}
 
-export type Thread = {
-  slug: string;
+export interface Thread {
   approved: PublicComment[];
-  pending: PendingComment[];
-  loaded: boolean;
   error: string | null;
-};
+  loaded: boolean;
+  pending: PendingComment[];
+  slug: string;
+}
 
 const KEY = "interact:pending-comments";
 /** 30 days. */
@@ -85,11 +85,11 @@ type Listener = (thread: Thread) => void;
 const listeners = new Map<string, Set<Listener>>();
 
 const emptyThread = (slug: string): Thread => ({
-  slug,
   approved: [],
-  pending: readPending(slug),
-  loaded: false,
   error: null,
+  loaded: false,
+  pending: readPending(slug),
+  slug,
 });
 
 const threadOf = (slug: string) => threads.get(slug) ?? emptyThread(slug);
@@ -121,16 +121,16 @@ export const subscribe = (slug: string, listener: Listener) => {
 };
 
 const toPending = (item: PublicComment): PendingComment => ({
+  anchor: item.anchor,
+  body: item.body,
+  createdAt: item.createdAt,
   id: item.id,
+  isOwner: item.isOwner,
   kind: item.kind,
   name: item.name,
-  site: item.site,
-  body: item.body,
-  anchor: item.anchor,
   parentId: item.parentId,
-  createdAt: item.createdAt,
+  site: item.site,
   user: item.user,
-  isOwner: item.isOwner,
 });
 
 const fetchThread = async (slug: string): Promise<Thread> => {
@@ -146,7 +146,7 @@ const fetchThread = async (slug: string): Promise<Thread> => {
   }
   const result = await requestJson<CommentsResponse>(`/api/comments?${params}`);
   if (!result.ok) {
-    return { ...threadOf(slug), pending, loaded: true, error: result.message };
+    return { ...threadOf(slug), error: result.message, loaded: true, pending };
   }
   const stillPending = pending.filter(
     (item) => result.data.mine[item.id] === "pending"
@@ -157,13 +157,13 @@ const fetchThread = async (slug: string): Promise<Thread> => {
     .filter((item) => !local.has(item.id))
     .map(toPending);
   return {
-    slug,
     approved: result.data.comments,
+    error: null,
+    loaded: true,
     pending: [...stillPending, ...fromAccount].sort(
       (a, b) => a.createdAt - b.createdAt
     ),
-    loaded: true,
-    error: null,
+    slug,
   };
 };
 
@@ -187,32 +187,35 @@ export const loadThread = (slug: string, force = false) => {
   return request;
 };
 
-export type NewComment = {
-  slug: string;
+export interface NewComment {
+  anchor?: Anchor;
+  body: string;
+  email?: string;
   kind: CommentKind;
   /** Left out when logged in (the account is the author). */
   name?: string;
-  email?: string;
-  site?: string;
-  body: string;
   parentId?: string;
-  anchor?: Anchor;
+  site?: string;
+  slug: string;
   /** Left out when logged in (the session stands in for Turnstile). */
   turnstile?: string;
-};
+}
 
 /** Logged in: how the new comment shows until it is reviewed. */
-type Signed = { user: PublicUser | null; isOwner: boolean };
+interface Signed {
+  isOwner: boolean;
+  user: PublicUser | null;
+}
 
 /** Sends a comment; on success it shows up as 审核中 for this visitor. */
 export const submitComment = async (
   input: NewComment,
-  { user, isOwner }: Signed = { user: null, isOwner: false }
+  { user, isOwner }: Signed = { isOwner: false, user: null }
 ) => {
   const result = await requestJson<CreatedResponse>("/api/comments", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
     body: JSON.stringify(input),
+    headers: { "content-type": "application/json" },
+    method: "POST",
   });
   if (!result.ok) {
     return result;
@@ -222,16 +225,16 @@ export const submitComment = async (
     await loadThread(input.slug, true);
   } else if (status === "pending") {
     const item: PendingComment = {
+      anchor: input.anchor ?? null,
+      body: input.body.trim(),
+      createdAt: Date.now(),
       id,
+      isOwner: user ? isOwner : false,
       kind: input.kind,
       name: user?.login ?? input.name?.trim() ?? "",
+      parentId: input.parentId ?? null,
       site: user?.htmlUrl ?? (input.site?.trim() || null),
       user,
-      isOwner: user ? isOwner : false,
-      body: input.body.trim(),
-      anchor: input.anchor ?? null,
-      parentId: input.parentId ?? null,
-      createdAt: Date.now(),
     };
     const pending = [...readPending(input.slug), item];
     writePending(input.slug, pending);

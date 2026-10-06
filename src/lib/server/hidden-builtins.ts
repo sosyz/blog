@@ -14,11 +14,11 @@ type Db = D1Database;
 /** More than the canvas has; keeps a runaway table from growing the list. */
 const MAX_HIDDEN = 200;
 
-export type HiddenBuiltinRow = {
-  key: string;
+export interface HiddenBuiltinRow {
   hidden_at: number;
   hidden_by: string;
-};
+  key: string;
+}
 
 /** The rows, newest first (/admin/). */
 export const listHiddenBuiltinRows = async (db: Db) => {
@@ -36,13 +36,13 @@ export const listHiddenBuiltinRows = async (db: Db) => {
 export const listHiddenBuiltins = async (db: Db) =>
   (await listHiddenBuiltinRows(db)).map((row) => row.key);
 
-export type BuiltinChange = {
-  key: string;
-  hidden: boolean;
+export interface BuiltinChange {
   /** 'admin:<email>' or 'owner:github:<login>'. */
   by: string;
+  hidden: boolean;
+  key: string;
   now: number;
-};
+}
 
 /**
  * Hides (a row) or restores (no row) a built-in. Idempotent: hiding one that
@@ -84,15 +84,15 @@ export const builtinEditor = (
   session: { isOwner: boolean; login: string } | null
 ): BuiltinEditor => {
   if (admin.ok) {
-    return { ok: true, actor: `admin:${admin.email}` };
+    return { actor: `admin:${admin.email}`, ok: true };
   }
   if (session?.isOwner) {
-    return { ok: true, actor: `owner:github:${session.login}` };
+    return { actor: `owner:github:${session.login}`, ok: true };
   }
   const someone = session !== null || admin.status === STATUS.forbidden;
   return {
+    message: NOT_OWNER,
     ok: false,
     status: someone ? STATUS.forbidden : STATUS.unauthorized,
-    message: NOT_OWNER,
   };
 };

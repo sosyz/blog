@@ -3,26 +3,26 @@ import { describe, expect, test } from "bun:test";
 import { fitsIn, isOutside, panToShow } from "../src/scripts/canvas/reveal";
 import { sentMessage } from "../src/scripts/interact/announce";
 
-const AREA = { width: 800, height: 600 };
+const AREA = { height: 600, width: 800 };
 
 describe("isOutside", () => {
   test("a box fully on the desk is visible", () => {
     expect(
-      isOutside({ left: 10, top: 10, right: 200, bottom: 100 }, AREA)
+      isOutside({ bottom: 100, left: 10, right: 200, top: 10 }, AREA)
     ).toBe(false);
   });
 
   test("a link above the top edge is outside", () => {
     expect(
-      isOutside({ left: 100, top: -56, right: 160, bottom: -30 }, AREA)
+      isOutside({ bottom: -30, left: 100, right: 160, top: -56 }, AREA)
     ).toBe(true);
   });
 
   test("a box under the drawer (past the free width) is outside", () => {
     expect(
       isOutside(
-        { left: 300, top: 100, right: 420, bottom: 140 },
-        { width: 400, height: 600 }
+        { bottom: 140, left: 300, right: 420, top: 100 },
+        { height: 600, width: 400 }
       )
     ).toBe(true);
   });
@@ -30,7 +30,7 @@ describe("isOutside", () => {
 
 describe("fitsIn", () => {
   test("the intro card fits a phone-sized desk", () => {
-    expect(fitsIn({ left: -40, top: 0, right: 248, bottom: 300 }, AREA)).toBe(
+    expect(fitsIn({ bottom: 300, left: -40, right: 248, top: 0 }, AREA)).toBe(
       true
     );
   });
@@ -38,8 +38,8 @@ describe("fitsIn", () => {
   test("a card wider than the strip left of the drawer does not fit", () => {
     expect(
       fitsIn(
-        { left: 0, top: 0, right: 360, bottom: 300 },
-        { width: 200, height: 600 }
+        { bottom: 300, left: 0, right: 360, top: 0 },
+        { height: 600, width: 200 }
       )
     ).toBe(false);
   });
@@ -47,8 +47,8 @@ describe("fitsIn", () => {
 
 describe("panToShow", () => {
   test("centres the box in the area at the same scale", () => {
-    const cam = { x: 50, y: -20, s: 0.8 };
-    const box = { left: 900, top: -100, right: 1000, bottom: -60 };
+    const cam = { s: 0.8, x: 50, y: -20 };
+    const box = { bottom: -60, left: 900, right: 1000, top: -100 };
     const next = panToShow(cam, box, AREA);
     expect(next.s).toBe(0.8);
     const shift = { x: next.x - cam.x, y: next.y - cam.y };
@@ -57,18 +57,18 @@ describe("panToShow", () => {
   });
 
   test("the result is visible afterwards", () => {
-    const cam = { x: 0, y: 0, s: 1 };
-    const box = { left: -300, top: 700, right: -200, bottom: 740 };
+    const cam = { s: 1, x: 0, y: 0 };
+    const box = { bottom: 740, left: -300, right: -200, top: 700 };
     const next = panToShow(cam, box, AREA);
     const dx = next.x - cam.x;
     const dy = next.y - cam.y;
     expect(
       isOutside(
         {
-          left: box.left + dx,
-          top: box.top + dy,
-          right: box.right + dx,
           bottom: box.bottom + dy,
+          left: box.left + dx,
+          right: box.right + dx,
+          top: box.top + dy,
         },
         AREA
       )

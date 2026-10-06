@@ -40,34 +40,34 @@ import {
 } from "./trash";
 import { reduceMotion } from "./util";
 
-export type ThrowSource = {
-  slug: string;
-  /** Presses and keys inside it are watched. */
-  root: HTMLElement;
+export interface ThrowSource {
+  /** Picked up anywhere, text included (margin notes). */
+  anywhere?: boolean;
   /** The throwable card a press or key on `target` is about. */
   cardOf: (target: Element) => HTMLElement | null;
   /** The card of this comment now (the lists re-render). */
   findCard: (id: string) => HTMLElement | null;
   /** Focus the first element with one of these data-keys, after sending. */
   focusKeys: (keys: string[]) => void;
-  /** Picked up anywhere, text included (margin notes). */
-  anywhere?: boolean;
   /** Extra class for the lifted copy (a popover row is sticky yellow). */
   ghostClass?: string;
-};
+  /** Presses and keys inside it are watched. */
+  root: HTMLElement;
+  slug: string;
+}
 
-type Drag = {
-  source: ThrowSource;
-  card: HTMLElement;
-  id: string;
-  pointerId: number;
-  start: { x: number; y: number };
-  ghost: HTMLElement | null;
+interface Drag {
   /** The card's own rotation (deg). */
   base: number;
-  pose: SlipPose;
+  card: HTMLElement;
+  ghost: HTMLElement | null;
+  id: string;
   over: boolean;
-};
+  pointerId: number;
+  pose: SlipPose;
+  source: ThrowSource;
+  start: { x: number; y: number };
+}
 
 const EASE_OUT = "cubic-bezier(0.2, 0.8, 0.2, 1)";
 const LIFTING = "is-lifting";
@@ -201,13 +201,13 @@ const throwInto = async ({
   window.setTimeout(hideTrash, LID_MS);
   const thrown = throwComment(source.slug, id, {
     focusUndo,
-    onUndo: (hadFocus) => settleCard(source, id, hadFocus),
     onSent: (keys) => {
       const active = document.activeElement;
       if (!active || active === document.body || !active.isConnected) {
         source.focusKeys(keys);
       }
     },
+    onUndo: (hadFocus) => settleCard(source, id, hadFocus),
   });
   if (!thrown) {
     settleCard(source, id, focusUndo);
@@ -222,11 +222,11 @@ const throwByKey = (source: ThrowSource, card: HTMLElement) => {
   placeGhost(ghost, pose, false);
   card.classList.add(LIFTING);
   throwInto({
-    source,
-    id: card.dataset.throw ?? "",
-    ghost,
-    pose,
     focusUndo: true,
+    ghost,
+    id: card.dataset.throw ?? "",
+    pose,
+    source,
   });
 };
 
@@ -257,11 +257,11 @@ const floatBack = async (current: Drag) => {
       .animate(
         [
           {
-            translate: `${current.pose.dx}px ${current.pose.dy}px`,
             rotate: `${current.pose.turn}deg`,
             scale: String(LIFT_SCALE),
+            translate: `${current.pose.dx}px ${current.pose.dy}px`,
           },
-          { translate: "0px 0px", rotate: `${current.base}deg`, scale: "1" },
+          { rotate: `${current.base}deg`, scale: "1", translate: "0px 0px" },
         ],
         { duration: FLOAT_BACK_MS, easing: EASE_OUT, fill: "forwards" }
       )
@@ -328,11 +328,11 @@ function onUp(event: PointerEvent) {
   swallowClick();
   if (event.type === "pointerup" && current.over) {
     throwInto({
-      source: current.source,
-      id: current.id,
-      ghost,
-      pose: current.pose,
       focusUndo: false,
+      ghost,
+      id: current.id,
+      pose: current.pose,
+      source: current.source,
     });
     return;
   }
@@ -372,15 +372,15 @@ const onPointerDown = (source: ThrowSource, event: PointerEvent) => {
   }
   const base = rotationOf(card);
   drag = {
-    source,
-    card,
-    id,
-    pointerId: event.pointerId,
-    start: { x: event.clientX, y: event.clientY },
-    ghost: null,
     base,
-    pose: { dx: 0, dy: 0, turn: base },
+    card,
+    ghost: null,
+    id,
     over: false,
+    pointerId: event.pointerId,
+    pose: { dx: 0, dy: 0, turn: base },
+    source,
+    start: { x: event.clientX, y: event.clientY },
   };
   window.addEventListener("pointermove", onMove);
   window.addEventListener("pointerup", onUp);

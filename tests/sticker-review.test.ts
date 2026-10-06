@@ -51,10 +51,10 @@ describe("isAuthLost", () => {
 });
 
 describe("findById / withoutIds", () => {
-  const review = [{ id: "a", from: "review" }];
+  const review = [{ from: "review", id: "a" }];
   const approved = [
-    { id: "a", from: "approved" },
-    { id: "b", from: "approved" },
+    { from: "approved", id: "a" },
+    { from: "approved", id: "b" },
   ];
 
   test("finds the review target in the first list that has it", () => {
@@ -74,9 +74,9 @@ describe("findById / withoutIds", () => {
 describe("reviewCamera", () => {
   test("keeps a comfortable zoom and lifts the sticker above centre", () => {
     expect(reviewCamera({ x: 100, y: 200 }, 1)).toEqual({
+      scale: 1,
       x: 100,
       y: 200 + REVIEW_LIFT,
-      scale: 1,
     });
   });
 
@@ -96,19 +96,19 @@ describe("reviewCamera", () => {
 describe("cardSide", () => {
   test("below when it fits", () => {
     expect(
-      cardSide({ top: 100, bottom: 200, cardHeight: 150, viewportHeight: 800 })
+      cardSide({ bottom: 200, cardHeight: 150, top: 100, viewportHeight: 800 })
     ).toBe("below");
   });
 
   test("above when the bottom is too close and there is room above", () => {
     expect(
-      cardSide({ top: 500, bottom: 700, cardHeight: 150, viewportHeight: 800 })
+      cardSide({ bottom: 700, cardHeight: 150, top: 500, viewportHeight: 800 })
     ).toBe("above");
   });
 
   test("stays below when neither side fits better", () => {
     expect(
-      cardSide({ top: 40, bottom: 700, cardHeight: 150, viewportHeight: 800 })
+      cardSide({ bottom: 700, cardHeight: 150, top: 40, viewportHeight: 800 })
     ).toBe("below");
   });
 });

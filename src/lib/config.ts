@@ -2,9 +2,9 @@ export const config = {
   cloudflare: {
     accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
     ai: {
-      gatewayId: process.env.CLOUDFLARE_GATEWAY_ID,
-      auth: process.env.CLOUDFLARE_GATEWAY_AUTH,
       apiKey: process.env.CLOUDFLARE_AI_API_KEY,
+      auth: process.env.CLOUDFLARE_GATEWAY_AUTH,
+      gatewayId: process.env.CLOUDFLARE_GATEWAY_ID,
     },
   },
   maashub: {

@@ -24,11 +24,8 @@ export const OG_LOCALE = "zh_CN";
  * bio; `image` is the dog sticker the site uses as the owner's avatar.
  */
 export const AUTHOR = {
-  name: PROFILE.name,
-  url: `${SITE_URL}/`,
   description: PROFILE.bio,
   image: `${SITE_URL}/stickers/people-dog.webp`,
-  sameAs: ["https://github.com/sosyz"],
   knowsAbout: [
     "AI 工具链",
     "Web 开发",
@@ -39,14 +36,17 @@ export const AUTHOR = {
     "Kubernetes",
     "运维与网络",
   ],
+  name: PROFILE.name,
+  sameAs: ["https://github.com/sosyz"],
+  url: `${SITE_URL}/`,
 } as const;
 
 /** Default share image (public/og-default.png, see build-og-image.ts). */
 export const DEFAULT_OG_IMAGE = {
+  alt: "点阵纸上贴着一张写着「这本手账属于 Sonui，技术踩坑和随想」的索引卡，旁边的便利贴写着最近在折腾的主题",
+  height: 630,
   src: "/og-default.png",
   width: 1200,
-  height: 630,
-  alt: "点阵纸上贴着一张写着「这本手账属于 Sonui，技术踩坑和随想」的索引卡，旁边的便利贴写着最近在折腾的主题",
 } as const;
 
 /** Stable JSON-LD node ids, so pages can reference the same Person/WebSite. */
@@ -64,33 +64,33 @@ export const noteMarkdownUrl = (slug: string) =>
   absoluteUrl(`/notes/${slug}.md`);
 
 export const personNode = () => ({
-  "@type": "Person",
   "@id": PERSON_ID,
-  name: AUTHOR.name,
-  url: AUTHOR.url,
+  "@type": "Person",
   description: AUTHOR.description,
   image: AUTHOR.image,
-  sameAs: [...AUTHOR.sameAs],
   knowsAbout: [...AUTHOR.knowsAbout],
+  name: AUTHOR.name,
+  sameAs: [...AUTHOR.sameAs],
+  url: AUTHOR.url,
 });
 
 export const websiteNode = () => ({
-  "@type": "WebSite",
   "@id": WEBSITE_ID,
-  name: SITE_NAME,
-  url: absoluteUrl("/"),
+  "@type": "WebSite",
+  author: { "@id": PERSON_ID },
   description: SITE_DESCRIPTION,
   inLanguage: SITE_LANGUAGE,
-  author: { "@id": PERSON_ID },
+  name: SITE_NAME,
   publisher: { "@id": PERSON_ID },
+  url: absoluteUrl("/"),
 });
 
 const JSON_LD_ESCAPES: Record<string, string> = {
-  "<": "\\u003c",
-  ">": "\\u003e",
-  "&": "\\u0026",
   "\u2028": "\\u2028",
   "\u2029": "\\u2029",
+  "&": "\\u0026",
+  "<": "\\u003c",
+  ">": "\\u003e",
 };
 const JSON_LD_UNSAFE = /[<>&\u2028\u2029]/g;
 

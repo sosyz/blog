@@ -24,10 +24,11 @@ import {
   isMermaidPre,
   mermaidDiagrams,
 } from "../src/lib/markdown/diagrams";
+import { rejectionMessage } from "./support/rejection";
 
 const POSTS = "src/posts";
 const MERMAID_FENCE = /^[ \t]*(?:```|~~~)mermaid\b/gm;
-const DIAGRAM_FIGURE = /<figure class="diagram"/g;
+const DIAGRAM_FIGURE = /<figure [^>]*class="diagram"/g;
 const EDGE_LABEL = /class="edgeLabel"/;
 const EDGE_LABEL_RECT = /<rect[^>]*class="background"/;
 const FORBIDDEN = /<script|<foreignObject|@import|\son[a-z]+=/i;
@@ -125,7 +126,7 @@ describe("render config", () => {
 
 describe("mermaidDiagrams plugin", () => {
   const dir = mkdtempSync(join(tmpdir(), "diagrams-"));
-  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+  afterAll(() => rmSync(dir, { force: true, recursive: true }));
 
   const source = "graph LR\n  accTitle: 测试图\n  A[甲] --> B[乙]";
   const hash = diagramHash(source);
@@ -138,7 +139,7 @@ describe("mermaidDiagrams plugin", () => {
     const markdown = `前文\n\n${fence(source)}\n\`\`\`ts\nconst a = 1;\n\`\`\`\n`;
     const { html } = await markdownToHtml(markdown, { hastPlugins: [plugin] });
     expect(html).toContain(
-      `<figure class="diagram" aria-labelledby="chart-title-${id}">`
+      `<figure aria-labelledby="chart-title-${id}" class="diagram">`
     );
     expect(html).toContain(
       `<div class="diagram-sheet" tabindex="0">${svg}</div>`
@@ -162,21 +163,21 @@ describe("mermaidDiagrams plugin", () => {
     // Sätteri throws synchronously when every plugin is synchronous.
     const compile = async () =>
       await markdownToHtml(markdown, { hastPlugins: [plugin] });
-    await expect(compile()).rejects.toThrow("bun run diagrams");
+    expect(await rejectionMessage(compile())).toContain("bun run diagrams");
   });
 
   test("recognises Shiki's pre and skips its own source copy", () => {
     const code = {
-      type: "element" as const,
-      tagName: "code",
-      properties: { className: ["language-mermaid"] },
       children: [],
+      properties: { className: ["language-mermaid"] },
+      tagName: "code",
+      type: "element" as const,
     };
     const pre = (properties: Record<string, string>) => ({
-      type: "element" as const,
-      tagName: "pre",
-      properties,
       children: [code],
+      properties,
+      tagName: "pre",
+      type: "element" as const,
     });
     expect(isMermaidPre(pre({}))).toBe(true);
     expect(

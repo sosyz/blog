@@ -20,13 +20,13 @@ export const noteSlugFromPath = (pathname: string) => {
   return match?.[1] ? decodeURIComponent(match[1]) : null;
 };
 
-export type DrawerParts = {
-  drawerEl: HTMLElement;
-  scrollEl: HTMLElement;
-  pageEl: HTMLElement;
+export interface DrawerParts {
   bodyEl: HTMLElement;
+  drawerEl: HTMLElement;
+  pageEl: HTMLElement;
+  scrollEl: HTMLElement;
   slug: string;
-};
+}
 
 /** The drawer on the current page, if this page shows a note. */
 export const findDrawer = (): DrawerParts | null => {
@@ -40,7 +40,7 @@ export const findDrawer = (): DrawerParts | null => {
   if (!(drawerEl && scrollEl && pageEl && bodyEl && slug)) {
     return null;
   }
-  return { drawerEl, scrollEl, pageEl, bodyEl, slug };
+  return { bodyEl, drawerEl, pageEl, scrollEl, slug };
 };
 
 export const slideIn = (drawer: HTMLElement) => {

@@ -18,30 +18,29 @@ import {
 } from "./turnstile-state";
 import { esc } from "./util";
 
-type RenderOptions = {
-  sitekey: string;
+interface RenderOptions {
   action: string;
+  "after-interactive-callback": () => void;
   appearance: "always" | "execute" | "interaction-only";
-  theme: "light" | "dark" | "auto";
-  language: string;
-  size: "normal" | "flexible" | "compact";
+  "before-interactive-callback": () => void;
   callback: (token: string) => void;
   "error-callback": (code?: string) => boolean;
   "expired-callback": () => void;
+  language: string;
+  sitekey: string;
+  size: "normal" | "flexible" | "compact";
+  theme: "light" | "dark" | "auto";
   "timeout-callback": () => void;
-  "before-interactive-callback": () => void;
-  "after-interactive-callback": () => void;
-};
+}
 
-type TurnstileApi = {
+interface TurnstileApi {
+  getResponse: (id: string) => string | undefined;
+  remove: (id: string) => void;
   render: (container: HTMLElement, options: RenderOptions) => string;
   reset: (id: string) => void;
-  remove: (id: string) => void;
-  getResponse: (id: string) => string | undefined;
-};
+}
 
 declare global {
-  // biome-ignore lint/nursery/useConsistentTypeDefinitions: global augmentation needs interfaces
   interface Window {
     turnstile?: TurnstileApi;
   }
@@ -117,15 +116,15 @@ export const turnstileMarkup = (action: string) =>
     <div class="ts-box"></div>
   </div>`;
 
-export type TurnstileHandle = {
-  /** Current token, or "" while not verified. */
-  token: () => string;
-  /** Tokens are single-use: call after every submit attempt. */
-  reset: () => void;
-  remove: () => void;
+export interface TurnstileHandle {
   /** False once it is known that no site key is configured (forms cannot be sent). */
   available: boolean;
-};
+  remove: () => void;
+  /** Tokens are single-use: call after every submit attempt. */
+  reset: () => void;
+  /** Current token, or "" while not verified. */
+  token: () => string;
+}
 
 /**
  * Renders the widget into a `.ts-wrap`. Safe to call once per wrap; later
@@ -161,19 +160,19 @@ export const mountTurnstile = (wrap: HTMLElement): TurnstileHandle => {
 
   const handle: TurnstileHandle = {
     available: true,
-    token: () => (api && widgetId ? (api.getResponse(widgetId) ?? "") : ""),
-    reset: () => {
-      if (api && widgetId) {
-        set("wait");
-        api.reset(widgetId);
-      }
-    },
     remove: () => {
       if (api && widgetId) {
         api.remove(widgetId);
         widgetId = undefined;
       }
     },
+    reset: () => {
+      if (api && widgetId) {
+        set("wait");
+        api.reset(widgetId);
+      }
+    },
+    token: () => (api && widgetId ? (api.getResponse(widgetId) ?? "") : ""),
   };
   handles.set(wrap, handle);
 
@@ -184,22 +183,22 @@ export const mountTurnstile = (wrap: HTMLElement): TurnstileHandle => {
   }
   const render = (loaded: TurnstileApi) => {
     widgetId = loaded.render(box, {
-      sitekey: siteKey,
       action,
+      // Passed or failed, `callback` / `error-callback` says which.
+      "after-interactive-callback": () => set("wait"),
       appearance: appearanceFor(manual),
-      theme: "light",
-      language: "zh-cn",
-      size: "flexible",
+      "before-interactive-callback": () => set("need"),
       callback: () => set("ok"),
       "error-callback": (code) => {
         set("fail", failText(code));
         return true;
       },
       "expired-callback": () => set("wait"),
+      language: "zh-cn",
+      sitekey: siteKey,
+      size: "flexible",
+      theme: "light",
       "timeout-callback": () => set("fail"),
-      "before-interactive-callback": () => set("need"),
-      // Passed or failed, `callback` / `error-callback` says which.
-      "after-interactive-callback": () => set("wait"),
     });
   };
 

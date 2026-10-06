@@ -6,11 +6,11 @@ import { prefersReducedMotion } from "@/scripts/canvas/api";
 import { seeded } from "@/scripts/canvas/seed";
 
 const ESCAPES: Record<string, string> = {
+  "'": "&#39;",
+  '"': "&quot;",
   "&": "&amp;",
   "<": "&lt;",
   ">": "&gt;",
-  '"': "&quot;",
-  "'": "&#39;",
 };
 const ESCAPE = /[&<>"']/g;
 
@@ -46,10 +46,10 @@ let dateFormat: Intl.DateTimeFormat | null = null;
 /** 2025.10.08 in China time, as on the blue date stamp. */
 export const dotDate = (ms: number) => {
   dateFormat ??= new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
     timeZone: "Asia/Shanghai",
     year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
   });
   return dateFormat.format(new Date(ms)).replaceAll("-", ".");
 };
@@ -83,7 +83,11 @@ export const writeStore = (key: string, value: unknown) => {
 };
 
 /** Name / e-mail / site remembered between forms. */
-export type Profile = { name?: string; email?: string; site?: string };
+export interface Profile {
+  email?: string;
+  name?: string;
+  site?: string;
+}
 
 const PROFILE_KEY = "interact:profile";
 
@@ -104,16 +108,16 @@ export const requestJson = async <T>(
       | null;
     if (!response.ok) {
       return {
-        ok: false,
         message:
           data?.error ?? `服务器出了点问题（${response.status}），稍后再试。`,
+        ok: false,
       };
     }
     if (data === null) {
-      return { ok: false, message: "服务器返回的内容看不懂，稍后再试。" };
+      return { message: "服务器返回的内容看不懂，稍后再试。", ok: false };
     }
-    return { ok: true, data };
+    return { data, ok: true };
   } catch {
-    return { ok: false, message: "网络好像断了，检查一下再试。" };
+    return { message: "网络好像断了，检查一下再试。", ok: false };
   }
 };

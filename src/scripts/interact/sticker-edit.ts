@@ -109,15 +109,15 @@ const STATUS_GAP = 18;
 const MOVED = "已挪好";
 const NOT_MOVED = "没挪成功，稍后再试";
 
-type Selected = {
-  id: string;
+interface Selected {
   el: HTMLElement;
+  id: string;
   placement: SizedPlacement;
   /** What the server has. */
   saved: SizedPlacement;
-  timer: number;
   saving: boolean;
-};
+  timer: number;
+}
 
 let api: CanvasApi | null = null;
 let selected: Selected | null = null;
@@ -140,7 +140,7 @@ export const onSelectionChange = (listener: SelectionListener) => {
 };
 
 const notifySelection = () => {
-  const selection = selected ? { id: selected.id, el: selected.el } : null;
+  const selection = selected ? { el: selected.el, id: selected.id } : null;
   for (const listener of selectionListeners) {
     listener(selection);
   }
@@ -176,12 +176,12 @@ const placementOf = (el: HTMLElement): SizedPlacement => {
     return Number.isFinite(value) ? value : fallback;
   };
   return {
-    x: read("x", 0),
-    y: read("y", 0),
+    height: read("height", 1),
     rotation: read("rotation", 0),
     scale: read("scale", 1),
     width: read("width", 1),
-    height: read("height", 1),
+    x: read("x", 0),
+    y: read("y", 0),
   };
 };
 
@@ -256,26 +256,26 @@ const moveRequest = (record: Selected) => {
   const { x, y, rotation, scale } = record.placement;
   const token = ownedToken(record.id);
   const init = (body: object): RequestInit => ({
-    method: "PATCH",
-    headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
+    headers: { "content-type": "application/json" },
+    method: "PATCH",
   });
   if (token) {
     return {
+      init: init({ rotation, scale, token, x, y }),
       url: `/api/stickers/${record.id}`,
-      init: init({ x, y, rotation, scale, token }),
     };
   }
   // The GitHub session proves ownership (or that this is the owner).
   if (isAccountOwned(record.id) || sessionOwner()) {
     return {
+      init: init({ rotation, scale, x, y }),
       url: `/api/stickers/${record.id}`,
-      init: init({ x, y, rotation, scale }),
     };
   }
   return {
+    init: init({ rotation, scale, x, y }),
     url: `/api/admin/stickers/${record.id}`,
-    init: init({ x, y, rotation, scale }),
   };
 };
 
@@ -306,8 +306,8 @@ const save = async (record: Selected) => {
     return;
   }
   const { x, y, rotation, scale } = result.data;
-  record.saved = { ...record.saved, x, y, rotation, scale };
-  movePendingSticker(record.id, { x, y, rotation, scale });
+  record.saved = { ...record.saved, rotation, scale, x, y };
+  movePendingSticker(record.id, { rotation, scale, x, y });
   if (same(record.placement, record.saved)) {
     say(record, MOVED, false);
     return;
@@ -369,12 +369,12 @@ const select = (el: HTMLElement) => {
   deselect();
   const placement = placementOf(el);
   const record: Selected = {
-    id: el.dataset.vsId ?? "",
     el,
+    id: el.dataset.vsId ?? "",
     placement,
     saved: { ...placement },
-    timer: 0,
     saving: false,
+    timer: 0,
   };
   selected = record;
   el.classList.add("is-selected");
@@ -472,12 +472,12 @@ const throwRecord = (record: Selected, focusUndo: boolean, fallen = false) => {
     notifySelection();
   }
   throwAway({
-    id,
     el,
-    scale: api?.getCamera().scale ?? 1,
-    restore: () => updateShown(id, saved),
-    focusUndo,
     fallen,
+    focusUndo,
+    id,
+    restore: () => updateShown(id, saved),
+    scale: api?.getCamera().scale ?? 1,
   });
 };
 
@@ -530,8 +530,27 @@ const startEdit = (canvas: CanvasApi, el: HTMLElement, event: PointerEvent) => {
     api: canvas,
     el,
     event,
-    origin,
-    slop: DRAG_SLOP,
+    onChange: (change) => {
+      if (held) {
+        adjust(record, change);
+      }
+    },
+    onEnd: (moved, e, mode) => {
+      if (moved && mode === "move" && overTrash) {
+        dropInTrash(record, peel);
+        return;
+      }
+      hideTrash();
+      if (e.type === "pointercancel") {
+        peel?.end();
+      } else {
+        peel?.drop();
+      }
+      // Let go before it came off: it never moved, nothing to save.
+      if (moved && held) {
+        save(record);
+      }
+    },
     onMove: (e) => {
       if (!peel) {
         return;
@@ -556,27 +575,8 @@ const startEdit = (canvas: CanvasApi, el: HTMLElement, event: PointerEvent) => {
         peel.hoverTrash(overTrash);
       }
     },
-    onChange: (change) => {
-      if (held) {
-        adjust(record, change);
-      }
-    },
-    onEnd: (moved, e, mode) => {
-      if (moved && mode === "move" && overTrash) {
-        dropInTrash(record, peel);
-        return;
-      }
-      hideTrash();
-      if (e.type === "pointercancel") {
-        peel?.end();
-      } else {
-        peel?.drop();
-      }
-      // Let go before it came off: it never moved, nothing to save.
-      if (moved && held) {
-        save(record);
-      }
-    },
+    origin,
+    slop: DRAG_SLOP,
   });
 };
 
@@ -593,12 +593,12 @@ const throwLocal = async (
 ) => {
   const fallen = await peel.fall(trashBox());
   await throwAway({
-    id,
     el,
-    scale: api?.getCamera().scale ?? 1,
-    restore: () => setOffsetVars(el, start),
-    focusUndo: false,
     fallen,
+    focusUndo: false,
+    id,
+    restore: () => setOffsetVars(el, start),
+    scale: api?.getCamera().scale ?? 1,
   });
   peel.end();
 };
@@ -612,12 +612,12 @@ const throwBuiltinLocal = async (
 ) => {
   const fallen = await peel.fall(trashBox());
   await throwBuiltin({
-    key,
     el,
-    scale: api?.getCamera().scale ?? 1,
-    restore: () => setOffsetVars(el, start),
-    focusUndo: false,
     fallen,
+    focusUndo: false,
+    key,
+    restore: () => setOffsetVars(el, start),
+    scale: api?.getCamera().scale ?? 1,
   });
   peel.end();
 };
@@ -630,11 +630,11 @@ const throwFocusedBuiltin = (el: HTMLElement) => {
   }
   const start = offsetOf(offsets, key);
   throwBuiltin({
-    key,
     el,
-    scale: api?.getCamera().scale ?? 1,
-    restore: () => setOffsetVars(el, start),
     focusUndo: true,
+    key,
+    restore: () => setOffsetVars(el, start),
+    scale: api?.getCamera().scale ?? 1,
   });
 };
 

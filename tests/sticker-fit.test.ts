@@ -60,7 +60,7 @@ describe("layoutSticker", () => {
 describe("encoding", () => {
   test("WebP steps down in quality before shrinking; PNG only shrinks", () => {
     const webp = encodeAttempts("image/webp");
-    expect(webp[0]).toEqual({ type: "image/webp", quality: 0.9, shrink: 1 });
+    expect(webp[0]).toEqual({ quality: 0.9, shrink: 1, type: "image/webp" });
     expect(webp[1]?.shrink).toBe(1);
     expect(webp[1]?.quality).toBeLessThan(0.9);
     const png = encodeAttempts("image/png");

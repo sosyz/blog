@@ -39,12 +39,12 @@ const newest = (dates: Iterable<Date>) => {
 };
 
 export const sitemapOptions: SitemapOptions = {
-  // Plain <urlset>: no news/image/video/xhtml extensions are used.
-  namespaces: { news: false, xhtml: false, image: false, video: false },
   filter: (page) => {
     const { pathname } = new URL(page);
     return !EXCLUDED.some((pattern) => pattern.test(pathname));
   },
+  // Plain <urlset>: no news/image/video/xhtml extensions are used.
+  namespaces: { image: false, news: false, video: false, xhtml: false },
   serialize: (item) => {
     const { pathname } = new URL(item.url);
     const dates = lastModifiedBySlug();
@@ -54,16 +54,16 @@ export const sitemapOptions: SitemapOptions = {
       const lastmod = dates.get(slug);
       return {
         ...item,
-        lastmod: lastmod?.toISOString(),
         changefreq: ChangeFreqEnum.YEARLY,
+        lastmod: lastmod?.toISOString(),
         priority: PRIORITY.note,
       };
     }
     if (INDEX_PATHS.has(pathname)) {
       return {
         ...item,
-        lastmod: newest(dates.values())?.toISOString(),
         changefreq: ChangeFreqEnum.WEEKLY,
+        lastmod: newest(dates.values())?.toISOString(),
         priority: pathname === "/" ? PRIORITY.home : PRIORITY.list,
       };
     }

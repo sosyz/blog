@@ -19,7 +19,6 @@ import {
  * Owner: SEO agent. Relative imports only (loaded by astro.config.mjs).
  */
 export const legacyListRedirects = (): AstroIntegration => ({
-  name: "journal-legacy-list-redirects",
   hooks: {
     "astro:build:done": async ({ dir, logger }) => {
       const file = new URL("_redirects", dir);
@@ -42,4 +41,5 @@ export const legacyListRedirects = (): AstroIntegration => ({
       );
     },
   },
+  name: "journal-legacy-list-redirects",
 });

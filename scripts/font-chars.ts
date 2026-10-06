@@ -30,11 +30,11 @@ const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
 export const splitFrontmatter = (source: string) => {
   const match = FRONTMATTER.exec(source);
   if (!match) {
-    return { frontmatter: "", body: source };
+    return { body: source, frontmatter: "" };
   }
   return {
-    frontmatter: match[1] ?? "",
     body: source.slice(match[0].length),
+    frontmatter: match[1] ?? "",
   };
 };
 
@@ -72,21 +72,21 @@ export const handText = (body: string) => {
   return parts.join("\n");
 };
 
-export type Sources = {
-  /** UI copy: .astro / .ts / .css files outside src/posts. */
-  ui: readonly string[];
+export interface Sources {
   /** Raw note files (frontmatter + Markdown). */
   posts: readonly string[];
-};
+  /** UI copy: .astro / .ts / .css files outside src/posts. */
+  ui: readonly string[];
+}
 
-export type SiteSets = {
-  /** On every page: UI copy, every note's frontmatter, BASE_RANGE. */
-  common: Set<number>;
+export interface SiteSets {
   /** Only in note bodies (not already in `common`). */
   body: Set<number>;
+  /** On every page: UI copy, every note's frontmatter, BASE_RANGE. */
+  common: Set<number>;
   /** Hand font: `common` plus the hand-set parts of note bodies. */
   hand: Set<number>;
-};
+}
 
 export const minus = (a: Iterable<number>, b: Set<number>) => {
   const out = new Set<number>();
@@ -125,8 +125,8 @@ export const siteSets = (sources: Sources): SiteSets => {
   }
   const commonSet = printable(common);
   return {
-    common: commonSet,
     body: printable(minus(bodies, commonSet)),
+    common: commonSet,
     hand: printable(new Set([...commonSet, ...hand])),
   };
 };
@@ -176,7 +176,7 @@ export const parseUnicodeRange = (value: string) => {
     const first = match[1] ?? "";
     const from = Number.parseInt(first.replaceAll("?", "0"), HEX);
     const to = Number.parseInt(match[2] ?? first.replaceAll("?", "F"), HEX);
-    for (let cp = from; cp <= to; cp++) {
+    for (let cp = from; cp <= to; cp += 1) {
       out.add(cp);
     }
   }
@@ -184,7 +184,10 @@ export const parseUnicodeRange = (value: string) => {
 };
 
 /** One @font-face of a cn-font-split result.css: its file and characters. */
-export type Chunk = { file: string; codePoints: Set<number> };
+export interface Chunk {
+  codePoints: Set<number>;
+  file: string;
+}
 
 const FACE = /@font-face\s*\{([^}]*)\}/g;
 const FACE_FILE = /url\(\s*["']?(?:\.\/)?([^"')]+\.woff2)["']?\s*\)/;
@@ -197,8 +200,8 @@ export const parseChunks = (css: string): Chunk[] => {
     const file = FACE_FILE.exec(body)?.[1];
     if (file) {
       out.push({
-        file,
         codePoints: parseUnicodeRange(FACE_RANGE.exec(body)?.[1] ?? ""),
+        file,
       });
     }
   }
@@ -219,21 +222,21 @@ export const restChunks = (
   for (const chunk of chunks) {
     const left = minus(chunk.codePoints, covered);
     if (left.size > 0) {
-      out.push({ file: chunk.file, codePoints: left });
+      out.push({ codePoints: left, file: chunk.file });
     }
   }
   return out;
 };
 
-export type FaceRule = {
-  family: string;
-  /** Sources in order, already written as CSS (`url(...) format(...)`). */
-  src: readonly string[];
-  /** Omit to cover every character the file has. */
-  range?: string;
+export interface FaceRule {
   /** Extra descriptors, e.g. { "size-adjust": "95%" }. */
   descriptors?: Readonly<Record<string, string>>;
-};
+  family: string;
+  /** Omit to cover every character the file has. */
+  range?: string;
+  /** Sources in order, already written as CSS (`url(...) format(...)`). */
+  src: readonly string[];
+}
 
 export const woff2 = (url: string) => `url("${url}") format("woff2")`;
 export const local = (name: string) => `local("${name}")`;
@@ -258,13 +261,13 @@ export const faceRule = (rule: FaceRule) => {
 
 /* ---------- metric-matched fallback ---------- */
 
-export type Metrics = {
-  unitsPerEm: number;
+export interface Metrics {
   ascent: number;
   /** Negative, as in hhea. */
   descent: number;
   lineGap: number;
-};
+  unitsPerEm: number;
+}
 
 const PERCENT = 100;
 const DECIMALS = 100;

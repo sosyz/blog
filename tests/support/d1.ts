@@ -11,11 +11,11 @@ import { join } from "node:path";
 const MIGRATIONS = join(import.meta.dir, "..", "..", "migrations");
 const READS = /^\s*(SELECT|WITH)\b/i;
 
-type Result = {
+interface Result {
+  meta: { changes: number };
   results: unknown[];
   success: true;
-  meta: { changes: number };
-};
+}
 
 class Statement {
   readonly #db: Database;
@@ -36,13 +36,13 @@ class Statement {
     const query = this.#db.query(this.#sql);
     if (READS.test(this.#sql)) {
       return {
+        meta: { changes: 0 },
         results: query.all(...this.#values),
         success: true,
-        meta: { changes: 0 },
       };
     }
     const { changes } = query.run(...this.#values);
-    return { results: [], success: true, meta: { changes } };
+    return { meta: { changes }, results: [], success: true };
   }
 
   first() {
@@ -58,10 +58,10 @@ class Statement {
   }
 }
 
-export type TestDb = {
-  sqlite: Database;
+export interface TestDb {
   d1: D1Database;
-};
+  sqlite: Database;
+}
 
 /** A fresh in-memory database with every migration applied. */
 export const createTestDb = (): TestDb => {
@@ -73,13 +73,13 @@ export const createTestDb = (): TestDb => {
     sqlite.run(readFileSync(join(MIGRATIONS, file), "utf8"));
   }
   const d1 = {
-    prepare: (sql: string) => new Statement(sqlite, sql),
     batch: (statements: Statement[]) =>
       Promise.resolve(
         sqlite.transaction(() =>
           statements.map((statement) => statement.execute())
         )()
       ),
+    prepare: (sql: string) => new Statement(sqlite, sql),
   };
-  return { sqlite, d1: d1 as unknown as D1Database };
+  return { d1: d1 as unknown as D1Database, sqlite };
 };

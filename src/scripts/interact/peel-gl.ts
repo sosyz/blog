@@ -29,33 +29,33 @@ import {
   silhouetteHull,
 } from "./peel-math";
 
-export type PeelFrame = {
+export interface PeelFrame {
   /** Screen-space (CSS px, viewport coords) rectangle where the sticker is drawn, before curl: centre, size, rotation. */
   cx: number;
   cy: number;
-  width: number;
-  height: number;
-  /** Radians, clockwise on screen (CSS `rotate()`). */
-  rotation: number;
+  /** Direction the curl travels (radians, screen space) — usually from the grab point toward the sticker centre, tilted by drag velocity. */
+  direction: number;
   /** Grab point in the sticker's local unit square (0..1, 0..1; (0,0) top-left). The curl starts at the edge/corner nearest this point. */
   grabU: number;
   grabV: number;
-  /** 0 = flat, 1 = fully peeled (the whole sticker lifted and rolled). */
-  progress: number;
-  /** Direction the curl travels (radians, screen space) — usually from the grab point toward the sticker centre, tilted by drag velocity. */
-  direction: number;
+  height: number;
   /** Extra lift for shadow (0..1). */
   lift: number;
-};
+  /** 0 = flat, 1 = fully peeled (the whole sticker lifted and rolled). */
+  progress: number;
+  /** Radians, clockwise on screen (CSS `rotate()`). */
+  rotation: number;
+  width: number;
+}
 
-export type PeelLayer = {
-  /** Draws one frame. Cheap to call every rAF. */
-  draw(frame: PeelFrame): void;
+export interface PeelLayer {
   /** Removes the canvas and frees GL resources. */
-  destroy(): void;
+  destroy: () => void;
+  /** Draws one frame. Cheap to call every rAF. */
+  draw: (frame: PeelFrame) => void;
   /** The silhouette hull the curl is shaped by (see `silhouetteHull`; empty: the whole rectangle). */
   readonly hull: Float32Array;
-};
+}
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
@@ -94,7 +94,7 @@ const LIFT_FADE = 1e-3;
 const DEFAULT_Z_INDEX = 15;
 /** Size changes smaller than this (px) don't re-sort the triangles. */
 const SIZE_TOLERANCE = 0.5;
-const RGBA = { stride: 4, channel: 3 };
+const RGBA = { channel: 3, stride: 4 };
 /** Everything in front of this is flat (used when progress is 0). */
 const NO_FOLD = -1e6;
 
@@ -313,8 +313,8 @@ const prefersReducedMotion = () =>
 
 const imageSize = (image: HTMLImageElement | ImageBitmap) =>
   "naturalWidth" in image
-    ? { width: image.naturalWidth, height: image.naturalHeight }
-    : { width: image.width, height: image.height };
+    ? { height: image.naturalHeight, width: image.naturalWidth }
+    : { height: image.height, width: image.width };
 
 /** Draws the image stretched onto a size×size 2D canvas and reads it back. */
 const rasterise = (image: HTMLImageElement | ImageBitmap, size: number) => {
@@ -334,9 +334,9 @@ const createContext = (canvas: HTMLCanvasElement) => {
     alpha: true,
     antialias: true,
     depth: false,
-    stencil: false,
     premultipliedAlpha: true,
     preserveDrawingBuffer: false,
+    stencil: false,
   };
   const gl2 = canvas.getContext("webgl2", attributes);
   if (gl2) {
@@ -382,7 +382,6 @@ const meshTriangles = () => {
 
 /** `gl.useProgram` (a WebGL call, not a React hook). */
 const activate = (gl: GL, program: WebGLProgram) => {
-  // biome-ignore lint/correctness/useHookAtTopLevel: WebGL, not a React hook
   gl.useProgram(program);
 };
 
@@ -408,7 +407,7 @@ const readImage = async (image: HTMLImageElement | ImageBitmap) => {
     const hull = small
       ? silhouetteHull(small.data, HULL_SIZE, HULL_SIZE, RGBA)
       : new Float32Array(0);
-    return { pixels, hull };
+    return { hull, pixels };
   } catch {
     return null; // tainted cross-origin image
   }
@@ -491,13 +490,13 @@ const createResources = (gl: GL, pixels: ImageData) => {
     gl.deleteProgram(shadowProgram);
   };
   return {
-    stickerProgram,
-    shadowProgram,
-    stickerUniforms,
-    shadowUniforms,
-    vertices,
-    triangles,
     free,
+    shadowProgram,
+    shadowUniforms,
+    stickerProgram,
+    stickerUniforms,
+    triangles,
+    vertices,
   };
 };
 
@@ -519,7 +518,7 @@ const createSorter = (
   const bucketOf = new Uint16Array(TRIANGLES);
   const bucketStart = new Uint32Array(BUCKETS + 1);
   const cursor = new Uint32Array(BUCKETS);
-  const last = { dirX: Number.NaN, dirY: Number.NaN, width: 0, height: 0 };
+  const last = { dirX: Number.NaN, dirY: Number.NaN, height: 0, width: 0 };
   const scale = { maxKey: 0, range: 1 };
 
   const computeKeys = (dirX: number, dirY: number, size: Size) => {
@@ -602,7 +601,7 @@ const createSorter = (
     return bucketStart[Math.max(0, Math.floor(ahead))] ?? 0;
   };
 
-  return { update, flatCount };
+  return { flatCount, update };
 };
 
 type Resources = NonNullable<ReturnType<typeof createResources>>;
@@ -613,7 +612,7 @@ type CommonLocations = Record<
 
 /** Keeps the canvas the size of the viewport (device pixels, DPR capped). */
 const createViewport = (canvas: HTMLCanvasElement) => {
-  const view = { width: 0, height: 0, dpr: 0 };
+  const view = { dpr: 0, height: 0, width: 0 };
   const fit = () => {
     const width = window.innerWidth;
     const height = window.innerHeight;
@@ -645,7 +644,7 @@ const createRenderer = (
   const sizeToWindow = createViewport(canvas);
   const sorter = createSorter(gl, resources.vertices, resources.triangles);
   const geometry: PeelGeometry = createGeometry();
-  const turn = { cos: 1, sin: 0, width: 0, height: 0 };
+  const turn = { cos: 1, height: 0, sin: 0, width: 0 };
 
   const setCommon = (locations: CommonLocations, frame: PeelFrame) => {
     gl.uniform4f(
@@ -800,12 +799,6 @@ export const createPeelLayer = async (
   canvas.addEventListener("webglcontextlost", onLost);
 
   return {
-    hull: source.hull,
-    draw(frame) {
-      if (!(lost || destroyed)) {
-        render(frame);
-      }
-    },
     destroy() {
       if (destroyed) {
         return;
@@ -818,5 +811,11 @@ export const createPeelLayer = async (
       }
       canvas.remove();
     },
+    draw(frame) {
+      if (!(lost || destroyed)) {
+        render(frame);
+      }
+    },
+    hull: source.hull,
   };
 };

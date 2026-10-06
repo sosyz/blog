@@ -56,14 +56,14 @@ describe("edit tokens", () => {
   test("moveNote writes old → new", () => {
     expect(
       moveNote(
-        { x: 10, y: 20, rotation: 0, scale: 1 },
-        { x: 40, y: 20, rotation: 5, scale: 1.2 }
+        { rotation: 0, scale: 1, x: 10, y: 20 },
+        { rotation: 5, scale: 1.2, x: 40, y: 20 }
       )
     ).toBe("(10, 20) 0° ×1 → (40, 20) 5° ×1.2");
     expect(
       moveNote(
-        { x: 0, y: 0, rotation: 0, scale: 1 },
-        { x: 1, y: 0, rotation: 0, scale: 1 },
+        { rotation: 0, scale: 1, x: 0, y: 0 },
+        { rotation: 0, scale: 1, x: 1, y: 0 },
         "博主整理贴纸"
       )
     ).toBe("博主整理贴纸：(0, 0) 0° ×1 → (1, 0) 0° ×1");
@@ -73,14 +73,14 @@ describe("edit tokens", () => {
 describe("roundPlacement", () => {
   test("rounds like the upload and clamps to the limits", () => {
     expect(
-      roundPlacement({ x: 10.4, y: -3.6, rotation: 12.345, scale: 1.234 })
-    ).toEqual({ x: 10, y: -4, rotation: 12.3, scale: 1.23 });
-    expect(roundPlacement({ x: 1e9, y: -1e9, rotation: 90, scale: 9 })).toEqual(
+      roundPlacement({ rotation: 12.345, scale: 1.234, x: 10.4, y: -3.6 })
+    ).toEqual({ rotation: 12.3, scale: 1.23, x: 10, y: -4 });
+    expect(roundPlacement({ rotation: 90, scale: 9, x: 1e9, y: -1e9 })).toEqual(
       {
-        x: LIMITS.world,
-        y: -LIMITS.world,
         rotation: LIMITS.rotation,
         scale: LIMITS.scaleMax,
+        x: LIMITS.world,
+        y: -LIMITS.world,
       }
     );
   });
@@ -88,7 +88,7 @@ describe("roundPlacement", () => {
 
 describe("stickerMoveInput", () => {
   const token = newEditToken();
-  const base = { x: 100, y: -40, rotation: 10, scale: 1.2, token };
+  const base = { rotation: 10, scale: 1.2, token, x: 100, y: -40 };
 
   const messageOf = (input: unknown) => {
     const result = stickerMoveInput.safeParse(input);
@@ -98,7 +98,7 @@ describe("stickerMoveInput", () => {
   test("accepts a move within the upload ranges", () => {
     expect(stickerMoveInput.parse(base)).toEqual(base);
     expect(
-      messageOf({ ...base, x: LIMITS.world, scale: LIMITS.scaleMin })
+      messageOf({ ...base, scale: LIMITS.scaleMin, x: LIMITS.world })
     ).toBeNull();
   });
 
@@ -152,28 +152,28 @@ describe("planMove", () => {
     status: MovableRow["status"],
     token: string
   ): Promise<MovableRow> => ({
-    x: 0,
-    y: 0,
+    edit_token_hash: await hashEditToken(token, SALT),
     rotation: 0,
     scale: 1,
     status,
-    edit_token_hash: await hashEditToken(token, SALT),
+    x: 0,
+    y: 0,
   });
-  const to = { x: 12.6, y: 5, rotation: 3.33, scale: 1.111 };
+  const to = { rotation: 3.33, scale: 1.111, x: 12.6, y: 5 };
 
   test("moves a pending or approved sticker with the right token", async () => {
     const token = newEditToken();
     for (const status of ["pending", "approved"] as const) {
       const plan = await planMove(await row(status, token), to, {
         kind: "visitor",
-        token,
         salt: SALT,
+        token,
       });
       expect(plan).toEqual({
-        ok: true,
-        from: { x: 0, y: 0, rotation: 0, scale: 1 },
-        to: { x: 13, y: 5, rotation: 3.3, scale: 1.11 },
         changed: true,
+        from: { rotation: 0, scale: 1, x: 0, y: 0 },
+        ok: true,
+        to: { rotation: 3.3, scale: 1.11, x: 13, y: 5 },
         via: "token",
       });
     }
@@ -182,8 +182,8 @@ describe("planMove", () => {
   test("a wrong token looks like a missing sticker", async () => {
     const plan = await planMove(await row("approved", newEditToken()), to, {
       kind: "visitor",
-      token: newEditToken(),
       salt: SALT,
+      token: newEditToken(),
     });
     expect(plan.ok).toBe(false);
     expect(plan.ok ? 0 : plan.status).toBe(404);
@@ -195,8 +195,8 @@ describe("planMove", () => {
     const legacy = { ...(await row("approved", "x")), edit_token_hash: null };
     const plan = await planMove(legacy, to, {
       kind: "visitor",
-      token: newEditToken(),
       salt: SALT,
+      token: newEditToken(),
     });
     expect(plan.ok ? 0 : plan.status).toBe(404);
     const admin = await planMove(legacy, to, { kind: "admin" });
@@ -207,8 +207,8 @@ describe("planMove", () => {
     const token = newEditToken();
     const plan = await planMove(await row("rejected", token), to, {
       kind: "visitor",
-      token,
       salt: SALT,
+      token,
     });
     expect(plan.ok ? 0 : plan.status).toBe(409);
     const admin = await planMove(await row("rejected", token), to, {
@@ -220,7 +220,7 @@ describe("planMove", () => {
   test("the same position is not a change", async () => {
     const plan = await planMove(
       await row("approved", "x"),
-      { x: 0.2, y: 0, rotation: 0.01, scale: 1.001 },
+      { rotation: 0.01, scale: 1.001, x: 0.2, y: 0 },
       { kind: "admin" }
     );
     expect(plan.ok && plan.changed).toBe(false);
@@ -257,12 +257,12 @@ describe("planMove", () => {
     });
 
     test("the uploader's GitHub account, without the token", async () => {
-      const session = { userId: "user-a", isOwner: false };
+      const session = { isOwner: false, userId: "user-a" };
       expect(await viaOf(await mine(), visitor({ session }))).toBe("account");
     });
 
     test("another account cannot, unless it has the token", async () => {
-      const session = { userId: "user-b", isOwner: false };
+      const session = { isOwner: false, userId: "user-b" };
       expect(await viaOf(await mine(), visitor({ session }))).toBe(404);
       expect(await viaOf(await mine(), visitor({ session, token }))).toBe(
         "token"
@@ -270,12 +270,12 @@ describe("planMove", () => {
     });
 
     test("an anonymous sticker has no account owner", async () => {
-      const session = { userId: "user-a", isOwner: false };
+      const session = { isOwner: false, userId: "user-a" };
       expect(await viaOf(await anonymous(), visitor({ session }))).toBe(404);
     });
 
     test("the owner's session moves any visitor sticker", async () => {
-      const session = { userId: "owner", isOwner: true };
+      const session = { isOwner: true, userId: "owner" };
       expect(await viaOf(await mine(), visitor({ session }))).toBe("owner");
       expect(await viaOf(await anonymous(), visitor({ session }))).toBe(
         "owner"
@@ -295,13 +295,13 @@ describe("planMove", () => {
       expect(
         await viaOf(
           rejected,
-          visitor({ session: { userId: "o", isOwner: true } })
+          visitor({ session: { isOwner: true, userId: "o" } })
         )
       ).toBe(409);
       expect(
         await viaOf(
           rejected,
-          visitor({ session: { userId: "user-a", isOwner: false } })
+          visitor({ session: { isOwner: false, userId: "user-a" } })
         )
       ).toBe(409);
     });

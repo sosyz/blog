@@ -11,20 +11,20 @@ import {
 } from "../src/lib/server/moderation";
 
 const comment: ModerationItem = {
-  type: "comment",
+  body: "写得真好",
   id: "c1",
-  slug: "go-context",
   kind: "comment",
   name: "小周",
-  body: "写得真好",
+  slug: "go-context",
+  type: "comment",
 };
 
 const sticker: ModerationItem = {
-  type: "sticker",
+  height: 200,
   id: "s1",
   mime: "image/webp",
+  type: "sticker",
   width: 200,
-  height: 200,
 };
 
 describe("registry", () => {
@@ -39,8 +39,8 @@ describe("registry", () => {
 
   test("ai mode with a model uses the AI moderator", () => {
     const moderator = createModerator({
-      mode: "ai",
       ai: () => Promise.resolve("APPROVE"),
+      mode: "ai",
     });
     expect(moderator).toBeInstanceOf(AiModerator);
   });
@@ -50,9 +50,9 @@ describe("decision flow", () => {
   test("manual: everything waits for a human", async () => {
     const moderator = new ManualModerator();
     expect(await moderate(moderator, comment)).toEqual({
+      actor: "moderator:manual",
       decision: "hold",
       status: "pending",
-      actor: "moderator:manual",
     });
     expect((await moderate(moderator, sticker)).status).toBe("pending");
   });
@@ -69,10 +69,10 @@ describe("decision flow", () => {
       review: () => Promise.reject(new Error("AI down")),
     };
     expect(await moderate(broken, comment)).toEqual({
-      decision: "hold",
-      status: "pending",
       actor: "moderator:broken",
+      decision: "hold",
       note: "AI down",
+      status: "pending",
     });
   });
 

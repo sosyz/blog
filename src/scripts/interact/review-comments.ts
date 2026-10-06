@@ -45,33 +45,36 @@ import { hold, toast } from "./trash";
 import { reduceMotion } from "./util";
 
 export const REVIEW_FOCUS = "interact:review-focus";
-export type ReviewFocusDetail = { slug: string; id: string };
+export interface ReviewFocusDetail {
+  id: string;
+  slug: string;
+}
 
-export type ReviewView = {
-  /** The review tools are shown. */
-  on: boolean;
+export interface ReviewView {
   /** An admin request answered 401/403: 需要先在 /admin/ 登录. */
   denied: boolean;
-  loaded: boolean;
   error: string | null;
-  pending: ReviewComment[];
   hidden: ReviewComment[];
+  loaded: boolean;
   /** Set after deciding the deep-linked comment. */
   next: NextState | null;
+  /** The review tools are shown. */
+  on: boolean;
+  pending: ReviewComment[];
   /** Bumped whenever a comment is thrown away or comes back (isThrown). */
   thrown: number;
-};
+}
 
 export const DENIED_TEXT = "需要先在 /admin/ 登录";
 
 const OFF: ReviewView = {
-  on: false,
   denied: false,
-  loaded: false,
   error: null,
-  pending: [],
   hidden: [],
+  loaded: false,
   next: null,
+  on: false,
+  pending: [],
   thrown: 0,
 };
 
@@ -117,13 +120,13 @@ const adminJson = async <T>(
 ): Promise<AdminResult<T>> => {
   try {
     const response = await fetch(input, {
-      credentials: "same-origin",
       cache: "no-store",
+      credentials: "same-origin",
       // An expired Access session answers with a redirect to its login page.
       redirect: "manual",
       ...init,
     });
-    const status = response.status;
+    const { status } = response;
     const denied =
       response.type === "opaqueredirect" ||
       status === HTTP_UNAUTHORIZED ||
@@ -132,31 +135,31 @@ const adminJson = async <T>(
       | (T & { error?: string })
       | null;
     if (denied) {
-      return { ok: false, denied, status, message: DENIED_TEXT };
+      return { denied, message: DENIED_TEXT, ok: false, status };
     }
     if (!response.ok) {
       return {
-        ok: false,
         denied,
-        status,
         message: data?.error ?? `服务器出了点问题（${status}），稍后再试。`,
+        ok: false,
+        status,
       };
     }
     if (data === null) {
       return {
-        ok: false,
         denied,
-        status,
         message: "服务器返回的内容看不懂，稍后再试。",
+        ok: false,
+        status,
       };
     }
-    return { ok: true, data };
+    return { data, ok: true };
   } catch {
     return {
-      ok: false,
       denied: false,
-      status: 0,
       message: "网络好像断了，检查一下再试。",
+      ok: false,
+      status: 0,
     };
   }
 };
@@ -179,21 +182,21 @@ const fetchReview = async (slug: string) => {
     } else {
       publish(slug, {
         ...reviewNow(slug),
-        on: true,
-        loaded: true,
         error: result.message,
+        loaded: true,
+        on: true,
       });
     }
     return;
   }
   publish(slug, {
     ...reviewNow(slug),
-    on: true,
     denied: false,
-    loaded: true,
     error: null,
-    pending: result.data.pending ?? [],
     hidden: result.data.hidden ?? [],
+    loaded: true,
+    on: true,
+    pending: result.data.pending ?? [],
   });
 };
 
@@ -237,15 +240,15 @@ const dispatch = (slug: string, id: string, event: BarEvent) => {
 
 /** Typing in a reply editor: kept silently, no re-render. */
 export const setDraft = (id: string, draft: string) => {
-  bars.set(id, reduceBar(barOf(id), { type: "edit", draft }));
+  bars.set(id, reduceBar(barOf(id), { draft, type: "edit" }));
 };
 
 const boardOf = (slug: string): Board => {
   const view = reviewNow(slug);
   return {
     approved: threadNow(slug).approved,
-    pending: view.pending,
     hidden: view.hidden,
+    pending: view.pending,
   };
 };
 
@@ -282,32 +285,32 @@ const decide = async (
 ): Promise<Sent> => {
   dispatch(slug, id, { type: "send" });
   const result = await adminJson<DecideResponse>("/api/admin/decide", {
-    method: "POST",
+    body: JSON.stringify({ id, type: "comment", ...request }),
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ type: "comment", id, ...request }),
     keepalive,
+    method: "POST",
   });
   if (!result.ok) {
-    dispatch(slug, id, { type: "fail", message: result.message });
+    dispatch(slug, id, { message: result.message, type: "fail" });
     if (result.denied) {
       deny(slug);
     }
-    return { ok: false, message: result.message };
+    return { message: result.message, ok: false };
   }
   const status = statusAfter(request.decision, result.data.status);
   const board = applyDecision(
     boardOf(slug),
-    { id, status, reply: request.reply },
+    { id, reply: request.reply, status },
     Date.now()
   );
   const target = reviewTarget();
   const next: NextState | null =
     target?.type === "comment" && target.id === id
       ? {
+          href: safeHref(result.data.next?.href),
           id,
           // A reply only leaves the status as it was: say 回复存好了.
           status: request.decision === "reply" ? null : status,
-          href: safeHref(result.data.next?.href),
         }
       : reviewNow(slug).next;
   bars.delete(id);
@@ -321,13 +324,13 @@ const decide = async (
   }));
   publish(slug, {
     ...reviewNow(slug),
-    pending: board.pending,
     hidden: board.hidden,
     next,
+    pending: board.pending,
   });
   return {
-    ok: true,
     keys: focusAfter(id, next?.id === id ? next : null, status ?? ""),
+    ok: true,
   };
 };
 
@@ -352,8 +355,8 @@ export const act = async (
   switch (action) {
     case "reply-open":
       dispatch(slug, id, {
-        type: "toggle-reply",
         draft: existingReply(slug, id),
+        type: "toggle-reply",
       });
       return barOf(id).mode === "reply"
         ? [`${id}:draft`]
@@ -369,7 +372,7 @@ export const act = async (
   }
   const planned = requestFor(action, bar);
   if (!planned.ok) {
-    dispatch(slug, id, { type: "fail", message: planned.message });
+    dispatch(slug, id, { message: planned.message, type: "fail" });
     return [`${id}:draft`];
   }
   return await send(slug, id, planned.request);
@@ -383,14 +386,14 @@ export const isThrown = (id: string) => thrown.has(id);
 const bumpThrown = (slug: string) =>
   publish(slug, { ...reviewNow(slug), thrown: reviewNow(slug).thrown + 1 });
 
-export type ThrowOptions = {
+export interface ThrowOptions {
   /** Keyboard: focus 撤销 afterwards. */
   focusUndo: boolean;
-  /** 撤销: the card is shown again; put focus / a small press on it. */
-  onUndo: (hadFocus: boolean) => void;
   /** Sent: the data-keys to focus when focus was left nowhere. */
   onSent: (keys: string[]) => void;
-};
+  /** 撤销: the card is shown again; put focus / a small press on it. */
+  onUndo: (hadFocus: boolean) => void;
+}
 
 /**
  * The comment went into the trash: hide it, 已扔掉 · 撤销, then reject it
@@ -422,13 +425,13 @@ export const throwComment = (
         }
         options.onSent(sent.keys);
       },
+      refocus: () => {
+        // Not the toolbar: onSent puts focus back in the list once sent.
+      },
       undo: (hadFocus) => {
         thrown.delete(id);
         bumpThrown(slug);
         options.onUndo(hadFocus);
-      },
-      refocus: () => {
-        // Not the toolbar: onSent puts focus back in the list once sent.
       },
     },
     options.focusUndo
@@ -544,7 +547,7 @@ export const settle = async (el: HTMLElement) => {
     let last = Number.NaN;
     let still = 0;
     const tick = (now: number) => {
-      const left = moving.getBoundingClientRect().left;
+      const { left } = moving.getBoundingClientRect();
       still = Math.abs(left - last) < SETTLE_EPSILON_PX ? still + 1 : 0;
       last = left;
       if (still >= SETTLE_FRAMES || now - began > SETTLE_MAX_MS) {

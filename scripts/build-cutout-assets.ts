@@ -72,12 +72,12 @@ const fetchModelFile = async (file: (typeof MODEL_FILES)[number]) => {
   return target;
 };
 
-const version = JSON.parse(
+const { version } = JSON.parse(
   await readFile(
     join(root, "node_modules/onnxruntime-web/package.json"),
     "utf8"
   )
-).version;
+);
 if (version !== ORT_VERSION) {
   throw new Error(
     `node_modules has onnxruntime-web ${version}; set ORT_VERSION in src/scripts/interact/cutout-assets.ts first`

@@ -8,7 +8,9 @@ import { handle } from "@astrojs/cloudflare/handler";
 import { SITE_URL } from "./lib/seo/site";
 import { fromEdge } from "./lib/server/edge";
 
-type EdgeVars = { EDGE_ORIGIN_SECRET?: string };
+interface EdgeVars {
+  EDGE_ORIGIN_SECRET?: string;
+}
 
 export default {
   fetch: (request, env, context) =>

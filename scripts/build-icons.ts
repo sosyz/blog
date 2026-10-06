@@ -53,20 +53,20 @@ const ico = (images: readonly { size: number; data: Buffer }[]) => {
 };
 
 const icoImages = await Promise.all(
-  ICO_SIZES.map(async (size) => ({ size, data: await png(size) }))
+  ICO_SIZES.map(async (size) => ({ data: await png(size), size }))
 );
 writeFileSync(join(PUBLIC, "favicon.ico"), ico(icoImages));
 
 const inner = Math.round(TOUCH_SIZE * TOUCH_FILL);
 await sharp({
   create: {
-    width: TOUCH_SIZE,
-    height: TOUCH_SIZE,
-    channels: 4,
     background: PAPER,
+    channels: 4,
+    height: TOUCH_SIZE,
+    width: TOUCH_SIZE,
   },
 })
-  .composite([{ input: await png(inner), gravity: "center" }])
+  .composite([{ gravity: "center", input: await png(inner) }])
   .png()
   .toFile(join(PUBLIC, "apple-touch-icon.png"));
 

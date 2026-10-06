@@ -17,18 +17,18 @@ import {
   WEBSITE_ID,
 } from "./seo/site.ts";
 
-export type FriendLink = {
-  /** Name on the card, e.g. the blog's title. Unique. */
-  name: string;
-  /** The friend's site. Must be https. Unique. */
-  url: string;
-  /** One short sentence (≤ 40 characters). */
-  description: string;
+export interface FriendLink {
   /** File name of an image in src/assets/links/, e.g. "someone.webp". */
   avatar?: string;
+  /** One short sentence (≤ 40 characters). */
+  description: string;
+  /** Name on the card, e.g. the blog's title. Unique. */
+  name: string;
   /** When the link was exchanged: "YYYY-MM-DD" or "YYYY-MM". */
   since?: string;
-};
+  /** The friend's site. Must be https. Unique. */
+  url: string;
+}
 
 /** How many name cards the canvas shows; /links/ shows all of them. */
 export const CANVAS_FRIENDS = 6;
@@ -70,7 +70,7 @@ const sinceProblem = (since: string) => {
 const urlProblems = (value: string) => {
   const url = parseUrl(value);
   if (!url) {
-    return { url: null, problems: ["url 不是完整的网址"] };
+    return { problems: ["url 不是完整的网址"], url: null };
   }
   const problems: string[] = [];
   if (url.protocol !== "https:") {
@@ -82,7 +82,7 @@ const urlProblems = (value: string) => {
   if (new URL(SITE_URL).hostname === url.hostname) {
     problems.push("url 是本站自己");
   }
-  return { url, problems };
+  return { problems, url };
 };
 
 /** Problems with one entry (without the duplicate checks). */
@@ -112,7 +112,7 @@ const entryProblems = (link: FriendLink) => {
   if (since) {
     problems.push(since);
   }
-  return { name, url, problems };
+  return { name, problems, url };
 };
 
 /**
@@ -198,35 +198,35 @@ export const sinceLabel = (since: string) => since.replaceAll("-", ".");
 
 /** This site's own card, for friends to copy when they add it. */
 export const SELF_CARD = {
+  avatar: AUTHOR.image,
+  description: PROFILE.title,
   name: SITE_NAME,
   url: SITE_URL,
-  description: PROFILE.title,
-  avatar: AUTHOR.image,
 } as const;
 
 /** JSON-LD for /links/: a CollectionPage whose main entity lists the sites. */
 export const linksJsonLd = (links: readonly FriendLink[]) => {
   const pageUrl = absoluteUrl("/links/");
   return {
-    "@type": "CollectionPage",
     "@id": `${pageUrl}#page`,
-    url: pageUrl,
-    name: `友链 · ${SITE_NAME}`,
+    "@type": "CollectionPage",
     inLanguage: SITE_LANGUAGE,
     isPartOf: { "@id": WEBSITE_ID },
     mainEntity: {
       "@type": "ItemList",
-      numberOfItems: links.length,
       itemListElement: links.map((link, index) => ({
         "@type": "ListItem",
-        position: index + 1,
         item: {
           "@type": "WebSite",
+          description: link.description,
           name: link.name,
           url: link.url,
-          description: link.description,
         },
+        position: index + 1,
       })),
+      numberOfItems: links.length,
     },
+    name: `友链 · ${SITE_NAME}`,
+    url: pageUrl,
   };
 };

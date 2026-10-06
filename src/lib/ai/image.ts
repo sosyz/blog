@@ -16,23 +16,24 @@ export const generateImageAlt = async (image: Buffer | string) => {
     const imageBase64 =
       image instanceof Buffer ? image.toString("base64") : image;
     const { text } = await generateText({
-      model: openrouter("qwen/qwen2.5-vl-32b-instruct:free"),
-      system: IMAGE_ALT_PROMPT,
       messages: [
         {
-          role: "user",
           content: [
             {
-              type: "image",
-              image: imageBase64,
+              data: imageBase64,
+              mediaType: "image",
+              type: "file",
             },
           ],
+          role: "user",
         },
       ],
+      model: openrouter("qwen/qwen2.5-vl-32b-instruct:free"),
+      system: IMAGE_ALT_PROMPT,
     });
 
     return text;
-  } catch (_error) {
+  } catch {
     return FALLBACK_ALT;
   }
 };
@@ -44,15 +45,6 @@ import sharpService from "astro/assets/services/sharp";
 const service: LocalImageService = {
   ...baseService,
   ...sharpService,
-  // Markdown pictures get `widths` from src/lib/markdown/plugins.ts
-  // (responsivePictures), and Sätteri hands property values on as strings.
-  validateOptions(options, imageConfig, logger) {
-    const widths = options.widths
-      ?.map(Number)
-      .filter((width) => Number.isInteger(width) && width > 0);
-    const next = widths ? ({ ...options, widths } as ImageTransform) : options;
-    return baseService.validateOptions?.(next, imageConfig, logger) ?? next;
-  },
   async getHTMLAttributes(options, imageConfig, logger) {
     const ret =
       (await baseService.getHTMLAttributes?.(options, imageConfig, logger)) ??
@@ -70,5 +62,14 @@ const service: LocalImageService = {
     return { ...ret, alt };
   },
   propertiesToHash: ["src", "width", "height", "format", "quality", "alt"],
+  // Markdown pictures get `widths` from src/lib/markdown/plugins.ts
+  // (responsivePictures), and Sätteri hands property values on as strings.
+  validateOptions(options, imageConfig, logger) {
+    const widths = options.widths
+      ?.map(Number)
+      .filter((width) => Number.isInteger(width) && width > 0);
+    const next = widths ? ({ ...options, widths } as ImageTransform) : options;
+    return baseService.validateOptions?.(next, imageConfig, logger) ?? next;
+  },
 };
 export default service;

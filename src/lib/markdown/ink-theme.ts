@@ -30,16 +30,15 @@ const FUNCTION = "#9e3129";
 const PUNCTUATION = "#524a3e";
 
 export const inkTheme: ShikiTheme = {
-  name: "journal-ink",
-  type: "light",
+  bg: "#00000000",
   colors: {
     "editor.background": "#00000000",
     "editor.foreground": INK,
   },
   fg: INK,
-  bg: "#00000000",
+  name: "journal-ink",
   settings: [
-    { settings: { foreground: INK, background: "#00000000" } },
+    { settings: { background: "#00000000", foreground: INK } },
     {
       // Recede: brackets, commas, dots and operators.
       scope: ["punctuation", "keyword.operator", "meta.brace"],
@@ -124,4 +123,5 @@ export const inkTheme: ShikiTheme = {
       settings: { foreground: INK },
     },
   ],
+  type: "light",
 };

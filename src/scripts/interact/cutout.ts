@@ -11,15 +11,19 @@ export type CutoutProgress =
   | { phase: "loading"; loaded: number; total: number }
   | { phase: "processing" };
 
-export type Matte = { alpha: Uint8ClampedArray; width: number; height: number };
+export interface Matte {
+  alpha: Uint8ClampedArray;
+  height: number;
+  width: number;
+}
 
 let worker: Worker | null = null;
 let nextId = 0;
 
 const startWorker = () => {
   worker ??= new Worker(new URL("./cutout.worker.ts", import.meta.url), {
-    type: "module",
     name: "sticker-cutout",
+    type: "module",
   });
   return worker;
 };
@@ -58,8 +62,8 @@ export const cutOut = (
       }
       if (message.type === "loading") {
         onProgress({
-          phase: "loading",
           loaded: message.loaded,
+          phase: "loading",
           total: message.total,
         });
       } else if (message.type === "processing") {
@@ -68,8 +72,8 @@ export const cutOut = (
         done();
         resolve({
           alpha: new Uint8ClampedArray(message.alpha),
-          width: message.width,
           height: message.height,
+          width: message.width,
         });
       } else {
         done();
@@ -89,6 +93,6 @@ export const cutOut = (
     target.addEventListener("message", onMessage);
     target.addEventListener("error", onError);
     signal.addEventListener("abort", onAbort);
-    const request: CutoutRequest = { id, bitmap };
+    const request: CutoutRequest = { bitmap, id };
     target.postMessage(request, [bitmap]);
   });

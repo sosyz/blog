@@ -42,11 +42,11 @@ export type ModerationItem =
       height: number;
     };
 
-export type Moderator = {
+export interface Moderator {
   /** Recorded in moderation_log as `moderator:<name>`. */
   readonly name: string;
   review: (item: ModerationItem) => Promise<Decision>;
-};
+}
 
 /** First implementation: every item waits for a human in /admin/. */
 export class ManualModerator implements Moderator {
@@ -100,12 +100,12 @@ export class AiModerator implements Moderator {
   }
 }
 
-export type ModeratorConfig = {
-  /** "manual" (default) or "ai". */
-  mode?: string;
+export interface ModeratorConfig {
   /** Needed for "ai"; without it the manual moderator is used. */
   ai?: TextModel;
-};
+  /** "manual" (default) or "ai". */
+  mode?: string;
+}
 
 /** The registry: picks the moderator from config. */
 export const createModerator = (config: ModeratorConfig = {}): Moderator => {
@@ -125,14 +125,14 @@ export const statusFor = (decision: Decision): ItemStatus => {
   return "pending";
 };
 
-export type ModerationResult = {
-  decision: Decision;
-  status: ItemStatus;
+export interface ModerationResult {
   /** For moderation_log.actor. */
   actor: string;
+  decision: Decision;
   /** Set when the moderator failed and we fell back to hold. */
   note?: string;
-};
+  status: ItemStatus;
+}
 
 /** Runs the moderator; any error means "hold" so nothing is lost or auto-published. */
 export const moderate = async (
@@ -142,9 +142,9 @@ export const moderate = async (
   const actor = `moderator:${moderator.name}`;
   try {
     const decision = await moderator.review(item);
-    return { decision, status: statusFor(decision), actor };
+    return { actor, decision, status: statusFor(decision) };
   } catch (error) {
     const note = error instanceof Error ? error.message : String(error);
-    return { decision: "hold", status: "pending", actor, note };
+    return { actor, decision: "hold", note, status: "pending" };
   }
 };

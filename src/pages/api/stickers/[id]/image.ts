@@ -48,14 +48,14 @@ export const GET: APIRoute = async ({ params, request }) => {
     return notFound();
   }
   const headers = new Headers({
-    "content-type": row.mime,
-    "content-length": String(object.size),
-    etag: object.httpEtag,
-    "x-content-type-options": "nosniff",
-    "content-security-policy": "default-src 'none'; sandbox",
     "cache-control": approved
       ? "public, max-age=31536000, immutable"
       : "private, no-store",
+    "content-length": String(object.size),
+    "content-security-policy": "default-src 'none'; sandbox",
+    "content-type": row.mime,
+    etag: object.httpEtag,
+    "x-content-type-options": "nosniff",
   });
   return new Response(object.body, { headers });
 };

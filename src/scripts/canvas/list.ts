@@ -5,7 +5,10 @@
  */
 import { getQuery, matches, onQuery } from "./store";
 
-type Filters = { type: string; topic: string };
+interface Filters {
+  topic: string;
+  type: string;
+}
 
 const bound = new WeakSet<HTMLElement>();
 const TRAILING_SLASH = /\/$/;
@@ -13,10 +16,10 @@ const ownsUrl = () => location.pathname.replace(TRAILING_SLASH, "") === "/list";
 
 const readUrl = (): Filters => {
   if (!ownsUrl()) {
-    return { type: "", topic: "" };
+    return { topic: "", type: "" };
   }
   const params = new URLSearchParams(location.search);
-  return { type: params.get("type") ?? "", topic: params.get("topic") ?? "" };
+  return { topic: params.get("topic") ?? "", type: params.get("type") ?? "" };
 };
 
 const writeUrl = ({ type, topic }: Filters) => {
@@ -24,7 +27,7 @@ const writeUrl = ({ type, topic }: Filters) => {
     return;
   }
   const url = new URL(location.href);
-  for (const [key, value] of Object.entries({ type, topic })) {
+  for (const [key, value] of Object.entries({ topic, type })) {
     if (value) {
       url.searchParams.set(key, value);
     } else {

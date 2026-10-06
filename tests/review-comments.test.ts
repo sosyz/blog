@@ -33,17 +33,17 @@ import {
 import type { PendingComment } from "../src/scripts/interact/store";
 
 const pub = (id: string, createdAt: number, extra = {}): PublicComment => ({
-  id,
-  kind: "comment",
-  parentId: null,
-  name: `n-${id}`,
-  site: null,
-  body: `body ${id}`,
   anchor: null,
+  body: `body ${id}`,
   createdAt,
-  reply: null,
-  user: null,
+  id,
   isOwner: false,
+  kind: "comment",
+  name: `n-${id}`,
+  parentId: null,
+  reply: null,
+  site: null,
+  user: null,
   ...extra,
 });
 
@@ -54,19 +54,19 @@ const rev = (
   extra = {}
 ): ReviewComment => ({
   ...pub(id, createdAt, extra),
-  status,
   fingerprint: `fp-${id}`,
+  status,
 });
 
 const own = (id: string, createdAt: number): PendingComment => ({
+  anchor: null,
+  body: "mine",
+  createdAt,
   id,
   kind: "comment",
   name: "me",
-  site: null,
-  body: "mine",
-  anchor: null,
   parentId: null,
-  createdAt,
+  site: null,
 });
 
 const ids = (rows: { item: { id: string } }[]) => rows.map((r) => r.item.id);
@@ -113,8 +113,8 @@ describe("mergeRows", () => {
 
 const board = (): Board => ({
   approved: [pub("a", 10), pub("c", 30)],
-  pending: [rev("b", 20), rev("d", 40)],
   hidden: [rev("x", 5, "rejected")],
+  pending: [rev("b", 20), rev("d", 40)],
 });
 
 describe("applyDecision", () => {
@@ -133,12 +133,12 @@ describe("applyDecision", () => {
   test("approve with a reply sets the owner reply", () => {
     const next = applyDecision(
       board(),
-      { id: "b", status: "approved", reply: "谢谢" },
+      { id: "b", reply: "谢谢", status: "approved" },
       99
     );
     expect(next.approved.find((c) => c.id === "b")?.reply).toEqual({
-      body: "谢谢",
       at: 99,
+      body: "谢谢",
     });
   });
 
@@ -169,14 +169,14 @@ describe("applyDecision", () => {
   test("reply only keeps the list and replaces or removes the reply", () => {
     const withReply = applyDecision(
       board(),
-      { id: "a", status: null, reply: "好" },
+      { id: "a", reply: "好", status: null },
       50
     );
     expect(withReply.approved.map((c) => c.id)).toEqual(["a", "c"]);
-    expect(withReply.approved[0]?.reply).toEqual({ body: "好", at: 50 });
+    expect(withReply.approved[0]?.reply).toEqual({ at: 50, body: "好" });
     const removed = applyDecision(
       withReply,
-      { id: "a", status: null, reply: "" },
+      { id: "a", reply: "", status: null },
       60
     );
     expect(removed.approved[0]?.reply).toBeNull();
@@ -185,7 +185,7 @@ describe("applyDecision", () => {
   test("a reply on a pending comment keeps it pending", () => {
     const next = applyDecision(
       board(),
-      { id: "b", status: null, reply: "嗯" },
+      { id: "b", reply: "嗯", status: null },
       7
     );
     expect(next.pending.find((c) => c.id === "b")?.reply?.body).toBe("嗯");
@@ -235,8 +235,8 @@ describe("matchTarget", () => {
     const b = board();
     b.pending.push(
       rev("i", 60, "pending", {
-        kind: "inline",
         anchor: { exact: "好的", prefix: "" },
+        kind: "inline",
       })
     );
     expect(matchTarget(parseReview("c:i"), b)?.inline).toBe(true);
@@ -253,25 +253,25 @@ describe("matchTarget", () => {
 describe("review bar", () => {
   const typed = (draft: string): BarState => ({
     ...IDLE_BAR,
-    mode: "reply",
     draft,
+    mode: "reply",
   });
 
   test("回复… opens with the existing reply and folds again", () => {
-    const open = reduceBar(IDLE_BAR, { type: "toggle-reply", draft: "旧" });
+    const open = reduceBar(IDLE_BAR, { draft: "旧", type: "toggle-reply" });
     expect(open.mode).toBe("reply");
     expect(open.draft).toBe("旧");
-    const edited = reduceBar(open, { type: "edit", draft: "新" });
-    const folded = reduceBar(edited, { type: "toggle-reply", draft: "旧" });
+    const edited = reduceBar(open, { draft: "新", type: "edit" });
+    const folded = reduceBar(edited, { draft: "旧", type: "toggle-reply" });
     expect(folded.mode).toBe("idle");
     // Reopening keeps what was typed.
-    expect(reduceBar(folded, { type: "toggle-reply", draft: "旧" }).draft).toBe(
+    expect(reduceBar(folded, { draft: "旧", type: "toggle-reply" }).draft).toBe(
       "新"
     );
   });
 
   test("收起 folds the reply editor", () => {
-    const open = reduceBar(IDLE_BAR, { type: "toggle-reply", draft: "" });
+    const open = reduceBar(IDLE_BAR, { draft: "", type: "toggle-reply" });
     expect(reduceBar(open, { type: "cancel" }).mode).toBe("idle");
   });
 
@@ -279,8 +279,8 @@ describe("review bar", () => {
     const busy = reduceBar(typed("hi"), { type: "send" });
     expect(busy.busy).toBe(true);
     expect(reduceBar(busy, { type: "cancel" })).toBe(busy);
-    expect(reduceBar(busy, { type: "toggle-reply", draft: "" })).toBe(busy);
-    const failed = reduceBar(busy, { type: "fail", message: "断网了" });
+    expect(reduceBar(busy, { draft: "", type: "toggle-reply" })).toBe(busy);
+    const failed = reduceBar(busy, { message: "断网了", type: "fail" });
     expect(failed).toEqual({ ...typed("hi"), error: "断网了" });
     expect(reduceBar(busy, { type: "done" })).toEqual(IDLE_BAR);
   });
@@ -343,8 +343,8 @@ describe("review HTML", () => {
   test("open editor shows the draft, escaped", () => {
     const html = reviewBarHtml("b", {
       ...IDLE_BAR,
-      mode: "reply",
       draft: "<b>",
+      mode: "reply",
     });
     expect(html).toContain("&lt;b&gt;</textarea>");
     expect(html).toContain('aria-expanded="true" aria-controls="rv-reply-b"');
@@ -353,7 +353,7 @@ describe("review HTML", () => {
   test("owner tools: 改回复 and 删回复 only with a reply", () => {
     expect(ownerToolsHtml(pub("a", 1), IDLE_BAR)).not.toContain("删回复");
     const replied = ownerToolsHtml(
-      pub("a", 1, { reply: { body: "x", at: 1 } }),
+      pub("a", 1, { reply: { at: 1, body: "x" } }),
       IDLE_BAR
     );
     expect(replied).toContain("改回复");
@@ -387,10 +387,10 @@ describe("review HTML", () => {
     const html = whoHtml(
       rev("a", 1, "pending", {
         user: {
-          login: "octo",
-          name: null,
           avatarUrl: "https://avatars.githubusercontent.com/u/1",
           htmlUrl: "https://github.com/octo",
+          login: "octo",
+          name: null,
         },
       })
     );
@@ -401,12 +401,12 @@ describe("review HTML", () => {
 
   test("next: link or 都审完了", () => {
     expect(
-      nextHtml({ id: "a", status: "approved", href: "/notes/x/?review=c:b" })
+      nextHtml({ href: "/notes/x/?review=c:b", id: "a", status: "approved" })
     ).toContain('data-rv-next="/notes/x/?review=c:b"');
-    const done = nextHtml({ id: "a", status: "rejected", href: null });
+    const done = nextHtml({ href: null, id: "a", status: "rejected" });
     expect(done).toContain("都审完了");
     expect(done).toContain('data-rv-next="/admin/"');
-    expect(nextHtml({ id: "a", status: null, href: null })).toContain(
+    expect(nextHtml({ href: null, id: "a", status: null })).toContain(
       "回复存好了"
     );
   });

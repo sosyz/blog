@@ -26,7 +26,7 @@ export const sameDigest = (a: string, b: string) => {
     return false;
   }
   let difference = 0;
-  for (let i = 0; i < a.length; i++) {
+  for (let i = 0; i < a.length; i += 1) {
     // biome-ignore lint/suspicious/noBitwiseOperators: constant-time comparison
     difference |= a.charCodeAt(i) ^ b.charCodeAt(i);
   }

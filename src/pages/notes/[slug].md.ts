@@ -14,7 +14,9 @@ export const getStaticPaths = (async () => {
   return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
 }) satisfies GetStaticPaths;
 
-type Props = { post: Post };
+interface Props {
+  post: Post;
+}
 
 export const GET: APIRoute<Props> = ({ props }) =>
   new Response(noteMarkdown(props.post, { frontMatter: true }), {

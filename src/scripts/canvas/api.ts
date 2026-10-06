@@ -14,12 +14,31 @@
  * re-bind to the `bodyEl` they receive each time.
  */
 
-export type Point = { x: number; y: number };
+export interface Point {
+  x: number;
+  y: number;
+}
 
 /** Screen = world * scale + (x, y). */
-export type Camera = { x: number; y: number; scale: number };
+export interface Camera {
+  scale: number;
+  x: number;
+  y: number;
+}
 
-export type CanvasApi = {
+export interface CanvasApi {
+  closeNote: () => void;
+  /** Slug of the note open in the drawer, or null. */
+  currentNote: () => string | null;
+  getCamera: () => Camera;
+  /** Called on every camera change (pan, zoom, inertia, glide). Returns an unsubscribe function. */
+  onCameraChange: (listener: (camera: Camera) => void) => () => void;
+  /** Open a note in the drawer (navigates to /notes/<slug>/). */
+  openNote: (slug: string) => void;
+  /** Smoothly move the camera so this world point is centred. */
+  panTo: (point: Point, options?: { scale?: number }) => void;
+  /** Viewport-relative client coordinates → world coordinates. */
+  screenToWorld: (point: Point) => Point;
   /** Fixed, full-screen element that receives pointer and wheel input. */
   viewportEl: HTMLElement;
   /**
@@ -28,35 +47,27 @@ export type CanvasApi = {
    * World origin (0, 0) is the centre of the intro card.
    */
   worldEl: HTMLElement;
-  /** Viewport-relative client coordinates → world coordinates. */
-  screenToWorld: (point: Point) => Point;
   /** World coordinates → viewport-relative client coordinates. */
   worldToScreen: (point: Point) => Point;
-  getCamera: () => Camera;
-  /** Called on every camera change (pan, zoom, inertia, glide). Returns an unsubscribe function. */
-  onCameraChange: (listener: (camera: Camera) => void) => () => void;
-  /** Smoothly move the camera so this world point is centred. */
-  panTo: (point: Point, options?: { scale?: number }) => void;
-  /** Slug of the note open in the drawer, or null. */
-  currentNote: () => string | null;
-  /** Open a note in the drawer (navigates to /notes/<slug>/). */
-  openNote: (slug: string) => void;
-  closeNote: () => void;
-};
+}
 
-export type DrawerOpenDetail = { slug: string };
-
-export type DrawerRenderedDetail = {
+export interface DrawerOpenDetail {
   slug: string;
+}
+
+export interface DrawerRenderedDetail {
+  /** The article body: the element with `data-post-body`. */
+  bodyEl: HTMLElement;
   /** The drawer panel (fixed, right side). */
   drawerEl: HTMLElement;
   /** The scrolling element inside the drawer; listen to its `scroll`. */
   scrollEl: HTMLElement;
-  /** The article body: the element with `data-post-body`. */
-  bodyEl: HTMLElement;
-};
+  slug: string;
+}
 
-export type DrawerCloseDetail = { slug: string };
+export interface DrawerCloseDetail {
+  slug: string;
+}
 
 export const CANVAS_READY = "canvas:ready";
 export const DRAWER_OPEN = "drawer:open";
@@ -64,17 +75,15 @@ export const DRAWER_RENDERED = "drawer:rendered";
 export const DRAWER_CLOSE = "drawer:close";
 
 declare global {
-  // biome-ignore lint/nursery/useConsistentTypeDefinitions: global augmentation needs interfaces
   interface WindowEventMap {
     "canvas:ready": CustomEvent<CanvasApi>;
+    /** The drawer closed. */
+    "drawer:close": CustomEvent<DrawerCloseDetail>;
     /** The drawer starts opening (or switches) to this note. */
     "drawer:open": CustomEvent<DrawerOpenDetail>;
     /** The article DOM for this note is in place and visible. */
     "drawer:rendered": CustomEvent<DrawerRenderedDetail>;
-    /** The drawer closed. */
-    "drawer:close": CustomEvent<DrawerCloseDetail>;
   }
-  // biome-ignore lint/nursery/useConsistentTypeDefinitions: global augmentation needs interfaces
   interface Window {
     /** Set by the canvas once ready; prefer `whenCanvasReady()`. */
     __canvas?: CanvasApi;

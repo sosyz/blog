@@ -18,8 +18,8 @@ export const ORT_WASM_URL = `${ORT_DIR}ort-wasm-simd-threaded.wasm`;
 
 /** ONNX Runtime Web, plain CPU (SIMD) build: the asyncify / JSEP builds are over 25 MiB. */
 export const ORT_FILES = [
-  { name: "ort-wasm-simd-threaded.mjs", url: ORT_MJS_URL, bytes: 24_381 },
-  { name: "ort-wasm-simd-threaded.wasm", url: ORT_WASM_URL, bytes: 14_264_838 },
+  { bytes: 24_381, name: "ort-wasm-simd-threaded.mjs", url: ORT_MJS_URL },
+  { bytes: 14_264_838, name: "ort-wasm-simd-threaded.wasm", url: ORT_WASM_URL },
 ] as const;
 
 export const ORT_WASM_BYTES = 14_264_838;
@@ -31,16 +31,16 @@ export const MODEL_SOURCE = "BritishWerewolf/U-2-Netp";
 export const MODEL_REVISION = "7112208dbac3a3642496c8d54e2f0f9bb3dc1dc8";
 export const MODEL_FILES = [
   {
-    name: "config.json",
-    url: "/models/u2netp/config.json",
     bytes: 388,
+    name: "config.json",
     sha256: "863f4c818e573a77b0bedea8ecacc6c449ec24e8c179e2f8b1f4067ba8d0dea6",
+    url: "/models/u2netp/config.json",
   },
   {
-    name: "onnx/model.onnx",
-    url: "/models/u2netp/onnx/model.onnx",
     bytes: 4_574_861,
+    name: "onnx/model.onnx",
     sha256: "309c8469258dda742793dce0ebea8e6dd393174f89934733ecc8b14c76f4ddd8",
+    url: "/models/u2netp/onnx/model.onnx",
   },
 ] as const;
 export const MODEL_BYTES = 4_574_861;

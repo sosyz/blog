@@ -61,12 +61,12 @@ const browserSources = () =>
     const path = relative(ROOT, file);
     if (ASTRO_FILE.test(file)) {
       return [...text.matchAll(SCRIPT_BLOCK)].map((match) => ({
-        path,
         code: match.groups?.body ?? "",
+        path,
       }));
     }
     if (SCRIPT_FILE.test(file) && !path.startsWith("src/pages/")) {
-      return [{ path, code: text }];
+      return [{ code: text, path }];
     }
     return [];
   });

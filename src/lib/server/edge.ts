@@ -21,12 +21,12 @@ export const EDGE_AUTH_HEADER = "x-edge-auth";
 /** EdgeOne's own header with the visitor's IP. */
 export const EDGE_CLIENT_IP_HEADER = "eo-client-ip";
 
-export type EdgeConfig = {
+export interface EdgeConfig {
   /** EDGE_ORIGIN_SECRET; empty = no EdgeOne, nothing is trusted. */
   secret: string;
   /** The public site, e.g. https://blog.sonui.cn. */
   site: string;
-};
+}
 
 /** Compares without stopping at the first difference. */
 const sameSecret = (given: string, secret: string) => {
@@ -77,9 +77,9 @@ export const fromEdge = (request: Request, config: EdgeConfig): Request => {
   }
   const hasBody = request.method !== "GET" && request.method !== "HEAD";
   return new Request(url, {
-    method: request.method,
-    headers,
     body: hasBody ? request.body : null,
+    headers,
+    method: request.method,
     redirect: "manual",
   });
 };

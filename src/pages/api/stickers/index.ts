@@ -76,10 +76,10 @@ export const prerender = false;
 const MAX_REQUEST_BYTES = LIMITS.stickerBytes + JSON_BODY_LIMIT;
 
 const EXTENSIONS: Record<string, string> = {
-  "image/png": "png",
-  "image/webp": "webp",
   "image/gif": "gif",
   "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
 };
 
 export const GET: APIRoute = async ({ url, request }) => {
@@ -93,19 +93,19 @@ export const GET: APIRoute = async ({ url, request }) => {
     listHiddenBuiltins(db),
   ]);
   const body: StickersResponse = {
-    stickers,
+    hiddenBuiltins,
     // The account's stickers report through `mine` like remembered ids.
     mine: { ...mine, ...own?.statuses },
     owned: own?.ids ?? [],
     ownPending: own?.pending ?? [],
-    hiddenBuiltins,
+    stickers,
   };
   // Only the plain anonymous list is cached at the edge; anything that
   // depends on who asks (mine=, me=1, a GitHub session) is private.
   const headers = listCacheHeaders(
     {
-      mine: mineIds.length > 0,
       me: url.searchParams.has("me"),
+      mine: mineIds.length > 0,
       session: viewer !== null,
     },
     "public, max-age=60, s-maxage=300"
@@ -137,12 +137,12 @@ const readUpload = async (request: Request, member: boolean) => {
     };
   }
   const fields = {
-    x: form.get("x"),
-    y: form.get("y"),
+    name: form.get("name") ?? undefined,
     rotation: form.get("rotation"),
     scale: form.get("scale"),
-    name: form.get("name") ?? undefined,
     turnstile: form.get("turnstile"),
+    x: form.get("x"),
+    y: form.get("y"),
   };
   // Logged in: no Turnstile, and the login is the signature.
   const parsed = member
@@ -173,7 +173,7 @@ const readUpload = async (request: Request, member: boolean) => {
       response: fail(STATUS.badRequest, image.message),
     };
   }
-  return { ok: true as const, input, bytes, header: image.header };
+  return { bytes, header: image.header, input, ok: true as const };
 };
 
 /**
@@ -189,7 +189,7 @@ const rateLimited = async (
     now,
   }: { ipHash: string; viewer: Viewer | null; now: number }
 ) => {
-  const window = { table: "stickers" as const, now, hour: HOUR, day: DAY };
+  const window = { day: DAY, hour: HOUR, now, table: "stickers" as const };
   const [byIp, byUser] = await Promise.all([
     recentCounts(db, { ...window, ipHash }),
     viewer
@@ -215,11 +215,11 @@ const humanCheck = async (
     return null;
   }
   const human = await verifyTurnstile({
-    secret: turnstileSecret(),
-    token: token ?? "",
-    remoteip: ip === "unknown" ? undefined : ip,
     action: "sticker",
     hostname,
+    remoteip: ip === "unknown" ? undefined : ip,
+    secret: turnstileSecret(),
+    token: token ?? "",
   });
   return human.ok ? null : fail(human.status, human.message);
 };
@@ -239,15 +239,15 @@ export const POST: APIRoute = async ({ request, url }) => {
   const ip = clientIp(request);
   const ipHash = await hashIp(ip, ipSalt());
 
-  const limited = await rateLimited(db, { ipHash, viewer, now });
+  const limited = await rateLimited(db, { ipHash, now, viewer });
   if (limited) {
     return fail(STATUS.tooManyRequests, limited);
   }
 
   const refused = await humanCheck(viewer, {
-    token: input.turnstile,
-    ip,
     hostname: url.hostname,
+    ip,
+    token: input.turnstile,
   });
   if (refused) {
     return refused;
@@ -258,12 +258,12 @@ export const POST: APIRoute = async ({ request, url }) => {
   const { mime, width, height } = upload.header;
   const r2Key = `stickers/${id}.${EXTENSIONS[mime] ?? "bin"}`;
   const result = await moderate(moderator(), {
-    type: "sticker",
-    id,
-    name,
-    mime,
-    width,
     height,
+    id,
+    mime,
+    name,
+    type: "sticker",
+    width,
   });
 
   // A sticker the moderator rejects is only logged; its image is not kept
@@ -276,33 +276,33 @@ export const POST: APIRoute = async ({ request, url }) => {
   const placement = roundPlacement(input);
   const stored = await storeSticker(db, stickerBucket(), {
     bytes,
-    row: {
-      id,
-      r2Key,
-      mime,
-      bytes: bytes.length,
-      width,
-      height,
-      ...placement,
-      editTokenHash,
-      name: name ?? null,
-      status: result.status,
-      createdAt: now,
-      ipHash,
-      userId: viewer?.userId ?? null,
-    },
-    log: {
-      itemType: "sticker",
-      itemId: id,
-      decision: result.decision,
-      actor: result.actor,
-      note: result.note,
-      createdAt: now,
-    },
     limits: visitorLimits(limitWindow("sticker", now), {
       ipHash,
       userId: viewer?.userId ?? null,
     }),
+    log: {
+      actor: result.actor,
+      createdAt: now,
+      decision: result.decision,
+      itemId: id,
+      itemType: "sticker",
+      note: result.note,
+    },
+    row: {
+      bytes: bytes.length,
+      height,
+      id,
+      mime,
+      r2Key,
+      width,
+      ...placement,
+      createdAt: now,
+      editTokenHash,
+      ipHash,
+      name: name ?? null,
+      status: result.status,
+      userId: viewer?.userId ?? null,
+    },
   });
   if (!stored) {
     return fail(STATUS.tooManyRequests, limitReachedMessage("sticker"));

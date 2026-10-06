@@ -111,10 +111,10 @@ class StickerSession {
     this.objectUrl = URL.createObjectURL(image);
     const centre = api.screenToWorld(deskCentre(api));
     this.placement = {
-      x: Math.round(centre.x),
-      y: Math.round(centre.y),
       rotation: 0,
       scale: 1,
+      x: Math.round(centre.x),
+      y: Math.round(centre.y),
       ...size,
     };
     this.el = this.buildSticker();
@@ -263,11 +263,11 @@ class StickerSession {
       api: this.api,
       el: this.el,
       event,
-      origin: { ...this.placement },
       onChange: (change) => this.adjust(change),
       onEnd: () => {
         // Nothing to do: the placement is sent with 贴上.
       },
+      origin: { ...this.placement },
     });
   }
 
@@ -334,8 +334,8 @@ class StickerSession {
       submit.disabled = true;
     }
     const result = await requestJson<StickerCreatedResponse>("/api/stickers", {
-      method: "POST",
       body: data,
+      method: "POST",
     });
     this.turnstile?.reset();
     if (submit) {
@@ -365,16 +365,16 @@ class StickerSession {
     }
     const { x, y, rotation, scale, width, height } = this.placement;
     addPendingSticker({
+      createdAt: Date.now(),
+      dataUrl: await readAsDataUrl(this.image),
+      height,
       id: created.id,
-      x,
-      y,
+      name: name || null,
       rotation,
       scale,
       width,
-      height,
-      name: name || null,
-      dataUrl: await readAsDataUrl(this.image),
-      createdAt: Date.now(),
+      x,
+      y,
     });
   }
 
@@ -435,7 +435,7 @@ const place = (host: HTMLElement, result: WorkshopResult) => {
   }
   session?.close();
   const { blob, width, height } = result;
-  session = new StickerSession(api, blob, { width, height }, () => {
+  session = new StickerSession(api, blob, { height, width }, () => {
     session = null;
     focusOpener(host);
   });
@@ -445,17 +445,17 @@ const openWorkshop = (host: HTMLElement, file: File) => {
   session?.close();
   workshop?.close();
   workshop = new StickerWorkshop(file, {
-    onUse: (result) => {
+    onCancel: () => {
       workshop = null;
-      place(host, result);
+      focusOpener(host);
     },
     onRepick: (next) => {
       workshop = null;
       openWorkshop(host, next);
     },
-    onCancel: () => {
+    onUse: (result) => {
       workshop = null;
-      focusOpener(host);
+      place(host, result);
     },
   });
 };

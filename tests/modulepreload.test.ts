@@ -6,12 +6,12 @@ import {
 } from "../src/lib/build/modulepreload";
 
 const CHUNKS: Record<string, string> = {
+  "/_astro/api.js": "export const n=1;",
   "/_astro/Canvas.js":
     'globalThis.x??={};import{t as e}from"./client.js";import"./api.js";var a=()=>import("./peel-gl.js");',
   "/_astro/client.js": 'export{a as t}from"./store.js";',
-  "/_astro/api.js": "export const n=1;",
-  "/_astro/store.js": 'import{n}from"./api.js";export const a=n;',
   "/_astro/peel-gl.js": 'import"./gl-only.js";',
+  "/_astro/store.js": 'import{n}from"./api.js";export const a=n;',
   "/_astro/Toolbar.js": 'import{a}from"./store.js";',
 };
 const read = (path: string) => CHUNKS[path];

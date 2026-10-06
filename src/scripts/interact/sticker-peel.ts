@@ -133,7 +133,19 @@ type Phase =
 /** How this gesture is shown: waiting for the layer, WebGL, or CSS. */
 type Mode = "pending" | "gl" | "css";
 
-export type Peel = {
+export interface Peel {
+  /** Let go on the desk (or a click): 贴回去. */
+  drop: () => void;
+  /** Ends at once, the element shown as it is (pointercancel, after a throw). */
+  end: () => void;
+  /**
+   * Dropped on the trash: falls into the bin. Resolves true when the curl
+   * did the fall (skip the crumple; call `end` after the throw), false when
+   * the caller should animate it as before.
+   */
+  fall: (bin: DOMRect | null) => Promise<boolean>;
+  /** Over the trash: peel further. */
+  hoverTrash: (over: boolean) => void;
   /** The press moved past the slop: start peeling (it stays where it is). */
   lift: () => void;
   /**
@@ -141,19 +153,7 @@ export type Peel = {
    * (fully peeled): only then should the caller move it.
    */
   move: (event: PointerEvent) => boolean;
-  /** Over the trash: peel further. */
-  hoverTrash: (over: boolean) => void;
-  /** Let go on the desk (or a click): 贴回去. */
-  drop: () => void;
-  /**
-   * Dropped on the trash: falls into the bin. Resolves true when the curl
-   * did the fall (skip the crumple; call `end` after the throw), false when
-   * the caller should animate it as before.
-   */
-  fall: (bin: DOMRect | null) => Promise<boolean>;
-  /** Ends at once, the element shown as it is (pointercancel, after a throw). */
-  end: () => void;
-};
+}
 
 const live = new Set<() => void>();
 
@@ -169,7 +169,12 @@ const numberOf = (value: string, fallback: number) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
-type Measure = { centre: Vec; width: number; height: number; degrees: number };
+interface Measure {
+  centre: Vec;
+  degrees: number;
+  height: number;
+  width: number;
+}
 
 /**
  * Where the (hidden) element is on screen: centre, unrotated size, rotation.
@@ -183,9 +188,9 @@ const measure = (el: HTMLElement, base: Vec, zoom: number): Measure => {
   const scale = numberOf(style.scale, 1) * zoom;
   return {
     centre: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
-    width: base.x * scale,
-    height: base.y * scale,
     degrees: rotateDegrees(style.rotate),
+    height: base.y * scale,
+    width: base.x * scale,
   };
 };
 
@@ -233,7 +238,7 @@ export const startPeel = (
   let last = 0;
   let phaseStart = 0;
   let overTrash = false;
-  let pose: PeelPose = { progress: 0, lift: 0, size: 1 };
+  let pose: PeelPose = { lift: 0, progress: 0, size: 1 };
   let from: PeelPose = pose;
   let direction = inwardAngle(
     grab,
@@ -404,12 +409,12 @@ export const startPeel = (
 
   /** The curl's shape for the sticker as measured (`size` from the pose). */
   const curlInput = (at: Measure, angle: number) => ({
-    width: at.width * pose.size,
-    height: at.height * pose.size,
-    rotation: at.degrees * DEG,
+    direction: angle,
     grabU: grab.u,
     grabV: grab.v,
-    direction: angle,
+    height: at.height * pose.size,
+    rotation: at.degrees * DEG,
+    width: at.width * pose.size,
   });
 
   /** The curl that keeps the held edge with the pointer, for `at`. */
@@ -434,10 +439,25 @@ export const startPeel = (
   const steps: Partial<
     Record<Phase, (now: number, dt: number, at: Measure) => boolean>
   > = {
+    held: (_now, dt) => {
+      const speed = Math.hypot(velocity.x, velocity.y);
+      const target = overTrash ? PEEL.trash : dragProgress(speed);
+      pose = {
+        lift: 1,
+        progress: approach(pose.progress, target, dt, PEEL_TAU.progress),
+        size: 1,
+      };
+      return true;
+    },
+    layBack: (now) => {
+      const t = (now - phaseStart) / PEEL_MS.layBack;
+      pose = layBackPose(t, from);
+      return t < 1;
+    },
     peeling: (_now, dt, at) => {
       pose = {
-        progress: approach(pose.progress, pullProgress(at), dt, PEEL_TAU.pull),
         lift: 0,
+        progress: approach(pose.progress, pullProgress(at), dt, PEEL_TAU.pull),
         size: 1,
       };
       return true;
@@ -449,21 +469,6 @@ export const startPeel = (
         phase = "held";
       }
       return true;
-    },
-    held: (_now, dt) => {
-      const speed = Math.hypot(velocity.x, velocity.y);
-      const target = overTrash ? PEEL.trash : dragProgress(speed);
-      pose = {
-        progress: approach(pose.progress, target, dt, PEEL_TAU.progress),
-        lift: 1,
-        size: 1,
-      };
-      return true;
-    },
-    layBack: (now) => {
-      const t = (now - phaseStart) / PEEL_MS.layBack;
-      pose = layBackPose(t, from);
-      return t < 1;
     },
     throw: (now) => {
       const t = (now - phaseStart) / PEEL_MS.throw;
@@ -555,14 +560,14 @@ export const startPeel = (
     target.draw({
       cx: centre.x,
       cy: centre.y,
-      width: at.width * pose.size,
-      height: at.height * pose.size,
-      rotation: at.degrees * DEG,
+      direction,
       grabU: grab.u,
       grabV: grab.v,
-      progress: pose.progress,
-      direction,
+      height: at.height * pose.size,
       lift: pose.lift,
+      progress: pose.progress,
+      rotation: at.degrees * DEG,
+      width: at.width * pose.size,
     });
     drawn = centre;
     drawnPointer = pointer;
@@ -661,6 +666,47 @@ export const startPeel = (
   }
 
   return {
+    drop: () => {
+      if (mode === "gl" && isMoving(phase)) {
+        enter("layBack", performance.now());
+        run();
+        return;
+      }
+      if (mode === "css" && isMoving(phase)) {
+        if (off) {
+          pressCss(el);
+        } else {
+          el.classList.remove(TUGGED);
+        }
+      }
+      // The CSS glide (if any) goes on: it ends where it is let go.
+      finish(true);
+    },
+    end: () => {
+      el.classList.remove(LIFTED, TUGGED);
+      stopGlide();
+      finish(true);
+    },
+    fall: (bin) => {
+      if (mode !== "gl" || !(phase === "pop" || phase === "held")) {
+        // The crumple starts from the element's place.
+        stopGlide();
+        return Promise.resolve(false);
+      }
+      const now = performance.now();
+      fallFrom = drawn ?? centreOf(measure(el, base, zoom()), now);
+      fallTo = bin
+        ? { x: bin.left + bin.width / 2, y: bin.top + bin.height * BIN_MOUTH }
+        : fallFrom;
+      enter("throw", now);
+      run();
+      return new Promise((resolve) => {
+        fallen = resolve;
+      });
+    },
+    hoverTrash: (over) => {
+      overTrash = over;
+    },
     lift: () => {
       if (phase !== "pressed") {
         return;
@@ -689,53 +735,12 @@ export const startPeel = (
         { x: pointer.x - press.x, y: pointer.y - press.y },
         aim
       );
-      aim = shaped.aim;
+      ({ aim } = shaped);
       pull = shaped.distance;
       if (peeledOff()) {
         detach();
       }
       return off;
-    },
-    hoverTrash: (over) => {
-      overTrash = over;
-    },
-    drop: () => {
-      if (mode === "gl" && isMoving(phase)) {
-        enter("layBack", performance.now());
-        run();
-        return;
-      }
-      if (mode === "css" && isMoving(phase)) {
-        if (off) {
-          pressCss(el);
-        } else {
-          el.classList.remove(TUGGED);
-        }
-      }
-      // The CSS glide (if any) goes on: it ends where it is let go.
-      finish(true);
-    },
-    fall: (bin) => {
-      if (mode !== "gl" || !(phase === "pop" || phase === "held")) {
-        // The crumple starts from the element's place.
-        stopGlide();
-        return Promise.resolve(false);
-      }
-      const now = performance.now();
-      fallFrom = drawn ?? centreOf(measure(el, base, zoom()), now);
-      fallTo = bin
-        ? { x: bin.left + bin.width / 2, y: bin.top + bin.height * BIN_MOUTH }
-        : fallFrom;
-      enter("throw", now);
-      run();
-      return new Promise((resolve) => {
-        fallen = resolve;
-      });
-    },
-    end: () => {
-      el.classList.remove(LIFTED, TUGGED);
-      stopGlide();
-      finish(true);
     },
   };
 };

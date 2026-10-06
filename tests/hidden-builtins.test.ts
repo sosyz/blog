@@ -60,29 +60,29 @@ describe("built-in sticker keys", () => {
 
 describe("POST /api/builtins input", () => {
   test("accepts a key and a boolean", () => {
-    expect(builtinToggleInput.parse({ key: TRAM, hidden: true })).toEqual({
-      key: TRAM,
+    expect(builtinToggleInput.parse({ hidden: true, key: TRAM })).toEqual({
       hidden: true,
+      key: TRAM,
     });
   });
 
   test("rejects bad keys and non-boolean hidden", () => {
     const badKey = builtinToggleInput.safeParse({
-      key: "<script>",
       hidden: true,
+      key: "<script>",
     });
     expect(badKey.success).toBe(false);
     if (!badKey.success) {
       expect(firstIssue(badKey.error)).toBe("不知道是哪张自带贴纸。");
     }
     expect(
-      builtinToggleInput.safeParse({ key: TRAM, hidden: "yes" }).success
+      builtinToggleInput.safeParse({ hidden: "yes", key: TRAM }).success
     ).toBe(false);
     expect(builtinToggleInput.safeParse({ key: TRAM }).success).toBe(false);
     expect(
       builtinToggleInput.safeParse({
-        key: `pile:${"字".repeat(25)}:obj-idea`,
         hidden: false,
+        key: `pile:${"字".repeat(25)}:obj-idea`,
       }).success
     ).toBe(false);
   });
@@ -96,49 +96,49 @@ describe("hidden_builtins", () => {
 
   test("hide is idempotent and keeps who hid it first", async () => {
     const first = await setBuiltinHidden(db.d1, {
-      key: TRAM,
-      hidden: true,
       by: "admin:owner@example.com",
+      hidden: true,
+      key: TRAM,
       now: NOW,
     });
     expect(first.changed).toBe(true);
     const again = await setBuiltinHidden(db.d1, {
-      key: TRAM,
-      hidden: true,
       by: "owner:github:sosyz",
+      hidden: true,
+      key: TRAM,
       now: NOW + 1000,
     });
     expect(again.changed).toBe(false);
     expect(await listHiddenBuiltinRows(db.d1)).toEqual([
-      { key: TRAM, hidden_at: NOW, hidden_by: "admin:owner@example.com" },
+      { hidden_at: NOW, hidden_by: "admin:owner@example.com", key: TRAM },
     ]);
   });
 
   test("restore deletes the row; restoring again does nothing", async () => {
     await setBuiltinHidden(db.d1, {
-      key: TRAM,
-      hidden: true,
       by: "admin:a",
+      hidden: true,
+      key: TRAM,
       now: NOW,
     });
     await setBuiltinHidden(db.d1, {
-      key: DOG,
-      hidden: true,
       by: "admin:a",
+      hidden: true,
+      key: DOG,
       now: NOW + 1,
     });
     expect(await listHiddenBuiltins(db.d1)).toEqual([DOG, TRAM]);
     const restored = await setBuiltinHidden(db.d1, {
-      key: TRAM,
-      hidden: false,
       by: "admin:a",
+      hidden: false,
+      key: TRAM,
       now: NOW + 2,
     });
     expect(restored.changed).toBe(true);
     const twice = await setBuiltinHidden(db.d1, {
-      key: TRAM,
-      hidden: false,
       by: "admin:a",
+      hidden: false,
+      key: TRAM,
       now: NOW + 3,
     });
     expect(twice.changed).toBe(false);
@@ -147,18 +147,18 @@ describe("hidden_builtins", () => {
 });
 
 describe("who may hide a built-in", () => {
-  const noAccess = { ok: false, status: 401, message: "请先登录" } as const;
+  const noAccess = { message: "请先登录", ok: false, status: 401 } as const;
 
   test("an Access login", () => {
     expect(
-      builtinEditor({ ok: true, email: "me@example.com", bypass: false }, null)
-    ).toEqual({ ok: true, actor: "admin:me@example.com" });
+      builtinEditor({ bypass: false, email: "me@example.com", ok: true }, null)
+    ).toEqual({ actor: "admin:me@example.com", ok: true });
   });
 
   test("the owner's GitHub session", () => {
     expect(builtinEditor(noAccess, { isOwner: true, login: "sosyz" })).toEqual({
-      ok: true,
       actor: "owner:github:sosyz",
+      ok: true,
     });
   });
 
@@ -172,7 +172,7 @@ describe("who may hide a built-in", () => {
     const other = builtinEditor(noAccess, { isOwner: false, login: "x" });
     expect(other.ok ? 0 : other.status).toBe(403);
     const expired = builtinEditor(
-      { ok: false, status: 403, message: "登录已失效" },
+      { message: "登录已失效", ok: false, status: 403 },
       null
     );
     expect(expired.ok ? 0 : expired.status).toBe(403);
@@ -180,7 +180,7 @@ describe("who may hide a built-in", () => {
 
   test("Access not configured is still just 401 for a visitor", () => {
     const result = builtinEditor(
-      { ok: false, status: 503, message: "没配置" },
+      { message: "没配置", ok: false, status: 503 },
       null
     );
     expect(result.ok ? 0 : result.status).toBe(401);

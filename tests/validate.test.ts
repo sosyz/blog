@@ -10,10 +10,10 @@ import {
 } from "../src/lib/server/validate";
 
 const base = {
-  kind: "comment",
-  slug: "go-context",
-  name: "  小周 ",
   body: "你好",
+  kind: "comment",
+  name: "  小周 ",
+  slug: "go-context",
   turnstile: "token",
 };
 
@@ -34,8 +34,8 @@ describe("commentInput", () => {
     const result = commentInput.parse({
       ...base,
       email: " ",
-      site: "",
       parentId: "",
+      site: "",
     });
     expect(result.email).toBeUndefined();
     expect(result.site).toBeUndefined();
@@ -57,8 +57,8 @@ describe("commentInput", () => {
     );
     const inline = {
       ...base,
-      kind: "inline",
       anchor: { exact: "网关名称", prefix: "" },
+      kind: "inline",
     };
     expect(messageOf({ ...inline, body: "字".repeat(300) })).toBeNull();
     expect(messageOf({ ...inline, body: "字".repeat(301) })).toBe(
@@ -74,8 +74,8 @@ describe("commentInput", () => {
   test("invisible format characters are dropped, ZWJ is kept", () => {
     const result = commentInput.parse({
       ...base,
-      name: "小\u202e周\u200b\u0085",
       body: "a\u2066b\ufeffc 👨\u200d👩",
+      name: "小\u202e周\u200b\u0085",
     });
     expect(result.name).toBe("小周");
     expect(result.body).toBe("abc 👨\u200d👩");
@@ -85,8 +85,8 @@ describe("commentInput", () => {
   test("anchor prefix is cleaned but not trimmed", () => {
     const result = commentInput.parse({
       ...base,
-      kind: "inline",
       anchor: { exact: "网关名称", prefix: "\u0000\u202e前面 \n的字 " },
+      kind: "inline",
     });
     expect(result.kind === "inline" && result.anchor.prefix).toBe("前面 的字 ");
   });
@@ -141,11 +141,11 @@ describe("commentInput", () => {
 });
 
 describe("stickerInput", () => {
-  const sticker = { x: "12.5", y: "-40", turnstile: "t" };
+  const sticker = { turnstile: "t", x: "12.5", y: "-40" };
 
   test("coerces form strings and applies defaults", () => {
     const result = stickerInput.parse({ ...sticker, rotation: "", scale: "" });
-    expect(result).toMatchObject({ x: 12.5, y: -40, rotation: 0, scale: 1 });
+    expect(result).toMatchObject({ rotation: 0, scale: 1, x: 12.5, y: -40 });
   });
 
   test("position is required: missing or blank is not (0, 0)", () => {
@@ -188,20 +188,20 @@ describe("decisionInput", () => {
   const id = "2166540f-7b0d-4706-88c2-c0694dbb6cc3";
   test("accepts approve with a reply", () => {
     const result = decisionInput.parse({
-      type: "comment",
-      id,
       decision: "approve",
+      id,
       reply: " 谢谢 ",
+      type: "comment",
     });
     expect(result.reply).toBe("谢谢");
   });
   test("rejects unknown decisions and bad ids", () => {
     expect(
-      decisionInput.safeParse({ type: "comment", id, decision: "maybe" })
+      decisionInput.safeParse({ decision: "maybe", id, type: "comment" })
         .success
     ).toBe(false);
     expect(
-      decisionInput.safeParse({ type: "comment", id: "1", decision: "approve" })
+      decisionInput.safeParse({ decision: "approve", id: "1", type: "comment" })
         .success
     ).toBe(false);
   });

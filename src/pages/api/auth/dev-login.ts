@@ -25,16 +25,16 @@ export const GET: APIRoute = ({ request, url }) => {
     return fail(STATUS.notFound, "没有这个地址。");
   }
   const parsed = devLoginInput.safeParse({
-    login: url.searchParams.get("login") ?? DEFAULT_LOGIN,
     id: url.searchParams.get("id") ?? DEFAULT_ID,
+    login: url.searchParams.get("login") ?? DEFAULT_LOGIN,
   });
   if (!parsed.success) {
     return fail(STATUS.badRequest, firstIssue(parsed.error));
   }
   return finishLogin(database(), {
-    request,
-    profile: devProfile(parsed.data.id, parsed.data.login),
     next: url.searchParams.get("next") ?? "/",
     now: Date.now(),
+    profile: devProfile(parsed.data.id, parsed.data.login),
+    request,
   });
 };

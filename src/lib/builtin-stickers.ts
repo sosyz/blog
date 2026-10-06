@@ -18,15 +18,15 @@ import {
   TOPIC_STICKERS,
 } from "../scripts/canvas/seed";
 
-export type BuiltinSticker = {
+export interface BuiltinSticker {
   key: string;
-  /** /stickers/<file>.webp */
-  src: string;
   /** What it shows, in Chinese (aria-label, /admin/ alt text). */
   label: string;
   /** Where it is on the canvas, e.g. 「Go」旁边. */
   place: string;
-};
+  /** /stickers/<file>.webp */
+  src: string;
+}
 
 /** Longest key the API accepts. */
 export const BUILTIN_KEY_MAX = 100;
@@ -68,23 +68,23 @@ export const stickerLabel = (file: string) => LABELS[file] ?? "贴纸";
 export const builtinStickers = (): BuiltinSticker[] => [
   {
     key: dogKey(DOG_STICKER),
-    src: stickerSrc(DOG_STICKER),
     label: stickerLabel(DOG_STICKER),
     place: "自我介绍旁边",
+    src: stickerSrc(DOG_STICKER),
   },
   ...Object.entries(TOPIC_STICKERS).flatMap(([topic, files]) =>
     files.map((file) => ({
       key: pileKey(topic, file),
-      src: stickerSrc(file),
       label: stickerLabel(file),
       place: `「${topic}」旁边`,
+      src: stickerSrc(file),
     }))
   ),
   ...OUTER_STICKERS.map((file) => ({
     key: outerKey(file),
-    src: stickerSrc(file),
     label: stickerLabel(file),
     place: "画布外圈",
+    src: stickerSrc(file),
   })),
 ];
 

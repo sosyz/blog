@@ -12,13 +12,13 @@ html {
 }
 
 body {
-  margin: 0;
   min-height: 100dvh;
-  background: var(--desk);
-  color: var(--ink);
+  margin: 0;
   font-family: var(--ui);
-  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--desk);
 }
 
 img,
@@ -65,21 +65,21 @@ samp {
   padding: 0;
   margin: -1px;
   overflow: hidden;
-  clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
+  clip-path: inset(50%);
 }
 
 .skip-link {
   position: fixed;
-  z-index: 100;
   top: 8px;
   left: 8px;
+  z-index: 100;
   padding: 6px 12px;
-  border-radius: 6px;
-  background: var(--ink);
-  color: var(--doc);
   font-family: var(--hand);
+  color: var(--doc);
+  background: var(--ink);
+  border-radius: 6px;
   translate: 0 -200%;
 }
 

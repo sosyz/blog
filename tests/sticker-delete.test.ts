@@ -32,16 +32,16 @@ const rowWith = async (
   token: string,
   userId: string | null = UPLOADER
 ): Promise<DeletableRow> => ({
+  edit_token_hash: await hashEditToken(token, SALT),
   r2_key: R2_KEY,
   status,
-  edit_token_hash: await hashEditToken(token, SALT),
   user_id: userId,
 });
 
 const visitor = (
   token?: string,
   session: { userId: string; isOwner: boolean } | null = null
-): MoveAuth => ({ kind: "visitor", token, salt: SALT, session });
+): MoveAuth => ({ kind: "visitor", salt: SALT, session, token });
 
 describe("stickerDeleteInput", () => {
   const messageOf = (input: unknown) => {
@@ -71,26 +71,26 @@ describe("planDelete: who may tear a sticker off", () => {
     ["the edit token", () => visitor(token), "token"],
     [
       "the uploader's GitHub session",
-      () => visitor(undefined, { userId: UPLOADER, isOwner: false }),
+      () => visitor(undefined, { isOwner: false, userId: UPLOADER }),
       "account",
     ],
     [
       "the owner's GitHub session",
-      () => visitor(undefined, { userId: OTHER, isOwner: true }),
+      () => visitor(undefined, { isOwner: true, userId: OTHER }),
       "owner",
     ],
     [
       "another user who still has the token",
-      () => visitor(token, { userId: OTHER, isOwner: false }),
+      () => visitor(token, { isOwner: false, userId: OTHER }),
       "token",
     ],
   ] as const)("allowed with %s", async (_name, auth, via) => {
     for (const status of ["pending", "approved"] as const) {
       expect(await planDelete(await rowWith(status, token), auth())).toEqual({
-        ok: true,
-        via,
         alreadyGone: false,
+        ok: true,
         r2Key: R2_KEY,
+        via,
       });
     }
   });
@@ -100,14 +100,14 @@ describe("planDelete: who may tear a sticker off", () => {
     ["a wrong token", () => visitor(newEditToken())],
     [
       "another GitHub user",
-      () => visitor(undefined, { userId: OTHER, isOwner: false }),
+      () => visitor(undefined, { isOwner: false, userId: OTHER }),
     ],
   ] as const)("404 for %s", async (_name, auth) => {
     const plan = await planDelete(await rowWith("approved", token), auth());
     expect(plan).toEqual({
+      message: "没有这张贴纸，或者它不是你贴的。",
       ok: false,
       status: 404,
-      message: "没有这张贴纸，或者它不是你贴的。",
     });
   });
 
@@ -123,7 +123,7 @@ describe("planDelete: who may tear a sticker off", () => {
   test("an anonymous sticker has no account to match", async () => {
     const plan = await planDelete(
       await rowWith("approved", token, null),
-      visitor(undefined, { userId: UPLOADER, isOwner: false })
+      visitor(undefined, { isOwner: false, userId: UPLOADER })
     );
     expect(plan.ok).toBe(false);
   });
@@ -131,7 +131,7 @@ describe("planDelete: who may tear a sticker off", () => {
   test("already rejected: allowed and idempotent, still hands back the key", async () => {
     expect(
       await planDelete(await rowWith("rejected", token), visitor(token))
-    ).toEqual({ ok: true, via: "token", alreadyGone: true, r2Key: R2_KEY });
+    ).toEqual({ alreadyGone: true, ok: true, r2Key: R2_KEY, via: "token" });
     // Not yours: still 404, so rejected ids cannot be probed.
     const plan = await planDelete(await rowWith("rejected", token), visitor());
     expect(plan.ok ? 0 : plan.status).toBe(404);
@@ -190,13 +190,13 @@ describe("tearing off in D1", () => {
 
   const tearOff = (via: "token" | "owner", login?: string) =>
     tearOffSticker(db.d1, STICKER, {
-      itemType: "sticker",
-      itemId: STICKER,
-      decision: "reject",
       actor: moveActor(via, login).actor,
-      note: tearOffNote(via),
       createdAt: NOW,
+      decision: "reject",
       ipHash: via === "owner" ? null : IP_HASH,
+      itemId: STICKER,
+      itemType: "sticker",
+      note: tearOffNote(via),
     });
 
   beforeEach(() => {
@@ -220,13 +220,13 @@ describe("tearing off in D1", () => {
   test("rejects the sticker, sets decided_at and logs a 'reject'", async () => {
     await addSticker("approved", newEditToken());
     expect(await tearOff("token")).toBe(true);
-    expect(stickerRow()).toEqual({ status: "rejected", decided_at: NOW });
+    expect(stickerRow()).toEqual({ decided_at: NOW, status: "rejected" });
     expect(logRows()).toEqual([
       {
-        decision: "reject",
         actor: "visitor:owner",
-        note: "上传者撕掉了",
+        decision: "reject",
         ip_hash: IP_HASH,
+        note: "上传者撕掉了",
       },
     ]);
   });
@@ -236,10 +236,10 @@ describe("tearing off in D1", () => {
     expect(await tearOff("owner", "sonui")).toBe(true);
     expect(logRows()).toEqual([
       {
-        decision: "reject",
         actor: "owner:github:sonui",
-        note: "博主扔掉了",
+        decision: "reject",
         ip_hash: null,
+        note: "博主扔掉了",
       },
     ]);
   });
@@ -252,10 +252,10 @@ describe("tearing off in D1", () => {
       await getStickerForDelete(db.d1, STICKER),
       visitor(token)
     );
-    expect(again).toMatchObject({ ok: true, alreadyGone: true });
+    expect(again).toMatchObject({ alreadyGone: true, ok: true });
     // Even if it did write, the status stays and decided_at does not move.
     expect(await tearOff("token")).toBe(false);
-    expect(stickerRow()).toEqual({ status: "rejected", decided_at: NOW });
+    expect(stickerRow()).toEqual({ decided_at: NOW, status: "rejected" });
   });
 
   test("visitor tear-offs count for the move limit; the owner's do not", async () => {
@@ -269,10 +269,10 @@ describe("tearing off in D1", () => {
     );
     expect(
       await recentMoves(db.d1, {
+        day: DAY,
+        hour: HOUR,
         ipHash: IP_HASH,
         now: NOW + 1,
-        hour: HOUR,
-        day: DAY,
       })
     ).toEqual([1, 2]);
   });

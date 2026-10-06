@@ -52,12 +52,12 @@ const metaLines = (post: Post) => {
 
 const frontMatter = (post: Post) =>
   noteFrontMatter({
-    title: post.data.title,
-    description: post.data.description,
-    url: noteUrl(post.id),
-    published: isoDate(post.data.pubDate),
-    updated: isoDate(lastUpdated(post)),
     basedOn: post.data.source,
+    description: post.data.description,
+    published: isoDate(post.data.pubDate),
+    title: post.data.title,
+    updated: isoDate(lastUpdated(post)),
+    url: noteUrl(post.id),
   });
 
 /**

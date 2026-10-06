@@ -32,13 +32,15 @@ type MdastPlugin = Extract<
   { name: string }
 >;
 /** What a plugin factory is told about the document (satteri). */
-type FactoryContext = { readonly fileURL: URL | undefined };
+interface FactoryContext {
+  readonly fileURL: URL | undefined;
+}
 /** A node Sätteri renders through `data.hName` (see satteri `Custom`). */
-type CustomNode = {
-  type: string;
+interface CustomNode {
   children: PhrasingContent[];
   data: { hName: string };
-};
+  type: string;
+}
 
 /* ---------- helpers ---------- */
 
@@ -99,7 +101,11 @@ const TITLE_META = /(?:title|file)=(?:"([^"]+)"|'([^']+)'|(\S+))/;
 const COLLAPSE_META = /(?:^|\s)collapse(?=\s|$)/;
 const LINE_NUMBERS_META = /(?:^|\s)showLineNumbers(?=\s|$)/;
 
-type FenceMeta = { title?: string; collapse: boolean; lineNumbers: boolean };
+interface FenceMeta {
+  collapse: boolean;
+  lineNumbers: boolean;
+  title?: string;
+}
 /** Where fenceMeta keeps what it read, in Shiki's per-block `this.meta`. */
 const FENCE_META = Symbol("journal-fence-meta");
 
@@ -123,15 +129,6 @@ export const parseFenceMeta = (raw: string): FenceMeta => {
  */
 export const fenceMeta: ShikiTransformer = {
   name: "journal-fence-meta",
-  preprocess(_code, options) {
-    const meta = options.meta as { __raw?: string } | undefined;
-    const raw = meta?.__raw;
-    if (!(meta && raw)) {
-      return;
-    }
-    (this.meta as Record<symbol, FenceMeta>)[FENCE_META] = parseFenceMeta(raw);
-    meta.__raw = raw.replace(TITLE_META, "");
-  },
   pre(node) {
     const found = (this.meta as Record<symbol, FenceMeta | undefined>)[
       FENCE_META
@@ -145,6 +142,15 @@ export const fenceMeta: ShikiTransformer = {
     if (found?.lineNumbers) {
       node.properties.dataLineNumbers = "";
     }
+  },
+  preprocess(_code, options) {
+    const meta = options.meta as { __raw?: string } | undefined;
+    const raw = meta?.__raw;
+    if (!(meta && raw)) {
+      return;
+    }
+    (this.meta as Record<symbol, FenceMeta>)[FENCE_META] = parseFenceMeta(raw);
+    meta.__raw = raw.replace(TITLE_META, "");
   },
 };
 
@@ -230,10 +236,10 @@ const textNode = (value: string): ElementContent => ({
 });
 
 const spanOf = (className: string, value: string): Element => ({
-  type: "element",
-  tagName: "span",
-  properties: { className: [className] },
   children: [textNode(value)],
+  properties: { className: [className] },
+  tagName: "span",
+  type: "element",
 });
 
 /**
@@ -242,21 +248,21 @@ const spanOf = (className: string, value: string): Element => ({
  * span at a time, so the button's accessible name follows its state).
  */
 const folded = (pre: Readonly<Element>, lines: number): Element => ({
-  type: "element",
-  tagName: "details",
-  properties: { className: ["slip-fold"] },
   children: [
     {
-      type: "element",
-      tagName: "summary",
-      properties: {},
       children: [
         spanOf("slip-open", `展开代码（${lines} 行）`),
         spanOf("slip-close", "收起代码"),
       ],
+      properties: {},
+      tagName: "summary",
+      type: "element",
     },
     pre,
   ],
+  properties: { className: ["slip-fold"] },
+  tagName: "details",
+  type: "element",
 });
 
 /**
@@ -278,7 +284,6 @@ export const codeSlips = ({ fileURL }: FactoryContext): HastPlugin => {
   const slug = slugOf(fileURL);
   let index = 0;
   return {
-    name: "journal-code-slips",
     element: {
       filter: ["pre"],
       visit(pre, ctx) {
@@ -297,8 +302,31 @@ export const codeSlips = ({ fileURL }: FactoryContext): HastPlugin => {
         // A folded slip is short on the page, so it keeps the tilt.
         const straight = lines > STRAIGHT_AFTER_LINES && !collapse;
         ctx.replaceNode(pre, {
-          type: "element",
-          tagName: "figure",
+          children: [
+            collapse ? folded(pre, lines) : pre,
+            {
+              children: [textNode("复制")],
+              properties: {
+                ariaLabel: "复制代码",
+                className: ["slip-copy"],
+                type: "button",
+              },
+              tagName: "button",
+              type: "element",
+            },
+            {
+              children: [],
+              properties: { className: ["slip-said"], role: "status" },
+              tagName: "span",
+              type: "element",
+            },
+            {
+              children: [textNode(labelOf(pre, lang))],
+              properties: { className: ["fname"] },
+              tagName: "figcaption",
+              type: "element",
+            },
+          ],
           properties: {
             className: ["slip"],
             dataLang: lang,
@@ -306,34 +334,12 @@ export const codeSlips = ({ fileURL }: FactoryContext): HastPlugin => {
             dataNoAnnotate: "",
             style: `--tape: url("/journal/tape/${tape}.webp"); --tr: ${tapeAngle}deg; --sr: ${straight ? 0 : SLIP_TILT}deg`,
           },
-          children: [
-            collapse ? folded(pre, lines) : pre,
-            {
-              type: "element",
-              tagName: "button",
-              properties: {
-                type: "button",
-                className: ["slip-copy"],
-                ariaLabel: "复制代码",
-              },
-              children: [textNode("复制")],
-            },
-            {
-              type: "element",
-              tagName: "span",
-              properties: { className: ["slip-said"], role: "status" },
-              children: [],
-            },
-            {
-              type: "element",
-              tagName: "figcaption",
-              properties: { className: ["fname"] },
-              children: [textNode(labelOf(pre, lang))],
-            },
-          ],
+          tagName: "figure",
+          type: "element",
         });
       },
     },
+    name: "journal-code-slips",
   };
 };
 
@@ -358,11 +364,10 @@ const isPicture = (child: ElementContent): boolean => {
 
 /** Mark paragraphs that hold only images as `p.pic` (polaroid frames). */
 export const pictureParagraphs: HastPlugin = {
-  name: "journal-picture-paragraphs",
   element: {
     filter: ["p"],
     visit(paragraph, ctx) {
-      const children = paragraph.children;
+      const { children } = paragraph;
       const onlyPictures =
         children.some(isPicture) &&
         children.every((child) => isPicture(child) || isBlank(child));
@@ -374,6 +379,7 @@ export const pictureParagraphs: HastPlugin = {
       }
     },
   },
+  name: "journal-picture-paragraphs",
 };
 
 /* ---------- responsive pictures ---------- */
@@ -401,7 +407,6 @@ const EXTERNAL = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
  * widths back as numbers. Remote and data: images are left alone.
  */
 export const responsivePictures: HastPlugin = {
-  name: "journal-responsive-pictures",
   element: {
     filter: ["img"],
     visit(img, ctx) {
@@ -417,6 +422,7 @@ export const responsivePictures: HastPlugin = {
       }
     },
   },
+  name: "journal-responsive-pictures",
 };
 
 /* ---------- margin sticky notes ---------- */
@@ -440,7 +446,6 @@ const hasContent = (node: ElementContent) =>
  * <aside class="aside-sticky sticky-paper"><b>label</b><p>…</p></aside>
  */
 export const asideStickies: HastPlugin = {
-  name: "journal-aside-stickies",
   element: {
     filter: ["blockquote"],
     visit(quote, ctx) {
@@ -466,21 +471,22 @@ export const asideStickies: HastPlugin = {
         .map((child) => (child === first ? paragraph : child))
         .filter(hasContent);
       ctx.replaceNode(quote, {
-        type: "element",
-        tagName: "aside",
-        properties: { className: ["aside-sticky", "sticky-paper"] },
         children: [
           {
-            type: "element",
-            tagName: "b",
-            properties: {},
             children: [{ type: "text", value: label }],
+            properties: {},
+            tagName: "b",
+            type: "element",
           },
           ...children,
         ],
+        properties: { className: ["aside-sticky", "sticky-paper"] },
+        tagName: "aside",
+        type: "element",
       });
     },
   },
+  name: "journal-aside-stickies",
 };
 
 /* ---------- title heading ---------- */
@@ -492,7 +498,6 @@ const normalise = (text: string) => text.replace(WHITESPACE, " ").trim();
  * already prints the title as the page's only <h1>.
  */
 export const dropTitleHeading: HastPlugin = {
-  name: "journal-drop-title-heading",
   before(root, ctx) {
     const astro = ctx.data.astro as
       | { frontmatter?: Record<string, unknown> }
@@ -508,6 +513,7 @@ export const dropTitleHeading: HastPlugin = {
       ctx.removeNode(first);
     }
   },
+  name: "journal-drop-title-heading",
 };
 
 /* ---------- ==highlight== ---------- */
@@ -534,9 +540,9 @@ export const highlightMarks: MdastPlugin = {
         parts.push({ type: "text", value: node.value.slice(last, start) });
       }
       parts.push({
-        type: "mark",
         children: [{ type: "text", value: match[1] ?? "" }],
         data: { hName: "mark" },
+        type: "mark",
       });
       last = start + match[0].length;
     }

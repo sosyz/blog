@@ -16,19 +16,19 @@ const AVATAR_HOST = "avatars.githubusercontent.com";
 /** Display names are cut to this many characters. */
 const NAME_MAX = 60;
 
-export type GithubProfile = {
+export interface GithubProfile {
+  avatarUrl: string;
   githubId: number;
+  htmlUrl: string;
   login: string;
   name: string | null;
-  avatarUrl: string;
-  htmlUrl: string;
-};
+}
 
 const userPayload = z.object({
+  avatar_url: z.string().nullish(),
   id: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
   login: z.string().regex(GITHUB_LOGIN),
   name: z.string().nullish(),
-  avatar_url: z.string().nullish(),
 });
 
 const fallbackAvatar = (id: number) => `https://${AVATAR_HOST}/u/${id}?v=4`;
@@ -59,21 +59,21 @@ export const profileFromGithub = (raw: unknown): GithubProfile | null => {
   const { id, login, name, avatar_url } = parsed.data;
   const shownName = [...cleanLine(name ?? "")].slice(0, NAME_MAX).join("");
   return {
+    avatarUrl: avatarOf(avatar_url, id),
     githubId: id,
+    htmlUrl: `https://github.com/${login}`,
     login,
     name: shownName || null,
-    avatarUrl: avatarOf(avatar_url, id),
-    htmlUrl: `https://github.com/${login}`,
   };
 };
 
 /** The profile the local dev login pretends to have. */
 export const devProfile = (githubId: number, login: string): GithubProfile => ({
+  avatarUrl: fallbackAvatar(githubId),
   githubId,
+  htmlUrl: `https://github.com/${login}`,
   login,
   name: login,
-  avatarUrl: fallbackAvatar(githubId),
-  htmlUrl: `https://github.com/${login}`,
 });
 
 export type GithubResult<T> =
@@ -93,26 +93,26 @@ export const exchangeCode = async (options: {
   const { fetchFn = fetch } = options;
   try {
     const response = await fetchFn(TOKEN_URL, {
-      method: "POST",
-      headers: {
-        accept: "application/json",
-        "content-type": "application/json",
-        "user-agent": USER_AGENT,
-      },
       body: JSON.stringify({
         client_id: options.clientId,
         client_secret: options.clientSecret,
         code: options.code,
         redirect_uri: options.redirectUri,
       }),
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json",
+        "user-agent": USER_AGENT,
+      },
+      method: "POST",
     });
     const parsed = tokenPayload.safeParse(await response.json());
     if (!(response.ok && parsed.success)) {
-      return { ok: false, message: "GitHub 没有确认这次登录，再试一次吧。" };
+      return { message: "GitHub 没有确认这次登录，再试一次吧。", ok: false };
     }
     return { ok: true, value: parsed.data.access_token };
   } catch {
-    return { ok: false, message: "暂时连不上 GitHub，过一会儿再试。" };
+    return { message: "暂时连不上 GitHub，过一会儿再试。", ok: false };
   }
 };
 
@@ -134,10 +134,10 @@ export const fetchGithubUser = async (
       ? profileFromGithub(await response.json())
       : null;
     if (!profile) {
-      return { ok: false, message: "没能读到你的 GitHub 资料，再试一次吧。" };
+      return { message: "没能读到你的 GitHub 资料，再试一次吧。", ok: false };
     }
     return { ok: true, value: profile };
   } catch {
-    return { ok: false, message: "暂时连不上 GitHub，过一会儿再试。" };
+    return { message: "暂时连不上 GitHub，过一会儿再试。", ok: false };
   }
 };

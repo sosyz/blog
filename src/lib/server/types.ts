@@ -7,38 +7,41 @@ export type ItemStatus = "pending" | "approved" | "rejected";
 
 export type CommentKind = "comment" | "inline";
 
-export type Anchor = { exact: string; prefix: string };
+export interface Anchor {
+  exact: string;
+  prefix: string;
+}
 
 /** The public GitHub profile of a logged-in visitor. */
-export type PublicUser = {
-  login: string;
-  name: string | null;
+export interface PublicUser {
   /** https://avatars.githubusercontent.com/… */
   avatarUrl: string;
   /** https://github.com/<login> */
   htmlUrl: string;
-};
+  login: string;
+  name: string | null;
+}
 
 /** A comment as shown publicly (no e-mail hash, IP hash or user agent). */
-export type PublicComment = {
-  id: string;
-  kind: CommentKind;
-  parentId: string | null;
-  name: string;
-  site: string | null;
-  body: string;
+export interface PublicComment {
   anchor: Anchor | null;
+  body: string;
   /** Epoch ms. */
   createdAt: number;
-  reply: { body: string; at: number } | null;
-  /** The GitHub account it was written with; null for nickname comments. */
-  user: PublicUser | null;
+  id: string;
   /** Written by the blog owner (OWNER_GITHUB_ID): shown with the 博主 stamp. */
   isOwner: boolean;
-};
+  kind: CommentKind;
+  name: string;
+  parentId: string | null;
+  reply: { body: string; at: number } | null;
+  site: string | null;
+  /** The GitHub account it was written with; null for nickname comments. */
+  user: PublicUser | null;
+}
 
 /** GET /api/comments?slug=&mine= */
-export type CommentsResponse = {
+export interface CommentsResponse {
   comments: PublicComment[];
   /**
    * Status of the ids passed in `mine` (the visitor's own submissions) and,
@@ -50,20 +53,23 @@ export type CommentsResponse = {
    * note (their ids are also in `mine`), so another device can render them.
    */
   ownPending: PublicComment[];
-};
+}
 
 /** GET /api/auth/me */
-export type MeResponse = {
+export interface MeResponse {
   /** A login is offered: GitHub is configured, or the localhost dev login. */
   enabled: boolean;
-  user: PublicUser | null;
   isOwner: boolean;
   /** Which login to offer: GitHub, the localhost dev login, or none. */
   login: "github" | "dev" | null;
-};
+  user: PublicUser | null;
+}
 
 /** POST /api/comments and POST /api/stickers */
-export type CreatedResponse = { id: string; status: ItemStatus };
+export interface CreatedResponse {
+  id: string;
+  status: ItemStatus;
+}
 
 /**
  * POST /api/stickers. `token` (the edit token for moving the sticker later)
@@ -73,30 +79,34 @@ export type CreatedResponse = { id: string; status: ItemStatus };
 export type StickerCreatedResponse = CreatedResponse & { token?: string };
 
 /** PATCH /api/stickers/:id and /api/admin/stickers/:id: the stored position. */
-export type MovedResponse = {
+export interface MovedResponse {
   id: string;
-  x: number;
-  y: number;
   rotation: number;
   scale: number;
-};
+  x: number;
+  y: number;
+}
 
-export type PublicSticker = {
+export interface PublicSticker {
+  height: number;
   id: string;
+  name: string | null;
+  rotation: number;
+  scale: number;
+  src: string;
+  width: number;
   /** World coordinates of the centre. */
   x: number;
   y: number;
-  rotation: number;
-  scale: number;
-  width: number;
-  height: number;
-  name: string | null;
-  src: string;
-};
+}
 
 /** GET /api/stickers?mine= */
-export type StickersResponse = {
-  stickers: PublicSticker[];
+export interface StickersResponse {
+  /**
+   * Keys (data-sticker-key) of the built-in stickers the owner threw away:
+   * hidden for everyone (POST /api/builtins, src/lib/builtin-stickers.ts).
+   */
+  hiddenBuiltins: string[];
   /**
    * Status of the ids passed in `mine` and, with a GitHub session, of that
    * account's stickers (pending and approved).
@@ -110,21 +120,19 @@ export type StickersResponse = {
    * another device can show them as 审核中.
    */
   ownPending: PublicSticker[];
-  /**
-   * Keys (data-sticker-key) of the built-in stickers the owner threw away:
-   * hidden for everyone (POST /api/builtins, src/lib/builtin-stickers.ts).
-   */
-  hiddenBuiltins: string[];
-};
+  stickers: PublicSticker[];
+}
 
 /** POST /api/builtins {key, hidden} → the key's state and the whole list. */
-export type BuiltinToggleResponse = {
-  key: string;
+export interface BuiltinToggleResponse {
   hidden: boolean;
   hiddenBuiltins: string[];
-};
+  key: string;
+}
 
-export type ErrorResponse = { error: string };
+export interface ErrorResponse {
+  error: string;
+}
 
 /* ---------- admin (behind Cloudflare Access) ---------- */
 
@@ -152,36 +160,36 @@ export type AdminSticker = PublicSticker & {
  * Where the owner reviews an item in place: a comment (normal or inline) on
  * its note page, a sticker on the canvas. See reviewHref in db.ts.
  */
-export type ReviewLink = {
-  type: "comment" | "sticker";
-  id: string;
+export interface ReviewLink {
   /** /notes/<slug>/?review=c:<id>#comments or /?review=s:<id> */
   href: string;
-};
+  id: string;
+  type: "comment" | "sticker";
+}
 
 /** GET /api/admin/comments?slug= */
-export type AdminCommentsResponse = {
-  /** Waiting for review on this note, oldest first. */
-  pending: AdminComment[];
+export interface AdminCommentsResponse {
   /** Rejected on this note (can be restored), newest first, at most 50. */
   hidden: AdminComment[];
-};
+  /** Waiting for review on this note, oldest first. */
+  pending: AdminComment[];
+}
 
 /** GET /api/admin/stickers */
-export type AdminStickersResponse = {
+export interface AdminStickersResponse {
   /** Every pending sticker, oldest first. */
   pending: AdminSticker[];
-};
+}
 
 /** POST /api/admin/decide {type, id, decision, reply?} */
 export type AdminDecision = "approve" | "reject" | "hold" | "reply";
 
-export type DecideResponse = {
-  ok: true;
-  id: string;
+export interface DecideResponse {
   decision: AdminDecision;
-  /** The item's status after the decision. */
-  status: ItemStatus;
+  id: string;
   /** The oldest other pending item (comments and stickers), or null. */
   next: ReviewLink | null;
-};
+  ok: true;
+  /** The item's status after the decision. */
+  status: ItemStatus;
+}

@@ -27,15 +27,19 @@ export const prefixOf = (before: string) =>
   collapseSpace(before).slice(-PREFIX_LENGTH);
 
 /** A part of one text node: `texts[index].slice(start, end)`. */
-export type TextPart = { index: number; start: number; end: number };
+export interface TextPart {
+  end: number;
+  index: number;
+  start: number;
+}
 
-type Index = {
-  /** Concatenated text with whitespace runs collapsed to one space. */
-  text: string;
+interface Index {
   /** For every character of `text`: which text node and offset it came from. */
   node: number[];
   offset: number[];
-};
+  /** Concatenated text with whitespace runs collapsed to one space. */
+  text: string;
+}
 
 const buildIndex = (texts: readonly string[]): Index => {
   let text = "";
@@ -54,7 +58,7 @@ const buildIndex = (texts: readonly string[]): Index => {
       lastWasSpace = space;
     }
   }
-  return { text, node, offset };
+  return { node, offset, text };
 };
 
 const toParts = (index: Index, start: number, length: number) => {
@@ -66,7 +70,7 @@ const toParts = (index: Index, start: number, length: number) => {
     if (last && last.index === nodeIndex) {
       last.end = at + 1;
     } else {
-      parts.push({ index: nodeIndex, start: at, end: at + 1 });
+      parts.push({ end: at + 1, index: nodeIndex, start: at });
     }
   }
   return parts;

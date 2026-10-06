@@ -31,21 +31,17 @@ const ortWasmOnly = join(
  * @type {import("astro").AstroIntegration}
  */
 const modulePreloads = {
-  name: "journal-modulepreload",
   hooks: {
     "astro:build:done": async ({ dir, logger }) => {
       const pages = await addModulePreloads(fileURLToPath(dir));
       logger.info(`modulepreload links added to ${pages} pages`);
     },
   },
+  name: "journal-modulepreload",
 };
 
 // https://astro.build/config
 export default defineConfig({
-  site: "https://blog.sonui.cn",
-  trailingSlash: "ignore",
-  compressHTML: true,
-
   // Pages are prerendered; only routes with `export const prerender = false`
   // (src/pages/api/**, src/pages/admin/**) run on the Worker.
   adapter: cloudflare({
@@ -54,8 +50,40 @@ export default defineConfig({
     // Prerender in Node so sharp and the AI SDK work during the build.
     prerenderEnvironment: "node",
   }),
-  // No sessions: otherwise the adapter provisions a SESSION KV namespace.
-  session: false,
+  compressHTML: true,
+
+  env: {
+    schema: {
+      ACCESS_AUD: envField.string({
+        access: "secret",
+        context: "server",
+        optional: true,
+      }),
+      ACCESS_TEAM_DOMAIN: envField.string({
+        access: "secret",
+        context: "server",
+        optional: true,
+      }),
+      // Worker secrets: `wrangler secret put <NAME>`, or .dev.vars locally.
+      TURNSTILE_SECRET_KEY: envField.string({
+        access: "secret",
+        context: "server",
+        optional: true,
+      }),
+      // Public, inlined into client code at build time. Read from the build
+      // environment (.env or CI), not from .dev.vars.
+      TURNSTILE_SITE_KEY: envField.string({
+        access: "public",
+        context: "client",
+        optional: true,
+      }),
+    },
+  },
+  image: {
+    service: {
+      entrypoint: "src/lib/ai/image.ts",
+    },
+  },
 
   // legacyListRedirects must follow the adapter (see its header).
   integrations: [
@@ -66,36 +94,19 @@ export default defineConfig({
   ],
   markdown: markdownConfig,
   redirects,
-
-  env: {
-    schema: {
-      // Public, inlined into client code at build time. Read from the build
-      // environment (.env or CI), not from .dev.vars.
-      TURNSTILE_SITE_KEY: envField.string({
-        context: "client",
-        access: "public",
-        optional: true,
-      }),
-      // Worker secrets: `wrangler secret put <NAME>`, or .dev.vars locally.
-      TURNSTILE_SECRET_KEY: envField.string({
-        context: "server",
-        access: "secret",
-        optional: true,
-      }),
-      ACCESS_TEAM_DOMAIN: envField.string({
-        context: "server",
-        access: "secret",
-        optional: true,
-      }),
-      ACCESS_AUD: envField.string({
-        context: "server",
-        access: "secret",
-        optional: true,
-      }),
-    },
-  },
+  // No sessions: otherwise the adapter provisions a SESSION KV namespace.
+  session: false,
+  site: "https://blog.sonui.cn",
+  trailingSlash: "ignore",
 
   vite: {
+    build: {
+      // Never inline a <script> chunk into the page: the CSP (public/_headers)
+      // has no 'unsafe-inline' for scripts. Other assets keep the 4 KB default.
+      /** @param {string} filePath */
+      assetsInlineLimit: (filePath) =>
+        filePath.endsWith(".js") ? false : undefined,
+    },
     plugins: [noteSlugsPlugin()],
     resolve: {
       alias: {
@@ -105,17 +116,5 @@ export default defineConfig({
     },
     // The cutout worker is a module worker (dynamic imports).
     worker: { format: "es" },
-    build: {
-      // Never inline a <script> chunk into the page: the CSP (public/_headers)
-      // has no 'unsafe-inline' for scripts. Other assets keep the 4 KB default.
-      /** @param {string} filePath */
-      assetsInlineLimit: (filePath) =>
-        filePath.endsWith(".js") ? false : undefined,
-    },
-  },
-  image: {
-    service: {
-      entrypoint: "src/lib/ai/image.ts",
-    },
   },
 });

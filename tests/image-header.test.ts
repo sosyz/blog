@@ -1,6 +1,6 @@
 // biome-ignore-all lint/style/noMagicNumbers: test fixtures and expected values
 import { describe, expect, test } from "bun:test";
-import sharp from "sharp";
+import sharp, { type Sharp } from "sharp";
 import {
   checkStickerImage,
   parseImageHeader,
@@ -13,30 +13,29 @@ const H = 23;
 const solid = (channels: 3 | 4) =>
   sharp({
     create: {
-      width: W,
-      height: H,
+      background: { alpha: 0.5, b: 40, g: 120, r: 200 },
       channels,
-      background: { r: 200, g: 120, b: 40, alpha: 0.5 },
+      height: H,
+      width: W,
     },
   });
 
-const bytes = async (image: sharp.Sharp) =>
-  new Uint8Array(await image.toBuffer());
+const bytes = async (image: Sharp) => new Uint8Array(await image.toBuffer());
 
 describe("parseImageHeader", () => {
   test("PNG", async () => {
     expect(parseImageHeader(await bytes(solid(4).png()))).toEqual({
+      height: H,
       mime: "image/png",
       width: W,
-      height: H,
     });
   });
 
   test("GIF", async () => {
     expect(parseImageHeader(await bytes(solid(3).gif()))).toEqual({
+      height: H,
       mime: "image/gif",
       width: W,
-      height: H,
     });
   });
 
@@ -44,9 +43,9 @@ describe("parseImageHeader", () => {
     for (const progressive of [false, true]) {
       const jpeg = await bytes(solid(3).jpeg({ progressive }).withMetadata());
       expect(parseImageHeader(jpeg)).toEqual({
+        height: H,
         mime: "image/jpeg",
         width: W,
-        height: H,
       });
     }
   });
@@ -63,9 +62,9 @@ describe("parseImageHeader", () => {
     ]);
     for (const webp of [lossy, lossless, extended]) {
       expect(parseImageHeader(webp)).toEqual({
+        height: H,
         mime: "image/webp",
         width: W,
-        height: H,
       });
     }
   });
@@ -105,24 +104,24 @@ describe("checkStickerImage", () => {
 
   test("rejects too many bytes, too many pixels and unknown types", async () => {
     expect(checkStickerImage(new Uint8Array(300 * 1024 + 1), limits)).toEqual({
-      ok: false,
       message: "图片太大了，最大 300 KB。",
+      ok: false,
     });
     const big = await bytes(
       sharp({
-        create: { width: 600, height: 20, channels: 3, background: "#fff" },
+        create: { background: "#fff", channels: 3, height: 20, width: 600 },
       }).png()
     );
     expect(checkStickerImage(big, limits)).toEqual({
-      ok: false,
       message: "图片最大 512×512 像素，这张是 600×20。",
+      ok: false,
     });
     expect(
       checkStickerImage(new TextEncoder().encode("hello"), limits).ok
     ).toBe(false);
     expect(checkStickerImage(new Uint8Array(), limits)).toEqual({
-      ok: false,
       message: "没有收到图片。",
+      ok: false,
     });
   });
 });

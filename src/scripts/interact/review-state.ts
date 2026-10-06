@@ -35,12 +35,15 @@ export type ReviewComment = AdminComment;
 
 export type Decision = AdminDecision;
 
-export type DecideRequest = { decision: Decision; reply?: string };
+export interface DecideRequest {
+  decision: Decision;
+  reply?: string;
+}
 
 const STATUS_OF: Record<Decision, ItemStatus | null> = {
   approve: "approved",
-  reject: "rejected",
   hold: "pending",
+  reject: "rejected",
   reply: null,
 };
 
@@ -73,8 +76,8 @@ export const visitorRows = (
   approved: PublicComment[],
   own: PendingComment[]
 ): Row[] => [
-  ...approved.map((item): Row => ({ kind: "approved", item })),
-  ...own.map((item): Row => ({ kind: "own", item })),
+  ...approved.map((item): Row => ({ item, kind: "approved" })),
+  ...own.map((item): Row => ({ item, kind: "own" })),
 ];
 
 /**
@@ -96,13 +99,13 @@ export const mergeRows = (
     }
   };
   for (const item of approved) {
-    add({ kind: "approved", item });
+    add({ item, kind: "approved" });
   }
   for (const item of review) {
-    add({ kind: "review", item });
+    add({ item, kind: "review" });
   }
   for (const item of own) {
-    add({ kind: "own", item });
+    add({ item, kind: "own" });
   }
   // Array#sort is stable: equal times keep the order above.
   return rows.sort((a, b) => byTime(a.item, b.item));
@@ -110,48 +113,52 @@ export const mergeRows = (
 
 /* ---------- moving an item after a decision ---------- */
 
-export type Board = {
+export interface Board {
   approved: PublicComment[];
-  pending: ReviewComment[];
   hidden: ReviewComment[];
-};
+  pending: ReviewComment[];
+}
 
-export type Outcome = {
+export interface Outcome {
   id: string;
-  /** null: unchanged (reply only). */
-  status: ItemStatus | null;
   /** Set / replace the owner reply; "" removes it; undefined leaves it. */
   reply?: string;
-};
+  /** null: unchanged (reply only). */
+  status: ItemStatus | null;
+}
 
-type Found = { item: PublicComment; status: ItemStatus; fingerprint: string };
+interface Found {
+  fingerprint: string;
+  item: PublicComment;
+  status: ItemStatus;
+}
 
 const findItem = (board: Board, id: string): Found | null => {
   const approved = board.approved.find((item) => item.id === id);
   if (approved) {
-    return { item: approved, status: "approved", fingerprint: "" };
+    return { fingerprint: "", item: approved, status: "approved" };
   }
   const review = [...board.pending, ...board.hidden].find(
     (item) => item.id === id
   );
   return review
-    ? { item: review, status: review.status, fingerprint: review.fingerprint }
+    ? { fingerprint: review.fingerprint, item: review, status: review.status }
     : null;
 };
 
 /** Just the public fields (drops status / fingerprint). */
 const toPublic = (item: PublicComment): PublicComment => ({
-  id: item.id,
-  kind: item.kind,
-  parentId: item.parentId,
-  name: item.name,
-  site: item.site,
-  body: item.body,
   anchor: item.anchor,
+  body: item.body,
   createdAt: item.createdAt,
-  reply: item.reply,
-  user: item.user,
+  id: item.id,
   isOwner: item.isOwner,
+  kind: item.kind,
+  name: item.name,
+  parentId: item.parentId,
+  reply: item.reply,
+  site: item.site,
+  user: item.user,
 });
 
 const insertByTime = <T extends { createdAt: number }>(list: T[], item: T) =>
@@ -165,7 +172,7 @@ const replyOf = (
   if (reply === undefined) {
     return current;
   }
-  return reply ? { body: reply, at: now } : null;
+  return reply ? { at: now, body: reply } : null;
 };
 
 /** Moves the decided item to the list of its new status (pure). */
@@ -183,14 +190,14 @@ export const applyDecision = (
   const others = (item: { id: string }) => item.id !== outcome.id;
   const next: Board = {
     approved: board.approved.filter(others),
-    pending: board.pending.filter(others),
     hidden: board.hidden.filter(others),
+    pending: board.pending.filter(others),
   };
   const plain = { ...toPublic(found.item), reply };
   const moved: ReviewComment = {
     ...plain,
-    status,
     fingerprint: found.fingerprint,
+    status,
   };
   switch (status) {
     case "approved":
@@ -211,19 +218,19 @@ export const applyDecision = (
 
 /* ---------- the deep link ---------- */
 
-export type TargetHit = {
-  list: "pending" | "approved" | "hidden";
-  item: PublicComment;
-  /** A highlight comment: its real place is the underlined text. */
-  inline: boolean;
+export interface TargetHit {
   /** The action whose button gets focus. */
   focus: BarAction | "reply-open";
-};
+  /** A highlight comment: its real place is the underlined text. */
+  inline: boolean;
+  item: PublicComment;
+  list: "pending" | "approved" | "hidden";
+}
 
 const FOCUS_OF: Record<TargetHit["list"], TargetHit["focus"]> = {
-  pending: "approve",
-  hidden: "restore",
   approved: "reply-open",
+  hidden: "restore",
+  pending: "approve",
 };
 
 /** Where the `?review=c:<id>` comment is on this note, if it is here. */
@@ -243,10 +250,10 @@ export const matchTarget = (
     const item = items.find((entry) => entry.id === target.id);
     if (item) {
       return {
-        list,
-        item,
-        inline: item.kind === "inline" && item.anchor !== null,
         focus: FOCUS_OF[list],
+        inline: item.kind === "inline" && item.anchor !== null,
+        item,
+        list,
       };
     }
   }
@@ -257,20 +264,20 @@ export const matchTarget = (
 
 export type BarMode = "idle" | "reply";
 
-export type BarState = {
-  mode: BarMode;
+export interface BarState {
   /** A request is on its way: buttons are inert. */
   busy: boolean;
   /** The reply being written (kept when the editor is folded). */
   draft: string;
   error: string;
-};
+  mode: BarMode;
+}
 
 export const IDLE_BAR: BarState = {
-  mode: "idle",
   busy: false,
   draft: "",
   error: "",
+  mode: "idle",
 };
 
 export type BarEvent =
@@ -289,12 +296,12 @@ export const reduceBar = (state: BarState, event: BarEvent): BarState => {
   switch (event.type) {
     case "toggle-reply":
       return state.mode === "reply"
-        ? { ...state, mode: "idle", error: "" }
-        : { ...state, mode: "reply", draft: state.draft || event.draft };
+        ? { ...state, error: "", mode: "idle" }
+        : { ...state, draft: state.draft || event.draft, mode: "reply" };
     case "edit":
       return { ...state, draft: event.draft };
     case "cancel":
-      return { ...state, mode: "idle", error: "" };
+      return { ...state, error: "", mode: "idle" };
     case "send":
       return { ...state, busy: true, error: "" };
     case "fail":
@@ -331,7 +338,7 @@ export const requestFor = (
 ): { ok: true; request: DecideRequest } | { ok: false; message: string } => {
   const draft = bar.mode === "reply" ? bar.draft.trim() : "";
   if ([...draft].length > REPLY_MAX) {
-    return { ok: false, message: `回复最多 ${REPLY_MAX} 个字。` };
+    return { message: `回复最多 ${REPLY_MAX} 个字。`, ok: false };
   }
   switch (action) {
     case "approve":
@@ -349,11 +356,11 @@ export const requestFor = (
     case "reply-save":
       return draft
         ? { ok: true, request: { decision: "reply", reply: draft } }
-        : { ok: false, message: "回复还是空的。" };
+        : { message: "回复还是空的。", ok: false };
     case "reply-delete":
       return { ok: true, request: { decision: "reply", reply: "" } };
     default:
-      return { ok: false, message: "不认识这个操作。" };
+      return { message: "不认识这个操作。", ok: false };
   }
 };
 
@@ -414,7 +421,7 @@ export const reviewBarHtml = (id: string, bar: BarState) => {
     : "";
   return `<div class="rv-bar" data-rv="${esc(id)}"${bar.busy ? ' aria-busy="true"' : ""}>
     <div class="rv-row">
-      ${button(id, "approve", "通过", { cls: "stamp-btn rv-ok", busy: bar.busy })}
+      ${button(id, "approve", "通过", { busy: bar.busy, cls: "stamp-btn rv-ok" })}
       ${button(id, "reply-open", "回复…", { busy: bar.busy, extra: expanded(replying, panel) })}
     </div>
     ${editor}
@@ -432,7 +439,7 @@ export const ownerToolsHtml = (item: PublicComment, bar: BarState) => {
     ? `<div class="rv-reply" id="${panel}">
         ${draftHtml(id, bar, "写一句回复……")}
         <div class="rv-row">
-          ${button(id, "reply-save", "存回复", { cls: "stamp-btn rv-ok", busy: bar.busy })}
+          ${button(id, "reply-save", "存回复", { busy: bar.busy, cls: "stamp-btn rv-ok" })}
           ${button(id, "cancel", "收起", { busy: bar.busy })}
         </div>
       </div>`
@@ -452,22 +459,22 @@ export const ownerToolsHtml = (item: PublicComment, bar: BarState) => {
 /** A comment in 已撤下: 恢复. */
 export const restoreBarHtml = (id: string, bar: BarState) =>
   `<div class="rv-bar" data-rv="${esc(id)}"${bar.busy ? ' aria-busy="true"' : ""}>
-    <div class="rv-row">${button(id, "restore", "恢复", { cls: "stamp-btn rv-ok", busy: bar.busy })}</div>
+    <div class="rv-row">${button(id, "restore", "恢复", { busy: bar.busy, cls: "stamp-btn rv-ok" })}</div>
     ${errorHtml(bar)}
   </div>`;
 
 /** After deciding the deep-linked comment. */
-export type NextState = {
-  id: string;
-  status: ItemStatus | null;
+export interface NextState {
   /** Same-site path of the next pending item; null = nothing left. */
   href: string | null;
-};
+  id: string;
+  status: ItemStatus | null;
+}
 
 const DONE_TEXT: Record<ItemStatus, string> = {
   approved: "这条通过了。",
-  rejected: "这条拒绝了，在「已撤下」里还能恢复。",
   pending: "这条放回待审了。",
+  rejected: "这条拒绝了，在「已撤下」里还能恢复。",
 };
 
 export const nextHtml = (next: NextState) => {

@@ -6,11 +6,11 @@
  */
 
 /** GET /api/admin/queue (only the parts the badge reads). */
-export type QueueSummary = {
-  counts?: { comments?: number; stickers?: number };
+export interface QueueSummary {
   comments?: readonly unknown[];
+  counts?: { comments?: number; stickers?: number };
   stickers?: readonly unknown[];
-};
+}
 
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_FORBIDDEN = 403;
@@ -67,7 +67,11 @@ export const REVIEW_SCALE_MAX = 1.4;
 /** Screen px the sticker sits above the centre, so the card below fits. */
 export const REVIEW_LIFT = 80;
 
-export type CameraTarget = { x: number; y: number; scale: number };
+export interface CameraTarget {
+  scale: number;
+  x: number;
+  y: number;
+}
 
 /**
  * Where the camera should centre (world px) and at which zoom, so the
@@ -80,7 +84,7 @@ export const reviewCamera = (
   const safe =
     Number.isFinite(currentScale) && currentScale > 0 ? currentScale : 1;
   const scale = Math.min(REVIEW_SCALE_MAX, Math.max(REVIEW_SCALE_MIN, safe));
-  return { x: point.x, y: point.y + REVIEW_LIFT / scale, scale };
+  return { scale, x: point.x, y: point.y + REVIEW_LIFT / scale };
 };
 
 /** Screen px kept between the card and the viewport edge. */
@@ -115,13 +119,13 @@ export const shortFingerprint = (fingerprint: string) =>
   fingerprint.trim().slice(0, FINGERPRINT_CHARS);
 
 const timeFormat = new Intl.DateTimeFormat("zh-CN", {
-  timeZone: "Asia/Shanghai",
-  year: "numeric",
-  month: "2-digit",
   day: "2-digit",
   hour: "2-digit",
-  minute: "2-digit",
   hour12: false,
+  minute: "2-digit",
+  month: "2-digit",
+  timeZone: "Asia/Shanghai",
+  year: "numeric",
 });
 
 /** 2025.10.08 14:03 in China time. */

@@ -78,9 +78,9 @@ export const GET: APIRoute = async ({ request, url }) => {
     return htmlMessage(STATUS.badGateway, profile.message, state.next, clear);
   }
   return finishLogin(database(), {
-    request,
-    profile: profile.value,
     next: state.next,
     now: Date.now(),
+    profile: profile.value,
+    request,
   });
 };

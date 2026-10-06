@@ -33,25 +33,25 @@ const FINGERPRINT_LENGTH = 8;
 /** A logged-in visitor's own pending comments per note / stickers. */
 const MAX_OWN_ITEMS = 50;
 
-export type CommentRow = {
-  id: string;
-  kind: CommentKind;
-  parent_id: string | null;
-  name: string;
-  site: string | null;
-  body: string;
+export interface CommentRow {
   anchor_exact: string | null;
   anchor_prefix: string | null;
-  created_at: number;
-  owner_reply: string | null;
-  owner_reply_at: number | null;
+  author_avatar: string | null;
   /** From users (LEFT JOIN): null for nickname comments. */
   author_github_id: number | null;
+  author_html: string | null;
   author_login: string | null;
   author_name: string | null;
-  author_avatar: string | null;
-  author_html: string | null;
-};
+  body: string;
+  created_at: number;
+  id: string;
+  kind: CommentKind;
+  name: string;
+  owner_reply: string | null;
+  owner_reply_at: number | null;
+  parent_id: string | null;
+  site: string | null;
+}
 
 /** Public columns only; users has no e-mail and the IP hash is never read. */
 const PUBLIC_COMMENT_COLUMNS = `c.id, c.kind, c.parent_id, c.name, c.site, c.body, c.anchor_exact,
@@ -68,10 +68,10 @@ const userOf = (row: CommentRow): PublicUser | null => {
     return null;
   }
   return {
-    login: row.author_login,
-    name: row.author_name,
     avatarUrl: row.author_avatar,
     htmlUrl: row.author_html,
+    login: row.author_login,
+    name: row.author_name,
   };
 };
 
@@ -86,26 +86,26 @@ export const toPublicComment = (
 ): PublicComment => {
   const user = userOf(row);
   return {
-    id: row.id,
-    kind: row.kind,
-    parentId: row.parent_id,
-    name: user ? user.name || user.login : row.name,
-    site: user ? user.htmlUrl : row.site,
-    body: row.body,
     anchor:
       row.anchor_exact === null
         ? null
         : { exact: row.anchor_exact, prefix: row.anchor_prefix ?? "" },
+    body: row.body,
     createdAt: row.created_at,
-    reply:
-      row.owner_reply === null
-        ? null
-        : { body: row.owner_reply, at: row.owner_reply_at ?? row.created_at },
-    user,
+    id: row.id,
     isOwner:
       user !== null &&
       row.author_github_id !== null &&
       isOwnerId(row.author_github_id, ownerId),
+    kind: row.kind,
+    name: user ? user.name || user.login : row.name,
+    parentId: row.parent_id,
+    reply:
+      row.owner_reply === null
+        ? null
+        : { at: row.owner_reply_at ?? row.created_at, body: row.owner_reply },
+    site: user ? user.htmlUrl : row.site,
+    user,
   };
 };
 
@@ -172,14 +172,14 @@ export const statusesByIds = async (
   return out;
 };
 
-export type RecentQuery = {
-  table: "comments" | "stickers";
-  ipHash: string;
-  now: number;
+export interface RecentQuery {
+  day: number;
   /** Window lengths in ms. */
   hour: number;
-  day: number;
-};
+  ipHash: string;
+  now: number;
+  table: "comments" | "stickers";
+}
 
 /** [last hour, last day] submissions from this visitor. */
 export const recentCounts = async (
@@ -230,34 +230,34 @@ export const parentExists = async (db: Db, slug: string, parentId: string) => {
   return Boolean(row);
 };
 
-export type NewComment = {
-  id: string;
-  slug: string;
-  parentId: string | null;
-  kind: CommentKind;
+export interface NewComment {
   anchor: Anchor | null;
-  name: string;
-  emailHash: string | null;
-  site: string | null;
   body: string;
-  status: ItemStatus;
   createdAt: number;
+  emailHash: string | null;
+  id: string;
   ipHash: string;
+  kind: CommentKind;
+  name: string;
+  parentId: string | null;
+  site: string | null;
+  slug: string;
+  status: ItemStatus;
   ua: string | null;
   /** Logged-in author (users.id), or null for a nickname comment. */
   userId: string | null;
-};
+}
 
-export type LogEntry = {
-  itemType: "comment" | "sticker";
-  itemId: string;
-  decision: Decision | "reply" | "move";
+export interface LogEntry {
   actor: string;
-  note?: string | null;
   createdAt: number;
+  decision: Decision | "reply" | "move";
   /** Visitor moves only: counted for the move rate limit. */
   ipHash?: string | null;
-};
+  itemId: string;
+  itemType: "comment" | "sticker";
+  note?: string | null;
+}
 
 const logValues = (entry: LogEntry) => [
   entry.itemType,
@@ -278,7 +278,10 @@ const logStatement = (db: Db, entry: LogEntry) =>
     .bind(...logValues(entry));
 
 /** A SQL condition and the values its placeholders take. */
-type Condition = { sql: string; values: unknown[] };
+interface Condition {
+  sql: string;
+  values: unknown[];
+}
 
 /** The log row, written only when `when` holds (checked in the same statement). */
 const logStatementWhen = (db: Db, entry: LogEntry, when: Condition) =>
@@ -291,11 +294,11 @@ const logStatementWhen = (db: Db, entry: LogEntry, when: Condition) =>
  * the table being limited (see LIMIT_SOURCES), against a window from
  * rate-limit.ts. Moves are only counted by ip_hash.
  */
-export type LimitKey = {
+export interface LimitKey {
   column: "ip_hash" | "user_id";
   value: string;
   window: LimitWindow;
-};
+}
 
 /** Per IP always; per account too when logged in (both must hold). */
 export const visitorLimits = (
@@ -311,9 +314,9 @@ export const visitorLimits = (
 /** What each limit counts: every row, whatever its status (like recentCounts). */
 const LIMIT_SOURCES = {
   comments: "comments WHERE",
-  stickers: "stickers WHERE",
   /** Visitor moves and tear-offs (like recentMoves). */
   moves: "moderation_log WHERE decision IN ('move', 'reject') AND",
+  stickers: "stickers WHERE",
 } as const;
 
 /**
@@ -396,16 +399,16 @@ export const insertComment = async (
   return changed(insert);
 };
 
-type StickerRow = {
+interface StickerRow {
+  height: number;
   id: string;
-  x: number;
-  y: number;
+  name: string | null;
   rotation: number;
   scale: number;
   width: number;
-  height: number;
-  name: string | null;
-};
+  x: number;
+  y: number;
+}
 
 export const stickerImagePath = (id: string) => `/api/stickers/${id}/image`;
 
@@ -541,11 +544,11 @@ export const listOwnStickers = async (db: Db, userId: string) => {
     statuses[row.id] = row.status;
   }
   return {
+    ids: results.map((row) => row.id),
     pending: results
       .filter((row) => row.status === "pending")
       .map(({ status: _status, ...row }) => toPublicSticker(row))
       .reverse(),
-    ids: results.map((row) => row.id),
     statuses,
   };
 };
@@ -565,12 +568,12 @@ export const getStickerForMove = (db: Db, id: string) =>
     .first<StickerForMove>();
 
 /** The columns DELETE /api/stickers/:id needs (see planDelete). */
-export type StickerForDelete = {
+export interface StickerForDelete {
+  edit_token_hash: string | null;
   r2_key: string;
   status: ItemStatus;
-  edit_token_hash: string | null;
   user_id: string | null;
-};
+}
 
 export const getStickerForDelete = (db: Db, id: string) =>
   db
@@ -606,7 +609,10 @@ export const recentMoves = async (
  * The outcome of a limited write: `limited` when the visitor was at the
  * limit (nothing was written), else `changed` as for the unlimited write.
  */
-export type LimitedWrite = { limited: boolean; changed: boolean };
+export interface LimitedWrite {
+  changed: boolean;
+  limited: boolean;
+}
 
 /**
  * An UPDATE of a sticker plus its log row, both only while `limits` hold.
@@ -629,14 +635,14 @@ const limitedStickerWrite = async (
       .bind(...update.values, ...limit.values),
     logStatementWhen(db, log, limit),
   ]);
-  return { limited: !changed(logged), changed: changed(row) };
+  return { changed: changed(row), limited: !changed(logged) };
 };
 
-export type LimitedMove = {
-  to: Placement;
-  log: LogEntry;
+export interface LimitedMove {
   limits: readonly LimitKey[];
-};
+  log: LogEntry;
+  to: Placement;
+}
 
 /**
  * Moves a sticker and logs it, in one batch (two writes). The status is
@@ -667,7 +673,7 @@ export const moveSticker = async (
   id: string,
   to: Placement,
   log: LogEntry
-) => (await moveStickerWithinLimit(db, id, { to, log, limits: [] })).changed;
+) => (await moveStickerWithinLimit(db, id, { limits: [], log, to })).changed;
 
 /**
  * Tears off a sticker (DELETE /api/stickers/:id): status 'rejected' and
@@ -695,7 +701,7 @@ export const tearOffStickerWithinLimit = (
 
 /** tearOffStickerWithinLimit without a limit; false when already rejected. */
 export const tearOffSticker = async (db: Db, id: string, log: LogEntry) =>
-  (await tearOffStickerWithinLimit(db, id, { log, limits: [] })).changed;
+  (await tearOffStickerWithinLimit(db, id, { limits: [], log })).changed;
 
 export const getStickerFile = (db: Db, id: string) =>
   db
@@ -726,9 +732,9 @@ export const reviewHref = (target: ReviewTarget) =>
     : `/?review=s:${target.id}`;
 
 export const reviewLink = (target: ReviewTarget): ReviewLink => ({
-  type: target.type,
-  id: target.id,
   href: reviewHref(target),
+  id: target.id,
+  type: target.type,
 });
 
 /** First characters of ip_hash, cut in SQL so the full hash never leaves D1. */
@@ -750,9 +756,9 @@ export const toAdminComment = (
   ownerId: number | null
 ): AdminComment => ({
   ...toPublicComment(row, ownerId),
-  status: row.status,
   createdAt: row.created_at,
   fingerprint: (row.fingerprint ?? "").slice(0, FINGERPRINT_LENGTH),
+  status: row.status,
 });
 
 const ADMIN_COMMENT_SELECT = `SELECT ${PUBLIC_COMMENT_COLUMNS}, c.status, ${fingerprintColumn("c.ip_hash")}
@@ -784,10 +790,10 @@ export const listAdminComments = async (
       .bind(slug, HIDDEN_LIMIT),
   ]);
   return {
+    hidden: (hidden?.results ?? []).map((row) => toAdminComment(row, ownerId)),
     pending: (pending?.results ?? []).map((row) =>
       toAdminComment(row, ownerId)
     ),
-    hidden: (hidden?.results ?? []).map((row) => toAdminComment(row, ownerId)),
   };
 };
 
@@ -799,18 +805,18 @@ export type AdminStickerRow = StickerRow & {
 
 /** A sticker for in-place review; only public columns plus the review ones. */
 export const toAdminSticker = (row: AdminStickerRow): AdminSticker => ({
-  id: row.id,
-  x: row.x,
-  y: row.y,
-  rotation: row.rotation,
-  scale: row.scale,
-  width: row.width,
-  height: row.height,
-  name: row.name,
-  src: stickerImagePath(row.id),
-  status: row.status,
   createdAt: row.created_at,
   fingerprint: (row.fingerprint ?? "").slice(0, FINGERPRINT_LENGTH),
+  height: row.height,
+  id: row.id,
+  name: row.name,
+  rotation: row.rotation,
+  scale: row.scale,
+  src: stickerImagePath(row.id),
+  status: row.status,
+  width: row.width,
+  x: row.x,
+  y: row.y,
 });
 
 /** GET /api/admin/stickers: every pending sticker, oldest first. */
@@ -851,33 +857,33 @@ export const nextPending = async (
     return null;
   }
   if (row.type === "comment") {
-    return reviewLink({ type: "comment", id: row.id, slug: row.slug ?? "" });
+    return reviewLink({ id: row.id, slug: row.slug ?? "", type: "comment" });
   }
-  return reviewLink({ type: "sticker", id: row.id });
+  return reviewLink({ id: row.id, type: "sticker" });
 };
 
 /** A pending or recently approved comment in GET /api/admin/queue. */
-export type QueueComment = {
-  id: string;
-  slug: string;
-  parent_id: string | null;
-  kind: CommentKind;
+export interface QueueComment {
   anchor_exact: string | null;
   anchor_prefix: string | null;
-  name: string;
-  email_hash: string | null;
-  site: string | null;
   body: string;
-  status: ItemStatus;
-  owner_reply: string | null;
   created_at: number;
+  email_hash: string | null;
+  /** Where to review it in place (see reviewHref). */
+  href: string;
+  id: string;
   ip_hash: string;
+  kind: CommentKind;
+  name: string;
+  owner_reply: string | null;
+  parent_id: string | null;
+  site: string | null;
+  slug: string;
+  status: ItemStatus;
   ua: string | null;
   /** GitHub login when written while logged in. */
   user_login: string | null;
-  /** Where to review it in place (see reviewHref). */
-  href: string;
-};
+}
 
 /** A pending sticker in GET /api/admin/queue. */
 export type QueueSticker = StickerRow & {
@@ -895,14 +901,14 @@ export type QueueSticker = StickerRow & {
   href: string;
 };
 
-export type AdminQueue = {
+export interface AdminQueue {
   comments: QueueComment[];
-  stickers: QueueSticker[];
-  /** Recently approved comments, to add or edit an owner reply. */
-  recent: QueueComment[];
   /** All pending items (the lists above stop at 200). */
   counts: { comments: number; stickers: number };
-};
+  /** Recently approved comments, to add or edit an owner reply. */
+  recent: QueueComment[];
+  stickers: QueueSticker[];
+}
 
 const USER_LOGIN = (table: string) =>
   `(SELECT login FROM users WHERE users.id = ${table}.user_id) AS user_login`;
@@ -912,7 +918,7 @@ const ADMIN_COMMENT_COLUMNS = `id, slug, parent_id, kind, anchor_exact, anchor_p
 
 const withCommentHref = (row: Omit<QueueComment, "href">): QueueComment => ({
   ...row,
-  href: reviewHref({ type: "comment", id: row.id, slug: row.slug }),
+  href: reviewHref({ id: row.id, slug: row.slug, type: "comment" }),
 });
 
 export const adminQueue = async (db: Db): Promise<AdminQueue> => {
@@ -954,38 +960,38 @@ export const adminQueue = async (db: Db): Promise<AdminQueue> => {
     comments: ((pending?.results ?? []) as Omit<QueueComment, "href">[]).map(
       withCommentHref
     ),
-    stickers: (
-      (stickers?.results ?? []) as Omit<QueueSticker, "src" | "href">[]
-    ).map((row) => ({
-      ...row,
-      src: stickerImagePath(row.id),
-      href: reviewHref({ type: "sticker", id: row.id }),
-    })),
-    recent: ((recent?.results ?? []) as Omit<QueueComment, "href">[]).map(
-      withCommentHref
-    ),
     counts: {
       comments: countOf(commentCount),
       stickers: countOf(stickerCount),
     },
+    recent: ((recent?.results ?? []) as Omit<QueueComment, "href">[]).map(
+      withCommentHref
+    ),
+    stickers: (
+      (stickers?.results ?? []) as Omit<QueueSticker, "src" | "href">[]
+    ).map((row) => ({
+      ...row,
+      href: reviewHref({ id: row.id, type: "sticker" }),
+      src: stickerImagePath(row.id),
+    })),
   };
 };
 
 const statusOf: Record<Decision, ItemStatus> = {
   approve: "approved",
-  reject: "rejected",
   hold: "pending",
+  reject: "rejected",
 };
 
-export type DecideCommand = {
-  type: "comment" | "sticker";
-  id: string;
+export interface DecideCommand {
+  actor: string;
   decision: AdminDecision;
+  id: string;
+  now: number;
   /** Owner reply (comments only); "" removes it. */
   reply?: string;
-  actor: string;
-  now: number;
-};
+  type: "comment" | "sticker";
+}
 
 export type DecideResult =
   | { found: false }
@@ -1002,11 +1008,11 @@ export type DecideResult =
       r2Key: string | null;
     };
 
-type DecisionTarget = {
+interface DecisionTarget {
+  owner_reply: string | null;
   r2_key: string | null;
   status: ItemStatus;
-  owner_reply: string | null;
-};
+}
 
 const loadDecisionTarget = (db: Db, type: DecideCommand["type"], id: string) =>
   db
@@ -1040,11 +1046,11 @@ const statusStatements = (
   return [
     db.prepare(sql).bind(status, now, id),
     logStatement(db, {
-      itemType: type,
-      itemId: id,
-      decision,
       actor,
       createdAt: now,
+      decision,
+      itemId: id,
+      itemType: type,
     }),
   ];
 };
@@ -1070,12 +1076,12 @@ const replyStatements = (
       )
       .bind(value, value === null ? null : now, id),
     logStatement(db, {
-      itemType: type,
-      itemId: id,
-      decision: "reply",
       actor,
-      note: value ?? "(removed)",
       createdAt: now,
+      decision: "reply",
+      itemId: id,
+      itemType: type,
+      note: value ?? "(removed)",
     }),
   ];
 };
@@ -1115,11 +1121,11 @@ export const decide = async (
     }
   }
   return {
+    changed: statements.length > 0,
     found: true,
     gone: false,
+    r2Key: target.r2_key,
     status:
       command.decision === "reply" ? target.status : statusOf[command.decision],
-    changed: statements.length > 0,
-    r2Key: target.r2_key,
   };
 };

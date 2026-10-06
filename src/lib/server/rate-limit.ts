@@ -15,18 +15,18 @@ export const HOUR = 3_600_000;
 export const DAY = 86_400_000;
 
 export const RATE_LIMITS = {
-  comment: { perHour: 6, perDay: 20 },
-  sticker: { perHour: 3, perDay: 6 },
+  comment: { perDay: 20, perHour: 6 },
   /** Moving your own sticker (counted from moderation_log 'move' rows). */
-  move: { perHour: 60, perDay: 300 },
+  move: { perDay: 300, perHour: 60 },
+  sticker: { perDay: 6, perHour: 3 },
 } as const;
 
 export type RateLimitKind = keyof typeof RATE_LIMITS;
 
 const MESSAGES: Record<RateLimitKind, string> = {
   comment: "留言有点频繁了，歇一会儿再来。",
-  sticker: "贴纸贴得有点多了，明天再来吧。",
   move: "挪得有点频繁了，歇一会儿再来。",
+  sticker: "贴纸贴得有点多了，明天再来吧。",
 };
 
 /** Counts are `[lastHour, lastDay]`. Returns a message when over the limit. */
@@ -50,16 +50,16 @@ export const limitReachedMessage = (kind: RateLimitKind) => MESSAGES[kind];
  * than `perHour` rows after `hourStart` and fewer than `perDay` after
  * `dayStart` (the same windows and comparison as rateLimitMessage).
  */
-export type LimitWindow = {
-  perHour: number;
-  perDay: number;
-  hourStart: number;
+export interface LimitWindow {
   dayStart: number;
-};
+  hourStart: number;
+  perDay: number;
+  perHour: number;
+}
 
 export const limitWindow = (kind: RateLimitKind, now: number): LimitWindow => ({
-  perHour: RATE_LIMITS[kind].perHour,
-  perDay: RATE_LIMITS[kind].perDay,
-  hourStart: now - HOUR,
   dayStart: now - DAY,
+  hourStart: now - HOUR,
+  perDay: RATE_LIMITS[kind].perDay,
+  perHour: RATE_LIMITS[kind].perHour,
 });

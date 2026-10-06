@@ -96,9 +96,9 @@ export const setAdminRemover = (remover: Remover | null) => {
 
 const routeFor = (id: string) =>
   throwRoute({
-    moderating: adminRemover !== null,
-    hasToken: Boolean(ownedToken(id)),
     accountOwned: isAccountOwned(id),
+    hasToken: Boolean(ownedToken(id)),
+    moderating: adminRemover !== null,
     sessionOwner: authNow()?.isOwner === true,
   });
 
@@ -149,10 +149,10 @@ const crumple = async (el: HTMLElement, scale: number) => {
   const centre = el.dataset.stickerKey === undefined ? "-50% + " : "";
   const frames = CRUMPLE_STOPS.map((stop) => ({
     offset: stop.offset,
-    translate: `calc(${centre}${dx + to.x * stop.way}px) calc(${centre}${dy + to.y * stop.way - stop.hop}px)`,
-    scale: stop.scale,
-    rotate: `${start + stop.turn}deg`,
     opacity: stop.opacity,
+    rotate: `${start + stop.turn}deg`,
+    scale: stop.scale,
+    translate: `calc(${centre}${dx + to.x * stop.way}px) calc(${centre}${dy + to.y * stop.way - stop.hop}px)`,
   }));
   await el
     .animate(frames, {
@@ -167,11 +167,11 @@ const deleteOwn: Remover = async (id, keepalive) => {
   const token = ownedToken(id);
   try {
     const response = await fetch(`/api/stickers/${encodeURIComponent(id)}`, {
-      method: "DELETE",
-      headers: { "content-type": "application/json" },
       body: JSON.stringify(token ? { token } : {}),
       credentials: "same-origin",
+      headers: { "content-type": "application/json" },
       keepalive,
+      method: "DELETE",
     });
     if (response.ok || response.status === HTTP_NO_CONTENT) {
       return { ok: true };
@@ -180,11 +180,11 @@ const deleteOwn: Remover = async (id, keepalive) => {
       error?: string;
     } | null;
     return {
-      ok: false,
       message: data?.error ?? `没扔掉（${response.status}），稍后再试。`,
+      ok: false,
     };
   } catch {
-    return { ok: false, message: "网络好像断了，贴纸没扔掉。" };
+    return { message: "网络好像断了，贴纸没扔掉。", ok: false };
   }
 };
 
@@ -205,7 +205,7 @@ const commit = async (
   const remover = route === "admin" ? adminRemover : deleteOwn;
   const outcome: ThrowOutcome = remover
     ? await remover(id, keepalive)
-    : { ok: false, message: "需要先在 /admin/ 登录，贴纸没扔掉。" };
+    : { message: "需要先在 /admin/ 登录，贴纸没扔掉。", ok: false };
   // Something else went into the trash meanwhile: keep its 撤销 up.
   const quiet = isHeld();
   if (!outcome.ok) {
@@ -237,18 +237,18 @@ const undo = (id: string, hadFocus: boolean) => {
   }
 };
 
-export type ThrowRequest = {
-  id: string;
+export interface ThrowRequest {
   el: HTMLElement;
-  /** Camera scale (world px → screen px) for the fall into the bin. */
-  scale: number;
-  /** Puts the layer's copy back where the sticker was picked up. */
-  restore: () => void;
-  /** Keyboard: focus 撤销 afterwards. */
-  focusUndo: boolean;
   /** It already fell into the bin (the WebGL curl did it): no crumple. */
   fallen?: boolean;
-};
+  /** Keyboard: focus 撤销 afterwards. */
+  focusUndo: boolean;
+  id: string;
+  /** Puts the layer's copy back where the sticker was picked up. */
+  restore: () => void;
+  /** Camera scale (world px → screen px) for the fall into the bin. */
+  scale: number;
+}
 
 /** Throws a sticker away: crumple, hide, 已扔掉 · 撤销, then really delete. */
 export const throwAway = async ({
@@ -292,11 +292,11 @@ const hideBuiltin = async (
   expectBuiltinHidden(key);
   try {
     const response = await fetch("/api/builtins", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ key, hidden: true }),
+      body: JSON.stringify({ hidden: true, key }),
       credentials: "same-origin",
+      headers: { "content-type": "application/json" },
       keepalive,
+      method: "POST",
     });
     const data = (await response.json().catch(() => null)) as
       | (Partial<BuiltinToggleResponse> & { error?: string })
@@ -306,11 +306,11 @@ const hideBuiltin = async (
       return { ok: true };
     }
     return {
-      ok: false,
       message: data?.error ?? `没扔掉（${response.status}），稍后再试。`,
+      ok: false,
     };
   } catch {
-    return { ok: false, message: "网络好像断了，贴纸没扔掉。" };
+    return { message: "网络好像断了，贴纸没扔掉。", ok: false };
   }
 };
 
@@ -345,18 +345,18 @@ const undoBuiltin = (key: string, hadFocus: boolean) => {
   }
 };
 
-export type BuiltinThrow = {
-  key: string;
+export interface BuiltinThrow {
   el: HTMLElement;
-  /** Camera scale (world px → screen px) for the fall into the bin. */
-  scale: number;
-  /** Puts it back where it was picked up (its local offset). */
-  restore: () => void;
-  /** Keyboard: focus 撤销 afterwards. */
-  focusUndo: boolean;
   /** It already fell into the bin (the WebGL curl did it): no crumple. */
   fallen?: boolean;
-};
+  /** Keyboard: focus 撤销 afterwards. */
+  focusUndo: boolean;
+  key: string;
+  /** Puts it back where it was picked up (its local offset). */
+  restore: () => void;
+  /** Camera scale (world px → screen px) for the fall into the bin. */
+  scale: number;
+}
 
 /**
  * The owner throws a built-in away: crumple, hide, 已扔掉 · 撤销, then POST

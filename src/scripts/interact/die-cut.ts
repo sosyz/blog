@@ -20,7 +20,12 @@ const FAR = 1_000_000_000_000;
 
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 
-export type Box = { x: number; y: number; width: number; height: number };
+export interface Box {
+  height: number;
+  width: number;
+  x: number;
+  y: number;
+}
 
 /**
  * Transparent pixels connected to the image edge (4-neighbour flood fill).
@@ -68,13 +73,13 @@ export const exteriorMask = (
   return exterior;
 };
 
-type Line = {
-  source: Float32Array;
-  target: Float32Array;
-  offset: number;
-  stride: number;
+interface Line {
   length: number;
-};
+  offset: number;
+  source: Float32Array;
+  stride: number;
+  target: Float32Array;
+}
 
 /** Squared distance along one row or column (in place from source to target). */
 const distanceTransform1D = (
@@ -139,11 +144,11 @@ export const squaredDistanceToArtwork = (
   for (let y = 0; y < height; y += 1) {
     distanceTransform1D(
       {
-        source: grid,
-        target: rows,
-        offset: y * width,
-        stride: 1,
         length: width,
+        offset: y * width,
+        source: grid,
+        stride: 1,
+        target: rows,
       },
       parabolas,
       bounds
@@ -151,7 +156,7 @@ export const squaredDistanceToArtwork = (
   }
   for (let x = 0; x < width; x += 1) {
     distanceTransform1D(
-      { source: rows, target: grid, offset: x, stride: width, length: height },
+      { length: height, offset: x, source: rows, stride: width, target: grid },
       parabolas,
       bounds
     );
@@ -255,7 +260,7 @@ export const alphaBounds = (
   if (right < 0) {
     return null;
   }
-  return { x: left, y: top, width: right - left + 1, height: bottom - top + 1 };
+  return { height: bottom - top + 1, width: right - left + 1, x: left, y: top };
 };
 
 /** More than this share of clearly see-through pixels = the picture already has a cutout. */

@@ -14,12 +14,12 @@
 @import "./diagrams.css";
 
 .post-body {
-  counter-reset: section;
   font-family: var(--body);
   font-size: 17px;
   line-height: 1.9;
   color: var(--ink);
   overflow-wrap: break-word;
+  counter-reset: section;
 }
 
 /* ---------- text ---------- */
@@ -74,18 +74,18 @@
 
 .post-body > h1::before,
 .post-body > h2::before {
-  counter-increment: section;
-  content: counter(section);
   display: inline-grid;
   place-content: center;
   width: 24px;
   height: 24px;
   margin-right: 10px;
-  vertical-align: 2px;
   font-family: var(--hand);
   font-size: 14px;
   line-height: 1;
+  vertical-align: 2px;
   color: var(--pencil);
+  content: counter(section);
+  counter-increment: section;
   border: 1.4px solid var(--pencil);
   border-radius: 50% 46% 52% 48%;
   rotate: -4deg;
@@ -111,16 +111,16 @@
 }
 
 .post-body h4::before {
-  content: "· ";
   color: var(--faint-mark);
+  content: "· ";
 }
 
 /* ---------- lists ---------- */
 
 .post-body ul,
 .post-body ol {
-  margin: 0 0 12px;
   padding-left: 1.4em;
+  margin: 0 0 12px;
 }
 
 .post-body ul {
@@ -157,13 +157,13 @@
 }
 
 .post-body .task-list-item > input[type="checkbox"] {
-  appearance: none;
   position: absolute;
   top: 7px;
   left: 0;
   width: 20px;
   height: 20px;
   margin: 0;
+  appearance: none;
   background: var(--pencil);
   -webkit-mask: url("/journal/doodle/box.svg") center / contain no-repeat;
   mask: url("/journal/doodle/box.svg") center / contain no-repeat;
@@ -177,11 +177,11 @@
 /* ---------- quotes, rules, tables ---------- */
 
 .post-body blockquote {
-  margin: 14px 0;
   padding: 4px 0 4px 16px;
-  border-left: 2px solid var(--faint-mark);
+  margin: 14px 0;
   font-family: var(--hand);
   color: var(--pencil);
+  border-left: 2px solid var(--faint-mark);
 }
 
 .post-body blockquote p,
@@ -204,23 +204,22 @@
 .post-body table {
   display: block;
   max-width: 100%;
-  overflow-x: auto;
   margin: 12px 0 16px;
-  border-collapse: collapse;
+  overflow-x: auto;
   font-family: var(--body);
   font-size: 15px;
   line-height: 1.7;
+  border-collapse: collapse;
 }
 
 .post-body th,
 .post-body td {
-  padding: 5px 10px;
-  border: 1px dashed rgb(94 78 52 / 0.3);
-  text-align: left;
-  vertical-align: top;
-  /* Narrow drawers squeeze columns down to one CJK glyph; keep them legible. */
   min-width: 4em;
+  padding: 5px 10px;
+  vertical-align: top;
+  text-align: left;
   overflow-wrap: normal;
+  border: 1px dashed rgb(94 78 52 / 0.3);
 }
 
 .post-body th {
@@ -232,12 +231,12 @@
 
 .post-body code {
   padding: 1px 5px;
-  border-radius: 3px;
-  background: rgb(120 100 60 / 0.1);
   font-family: var(--code);
-  font-feature-settings: "calt" 0;
   font-size: 0.84em;
+  font-feature-settings: "calt" 0;
   overflow-wrap: anywhere;
+  background: rgb(120 100 60 / 0.1);
+  border-radius: 3px;
 }
 
 .post-body :is(h1, h2, h3, h4, h5, h6) code {
@@ -246,8 +245,8 @@
 
 /* Identifiers in table cells stay whole; the table scrolls instead. */
 .post-body :is(td, th) code {
-  white-space: nowrap;
   overflow-wrap: normal;
+  white-space: nowrap;
 }
 
 /* Marker pen. Rough Notation redraws it on the client and adds
@@ -278,11 +277,11 @@
  * label and tab stick 10px out above the slip on purpose. */
 .post-body .slip {
   --slip-pad: 16px;
-  display: flow-root;
   position: relative;
-  margin: 18px 0 20px;
+  display: flow-root;
   /* The side padding is on the pre, so marked lines can reach the edge. */
   padding: var(--slip-pad) 0 14px;
+  margin: 18px 0 20px;
   background: var(--slip);
   box-shadow: var(--shadow-slip);
   rotate: var(--sr, -0.4deg);
@@ -290,57 +289,57 @@
 
 /* Tape: image set per slip as --tape (280px wide files, shown at 86px). */
 .post-body .slip::before {
-  content: "";
   position: absolute;
-  z-index: 1;
   top: -10px;
   left: 18px;
+  z-index: 1;
   width: 86px;
   aspect-ratio: 600 / 112;
+  pointer-events: none;
+  content: "";
   background: var(--tape) center / 100% 100% no-repeat;
   rotate: var(--tr, 2deg);
-  pointer-events: none;
 }
 
 /* The label sits left of the copy tab (right: 12px, 42px wide). */
 .post-body .slip .fname {
   position: absolute;
-  z-index: 1;
   top: -10px;
   right: 60px;
+  z-index: 1;
   max-width: calc(100% - 180px);
-  overflow: hidden;
   padding: 1px 10px;
-  background: var(--kraft) center / 300px auto;
-  color: var(--kraft-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-family: var(--hand);
   font-size: 13px;
   line-height: 1.5;
+  color: var(--kraft-ink);
   white-space: nowrap;
-  text-overflow: ellipsis;
-  rotate: 2deg;
   user-select: none;
+  background: var(--kraft) center / 300px auto;
+  rotate: 2deg;
 }
 
 /* Copy tab: a small paper tab pinned beside the label. */
 .post-body .slip-copy {
   position: absolute;
-  z-index: 1;
   top: -11px;
   right: 12px;
+  z-index: 1;
   width: 42px;
   height: 24px;
   padding: 0;
-  border: 1px solid var(--field-line);
-  border-radius: 2px;
-  background: var(--slip);
-  color: var(--pencil);
   font-family: var(--hand);
   font-size: 13px;
   line-height: 1;
+  color: var(--pencil);
   cursor: pointer;
-  rotate: -3deg;
+  background: var(--slip);
+  border: 1px solid var(--field-line);
+  border-radius: 2px;
   box-shadow: 0 1px 2px rgb(60 40 20 / 0.18);
+  rotate: -3deg;
   transition:
     color var(--dur-fast) var(--out),
     translate var(--dur-fast) var(--out);
@@ -360,20 +359,20 @@
  * grows to the left over the label when longer. */
 .post-body .slip-said {
   position: absolute;
-  z-index: 2;
   top: -11px;
   right: 10px;
+  z-index: 2;
   padding: 3px 6px;
-  border: 1.5px solid var(--stamp);
-  border-radius: 3px;
-  background: var(--slip);
-  color: var(--stamp-ink);
   font-family: var(--hand);
   font-size: 13px;
   line-height: 1.2;
+  color: var(--stamp-ink);
   white-space: nowrap;
-  rotate: -4deg;
   pointer-events: none;
+  background: var(--slip);
+  border: 1.5px solid var(--stamp);
+  border-radius: 3px;
+  rotate: -4deg;
 }
 
 /* Hidden while empty but still rendered, so the live region stays in the
@@ -383,17 +382,17 @@
 }
 
 .post-body .slip pre {
-  margin: 0;
   padding: 0 var(--slip-pad);
+  margin: 0;
   overflow-x: auto;
   font-family: var(--code);
-  font-feature-settings: "calt" 0;
   font-size: 13.5px;
+  font-feature-settings: "calt" 0;
   line-height: 1.65;
   tab-size: 4;
-  scrollbar-width: thin;
   /* ≥ 3:1 on the slip, so the reader can see there is more to the right. */
   scrollbar-color: var(--field-line) transparent;
+  scrollbar-width: thin;
 }
 
 /* inline-block (not grid or block) so the lines can be full width without
@@ -402,11 +401,11 @@
   display: inline-block;
   min-width: 100%;
   padding: 0;
-  border-radius: 0;
-  background: none;
   font-size: inherit;
   overflow-wrap: normal;
   counter-reset: code-line;
+  background: none;
+  border-radius: 0;
 }
 
 .post-body .slip pre:focus-visible {
@@ -415,12 +414,12 @@
 
 /* Lines fill the pre's side padding too, so a marked line spans the slip. */
 .post-body .slip .line {
-  display: inline-block;
   position: relative;
   box-sizing: content-box;
+  display: inline-block;
   width: 100%;
-  margin: 0 calc(var(--slip-pad) * -1);
   padding: 0 var(--slip-pad);
+  margin: 0 calc(var(--slip-pad) * -1);
 }
 
 /* {1,3} and // [!code highlight]: marker pen across the line. */
@@ -431,8 +430,8 @@
 
 /* /word/ and // [!code word:…] */
 .post-body .slip .highlighted-word {
-  border-radius: 2px;
   background: var(--code-word);
+  border-radius: 2px;
   box-shadow: 0 0 0 1px var(--code-word);
 }
 
@@ -456,13 +455,13 @@
 }
 
 .post-body .slip .line.diff.add::after {
-  content: "+";
   color: var(--diff-add-ink);
+  content: "+";
 }
 
 .post-body .slip .line.diff.remove::after {
-  content: "−";
   color: var(--stamp-ink);
+  content: "−";
 }
 
 /* showLineNumbers: pencil numbers from a CSS counter (never copied). */
@@ -471,24 +470,24 @@
 }
 
 .post-body .slip pre[data-line-numbers] .line::before {
-  content: counter(code-line);
   display: inline-block;
   width: 3ch;
   margin-right: 1.5ch;
   color: var(--faint);
   text-align: right;
   user-select: none;
+  content: counter(code-line);
 }
 
 /* collapse: a folded slip, opened with 展开代码（N 行）. */
 .post-body .slip-fold > summary {
   display: inline-block;
-  margin: 0 var(--slip-pad);
   padding: 0 2px;
-  color: var(--pencil);
+  margin: 0 var(--slip-pad);
   font-family: var(--hand);
   font-size: 14px;
   line-height: 1.8;
+  color: var(--pencil);
   cursor: pointer;
   list-style: none;
 }
@@ -498,9 +497,9 @@
 }
 
 .post-body .slip-fold > summary::before {
-  content: "▸";
   display: inline-block;
   margin-right: 6px;
+  content: "▸";
   transition: rotate var(--dur-fast) var(--out);
 }
 
@@ -544,16 +543,16 @@
   }
 
   .post-body .slip::after {
-    content: "";
     position: absolute;
-    z-index: 1;
     top: var(--slip-pad);
     right: 0;
     bottom: 14px;
+    z-index: 1;
     width: 40px;
+    pointer-events: none;
+    content: "";
     background: linear-gradient(to right, transparent, var(--slip) 85%);
     opacity: 0;
-    pointer-events: none;
     animation: slip-more linear both;
   }
 
@@ -604,8 +603,9 @@
   display: block;
   max-width: 100%;
   height: auto;
-  margin: 0 auto;
   padding: 8px 8px 22px;
+  margin: 0 auto;
+  cursor: zoom-in;
   background: var(--photo);
   box-shadow:
     0 1px 2px rgb(60 40 20 / 0.2),
@@ -618,10 +618,6 @@
   rotate: 0.6deg;
 }
 
-.post-body p.pic img {
-  cursor: zoom-in;
-}
-
 /* ---------- lightbox (lightbox.ts) ---------- */
 
 /* A modal <dialog>: undo the browser's dialog box so it fills the screen. */
@@ -632,19 +628,19 @@
   display: grid;
   place-items: center;
   width: auto;
-  height: auto;
   max-width: none;
+  height: auto;
   max-height: none;
-  margin: 0;
-  border: 0;
   padding: 40px 24px;
+  margin: 0;
   color: inherit;
+  cursor: zoom-out;
   /* No backdrop blur: a full-screen blur is heavy on old GPUs and barely
    * shows under this shade. */
   background: rgb(46 36 22 / 0.55);
+  border: 0;
   opacity: 0;
   transition: opacity 0.22s var(--out);
-  cursor: zoom-out;
 }
 
 .lightbox.is-open {
@@ -659,14 +655,14 @@
   position: relative;
   max-width: min(1100px, 100%);
   max-height: 100%;
-  margin: 0;
   padding: 12px 12px 42px;
+  margin: 0;
+  cursor: default;
   background: var(--photo);
   box-shadow:
     0 2px 4px rgb(0 0 0 / 0.2),
     0 30px 60px -20px rgb(0 0 0 / 0.55);
   rotate: -0.6deg;
-  cursor: default;
 }
 
 .lightbox figure > img:not(.lightbox-tape) {
@@ -683,11 +679,11 @@
   bottom: 10px;
   left: 16px;
   overflow: hidden;
+  text-overflow: ellipsis;
   font-family: var(--hand);
   font-size: 15px;
   color: var(--pencil);
   white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
 .lightbox-tape {
@@ -696,8 +692,8 @@
   left: 50%;
   width: 110px;
   margin-left: -55px;
-  rotate: -2deg;
   pointer-events: none;
+  rotate: -2deg;
 }
 
 .lightbox-close {
@@ -706,13 +702,13 @@
   right: -14px;
   width: 34px;
   height: 34px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--ink);
-  color: var(--doc);
   font-size: 18px;
   line-height: 1;
+  color: var(--doc);
   cursor: pointer;
+  background: var(--ink);
+  border: 0;
+  border-radius: 50%;
   box-shadow: 0 4px 10px rgb(0 0 0 / 0.3);
 }
 
@@ -725,10 +721,10 @@
 /* ---------- footnotes ---------- */
 
 .post-body .footnotes {
-  margin-top: 28px;
   padding-top: 10px;
-  border-top: 1px dashed var(--edge);
+  margin-top: 28px;
   font-size: 15px;
+  border-top: 1px dashed var(--edge);
 }
 
 .post-body .footnotes li,
@@ -747,8 +743,8 @@
 .post-body .aside-sticky {
   float: right;
   width: 176px;
-  margin: 4px -20px 10px 16px;
   padding: 14px 14px 16px;
+  margin: 4px -20px 10px 16px;
   font-family: var(--hand);
   font-size: 15px;
   line-height: 1.55;
@@ -784,9 +780,9 @@
 @media (max-width: 520px) {
   .post-body .slip {
     --slip-pad: 12px;
+    padding: 14px 0 12px;
     margin-right: -6px;
     margin-left: -6px;
-    padding: 14px 0 12px;
   }
 
   .post-body .slip pre {

@@ -8,14 +8,14 @@
 import { AUTHOR, PERSON_ID } from "./site.ts";
 
 export const LICENSE = {
+  /** Simplified Chinese deed, for people: links on the page. */
+  deed: "https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans",
   /** Short name, as shown on the page. */
   name: "CC BY-NC-SA 4.0",
   /** Full name in Chinese. */
   title: "知识共享 署名-非商业性使用-相同方式共享 4.0 国际",
   /** Canonical licence URL, for machines: JSON-LD, rel="license", RSS. */
   url: "https://creativecommons.org/licenses/by-nc-sa/4.0/",
-  /** Simplified Chinese deed, for people: links on the page. */
-  deed: "https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans",
 } as const;
 
 export const COPYRIGHT_HOLDER = AUTHOR.name;
@@ -42,7 +42,10 @@ const YEAR = new Intl.DateTimeFormat("en-CA", {
 
 export const yearOf = (date: Date) => Number(YEAR.format(date));
 
-export type CopyrightYears = { first: number; current: number };
+export interface CopyrightYears {
+  current: number;
+  first: number;
+}
 
 /**
  * From the year of the first note to the current year (at build time).
@@ -57,7 +60,7 @@ export const copyrightYears = (
   for (const date of dates) {
     first = Math.min(first, yearOf(date));
   }
-  return { first, current };
+  return { current, first };
 };
 
 /** "2019–2026", or "2026" when both are the same year. */
@@ -78,25 +81,25 @@ export const noteRights = (published: Date) =>
 
 /** BlogPosting fields: licence URL, holder (the site's Person), year. */
 export const licenseFields = (published: Date) => ({
-  license: LICENSE.url,
   copyrightHolder: { "@id": PERSON_ID },
   copyrightYear: yearOf(published),
+  license: LICENSE.url,
 });
 
 /** The licence line for llms.txt / llms-full.txt. */
 export const llmsLicenseLine = () =>
   `本站文章由 ${COPYRIGHT_HOLDER} 撰写，采用 ${LICENSE.name}（${LICENSE.title}）协议：${LICENSE.url}。${REPRINT_NOTICE}。`;
 
-export type NoteMeta = {
-  title: string;
-  description: string;
-  /** Canonical page URL. */
-  url: string;
-  published: string;
-  updated?: string;
+export interface NoteMeta {
   /** The original this note translates or reposts. */
   basedOn?: string;
-};
+  description: string;
+  published: string;
+  title: string;
+  updated?: string;
+  /** Canonical page URL. */
+  url: string;
+}
 
 /**
  * YAML front matter for /notes/<slug>.md. Strings are JSON-quoted, which is
@@ -120,10 +123,10 @@ export const noteFrontMatter = (meta: NoteMeta) =>
   ].join("\n");
 
 const HTML_ESCAPES: Record<string, string> = {
+  '"': "&quot;",
   "&": "&amp;",
   "<": "&lt;",
   ">": "&gt;",
-  '"': "&quot;",
 };
 const HTML_UNSAFE = /[&<>"]/g;
 const escapeHtml = (text: string) =>

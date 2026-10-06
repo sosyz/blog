@@ -15,19 +15,19 @@ export const database = () => env.DB;
 export const stickerBucket = () => env.STICKERS;
 
 /** Optional extra vars (not in the astro:env schema; see .dev.vars.example). */
-type OptionalVars = {
+interface OptionalVars {
   ADMIN_DEV_BYPASS?: string;
-  TURNSTILE_SITE_KEY?: string;
-  IP_HASH_SALT?: string;
-  MODERATOR?: string;
+  /** Local testing: /api/auth/dev-login (localhost only). */
+  AUTH_DEV_LOGIN?: string;
   /** GitHub OAuth App (optional login). The client id is public. */
   GITHUB_CLIENT_ID?: string;
   GITHUB_CLIENT_SECRET?: string;
+  IP_HASH_SALT?: string;
+  MODERATOR?: string;
   /** Numeric GitHub id of the owner (博主 stamp, 整理贴纸). */
   OWNER_GITHUB_ID?: string;
-  /** Local testing: /api/auth/dev-login (localhost only). */
-  AUTH_DEV_LOGIN?: string;
-};
+  TURNSTILE_SITE_KEY?: string;
+}
 
 const optionalVars = (): OptionalVars => env;
 
@@ -37,9 +37,9 @@ export const turnstileSecret = () => getSecret("TURNSTILE_SECRET_KEY");
 export const turnstileSiteKey = () => optionalVars().TURNSTILE_SITE_KEY ?? "";
 
 export const accessConfig = (): AccessConfig => ({
-  teamDomain: getSecret("ACCESS_TEAM_DOMAIN"),
   aud: getSecret("ACCESS_AUD"),
   devBypass: optionalVars().ADMIN_DEV_BYPASS === "1",
+  teamDomain: getSecret("ACCESS_TEAM_DOMAIN"),
 });
 
 /**
@@ -60,8 +60,8 @@ export const authConfig = (): AuthConfig => {
   return {
     clientId: vars.GITHUB_CLIENT_ID?.trim() ?? "",
     clientSecret: vars.GITHUB_CLIENT_SECRET?.trim() ?? "",
-    ownerId: ownerIdOf(vars.OWNER_GITHUB_ID),
     devLogin: vars.AUTH_DEV_LOGIN === "1" || vars.ADMIN_DEV_BYPASS === "1",
+    ownerId: ownerIdOf(vars.OWNER_GITHUB_ID),
   };
 };
 

@@ -15,22 +15,22 @@ import {
 } from "./db";
 
 /** The two R2 calls used here (R2Bucket fits). */
-export type StickerBucket = {
+export interface StickerBucket {
+  delete: (key: string) => Promise<unknown>;
   put: (
     key: string,
     value: Uint8Array,
     options: R2PutOptions
   ) => Promise<unknown>;
-  delete: (key: string) => Promise<unknown>;
-};
+}
 
-export type StoreStickerInput = {
+export interface StoreStickerInput {
   bytes: Uint8Array;
+  limits: readonly LimitKey[];
+  log: LogEntry;
   /** Status as moderated; a rejected sticker's image is never stored. */
   row: NewSticker;
-  log: LogEntry;
-  limits: readonly LimitKey[];
-};
+}
 
 /**
  * 1. Insert the row (and log row) if the visitor is under `limits`; false
@@ -58,8 +58,8 @@ export const storeSticker = async (
   }
   try {
     await bucket.put(row.r2Key, bytes, {
-      httpMetadata: { contentType: row.mime },
       customMetadata: { id: row.id },
+      httpMetadata: { contentType: row.mime },
     });
   } catch (error) {
     await discardSticker(db, row.id);

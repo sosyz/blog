@@ -80,7 +80,7 @@ const readMove = async (request: Request) => {
       response: fail(STATUS.badRequest, firstIssue(parsed.error)),
     };
   }
-  return { ok: true as const, input: parsed.data };
+  return { input: parsed.data, ok: true as const };
 };
 
 /**
@@ -97,10 +97,10 @@ const moveLimited = async (
     return null;
   }
   const [lastHour, lastDay] = await recentMoves(db, {
+    day: DAY,
+    hour: HOUR,
     ipHash,
     now,
-    hour: HOUR,
-    day: DAY,
   });
   return rateLimitMessage("move", lastHour, lastDay);
 };
@@ -135,9 +135,9 @@ export const PATCH: APIRoute = async ({ params, request }) => {
   const { viewer } = await viewerOf(request);
   const plan = await planMove(await getStickerForMove(db, id.data), placement, {
     kind: "visitor",
-    token,
     salt,
-    session: viewer ? { userId: viewer.userId, isOwner: viewer.isOwner } : null,
+    session: viewer ? { isOwner: viewer.isOwner, userId: viewer.userId } : null,
+    token,
   });
   if (!plan.ok) {
     return fail(plan.status, plan.message);
@@ -158,18 +158,18 @@ export const PATCH: APIRoute = async ({ params, request }) => {
   // Who moved it: the edit token, the GitHub account or the owner.
   const who = moveActor(plan.via, viewer?.user.login);
   const moved = await moveStickerWithinLimit(db, id.data, {
-    to: plan.to,
+    limits: moveLimits(plan.via, { ipHash, now }),
     log: {
-      itemType: "sticker",
-      itemId: id.data,
-      decision: "move",
       actor: who.actor,
-      note: moveNote(plan.from, plan.to, who.label),
       createdAt: now,
+      decision: "move",
       // Owner moves are not counted for the visitor limit.
       ipHash: plan.via === "owner" ? null : ipHash,
+      itemId: id.data,
+      itemType: "sticker",
+      note: moveNote(plan.from, plan.to, who.label),
     },
-    limits: moveLimits(plan.via, { ipHash, now }),
+    to: plan.to,
   });
   if (moved.limited) {
     return MOVE_LIMITED();
@@ -203,7 +203,7 @@ const readDelete = async (request: Request) => {
       response: fail(STATUS.badRequest, firstIssue(parsed.error)),
     };
   }
-  return { ok: true as const, input: parsed.data };
+  return { input: parsed.data, ok: true as const };
 };
 
 export const DELETE: APIRoute = async ({ params, request }) => {
@@ -223,9 +223,9 @@ export const DELETE: APIRoute = async ({ params, request }) => {
   const { viewer } = await viewerOf(request);
   const plan = await planDelete(await getStickerForDelete(db, id.data), {
     kind: "visitor",
-    token: body.input.token,
     salt,
-    session: viewer ? { userId: viewer.userId, isOwner: viewer.isOwner } : null,
+    session: viewer ? { isOwner: viewer.isOwner, userId: viewer.userId } : null,
+    token: body.input.token,
   });
   if (!plan.ok) {
     return fail(plan.status, plan.message);
@@ -239,17 +239,17 @@ export const DELETE: APIRoute = async ({ params, request }) => {
       return fail(STATUS.tooManyRequests, limited);
     }
     const torn = await tearOffStickerWithinLimit(db, id.data, {
+      limits: moveLimits(plan.via, { ipHash, now }),
       log: {
-        itemType: "sticker",
-        itemId: id.data,
-        decision: "reject",
         actor: moveActor(plan.via, viewer?.user.login).actor,
-        note: tearOffNote(plan.via),
         createdAt: now,
+        decision: "reject",
         // Counted for the move limit, except the owner's.
         ipHash: plan.via === "owner" ? null : ipHash,
+        itemId: id.data,
+        itemType: "sticker",
+        note: tearOffNote(plan.via),
       },
-      limits: moveLimits(plan.via, { ipHash, now }),
     });
     // Over the limit: nothing changed, so the image stays too.
     if (torn.limited) {

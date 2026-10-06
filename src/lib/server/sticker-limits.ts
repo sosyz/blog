@@ -6,20 +6,20 @@
  */
 
 export const STICKER_PLACEMENT = {
-  /** World coordinates stay within this box around the intro card. */
-  world: 20_000,
   /** Degrees either way. */
   rotation: 45,
-  scaleMin: 0.4,
   scaleMax: 1.6,
+  scaleMin: 0.4,
+  /** World coordinates stay within this box around the intro card. */
+  world: 20_000,
 } as const;
 
-export type Placement = {
-  x: number;
-  y: number;
+export interface Placement {
   rotation: number;
   scale: number;
-};
+  x: number;
+  y: number;
+}
 
 const ROTATION_PRECISION = 10;
 const SCALE_PRECISION = 100;
@@ -35,8 +35,6 @@ const clamp = (value: number, min: number, max: number) =>
 export const roundPlacement = (placement: Placement): Placement => {
   const { world, rotation, scaleMin, scaleMax } = STICKER_PLACEMENT;
   return {
-    x: clamp(Math.round(placement.x), -world, world),
-    y: clamp(Math.round(placement.y), -world, world),
     rotation: clamp(
       Math.round(placement.rotation * ROTATION_PRECISION) / ROTATION_PRECISION,
       -rotation,
@@ -47,6 +45,8 @@ export const roundPlacement = (placement: Placement): Placement => {
       scaleMin,
       scaleMax
     ),
+    x: clamp(Math.round(placement.x), -world, world),
+    y: clamp(Math.round(placement.y), -world, world),
   };
 };
 

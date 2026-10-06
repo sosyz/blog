@@ -65,14 +65,14 @@ const targetOf = (button: HTMLButtonElement) => {
     : null;
   if (slip) {
     return {
-      text: slipCode(slip),
       status: slip.querySelector<HTMLElement>(".slip-said"),
+      text: slipCode(slip),
     };
   }
   const statusId = button.dataset.copyStatus;
   return {
-    text: button.dataset.copy ?? "",
     status: statusId ? document.getElementById(statusId) : null,
+    text: button.dataset.copy ?? "",
   };
 };
 

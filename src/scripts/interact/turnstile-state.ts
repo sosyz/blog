@@ -12,12 +12,12 @@
 export type State = "idle" | "wait" | "ok" | "need" | "fail" | "off";
 
 export const TEXT: Record<State, string> = {
-  idle: "寄出前会确认你不是机器人",
-  wait: "正在确认你不是机器人……",
-  ok: "已确认",
-  need: "请点一下下面的验证",
   fail: "验证没通过，点这里手动验证",
+  idle: "寄出前会确认你不是机器人",
+  need: "请点一下下面的验证",
   off: "人机验证暂时不可用，没法提交",
+  ok: "已确认",
+  wait: "正在确认你不是机器人……",
 };
 
 /** Cloudflare error codes look like 600010 or 110200. */

@@ -20,18 +20,18 @@ import {
 const WIDTH = 200;
 const HEIGHT = 120;
 const FULL_RECT = new Float32Array(0);
-const SIZE = { width: WIDTH, height: HEIGHT };
+const SIZE = { height: HEIGHT, width: WIDTH };
 const DIAGONAL = { x: Math.SQRT1_2, y: Math.SQRT1_2 };
-const RGBA = { stride: 4, channel: 3 };
+const RGBA = { channel: 3, stride: 4 };
 
 const input = (overrides: Partial<PeelInput> = {}): PeelInput => ({
-  width: WIDTH,
-  height: HEIGHT,
-  rotation: 0,
+  direction: Math.PI / 4,
   grabU: 0,
   grabV: 0,
+  height: HEIGHT,
   progress: 0.4,
-  direction: Math.PI / 4,
+  rotation: 0,
+  width: WIDTH,
   ...overrides,
 });
 
@@ -67,13 +67,13 @@ describe("supportRange", () => {
       FULL_RECT,
       SIZE,
       { x: 1, y: 0 },
-      { min: 0, max: 0 }
+      { max: 0, min: 0 }
     );
     expect(range.min).toBeCloseTo(-WIDTH / 2);
     expect(range.max).toBeCloseTo(WIDTH / 2);
     const diagonal = supportRange(FULL_RECT, SIZE, DIAGONAL, {
-      min: 0,
       max: 0,
+      min: 0,
     });
     expect(diagonal.max).toBeCloseTo((WIDTH + HEIGHT) * Math.SQRT1_2 * 0.5);
   });
@@ -81,9 +81,9 @@ describe("supportRange", () => {
   test("uses the hull points", () => {
     // A diamond touching the middle of each side.
     const hull = new Float32Array([0.5, 0, 1, 0.5, 0.5, 1, 0, 0.5]);
-    const range = supportRange(hull, { width: 100, height: 100 }, DIAGONAL, {
-      min: 0,
+    const range = supportRange(hull, { height: 100, width: 100 }, DIAGONAL, {
       max: 0,
+      min: 0,
     });
     expect(range.max).toBeCloseTo(50 * Math.SQRT1_2);
     expect(range.min).toBeCloseTo(-50 * Math.SQRT1_2);
@@ -93,7 +93,7 @@ describe("supportRange", () => {
 describe("peelGeometry", () => {
   test("direction is converted into the sticker's local frame", () => {
     const g = peelGeometry(
-      input({ rotation: Math.PI / 2, direction: Math.PI / 2 }),
+      input({ direction: Math.PI / 2, rotation: Math.PI / 2 }),
       FULL_RECT,
       createGeometry()
     );
@@ -103,13 +103,13 @@ describe("peelGeometry", () => {
 
   test("the fold starts at the back edge and reaches past the far edge at 1", () => {
     const start = peelGeometry(
-      input({ progress: 0.001, direction: 0 }),
+      input({ direction: 0, progress: 0.001 }),
       FULL_RECT,
       createGeometry()
     );
     expect(start.front).toBeCloseTo(-WIDTH / 2, 0);
     const end = peelGeometry(
-      input({ progress: 1, direction: 0 }),
+      input({ direction: 0, progress: 1 }),
       FULL_RECT,
       createGeometry()
     );
@@ -184,7 +184,7 @@ describe("following the pull", () => {
     ]) {
       const progress = progressForPull(
         1,
-        pullOf({ grabU, grabV, direction: Math.PI / 5 }),
+        pullOf({ direction: Math.PI / 5, grabU, grabV }),
         FULL_RECT
       );
       expect(progress).toBeLessThan(0.05);
@@ -195,7 +195,7 @@ describe("following the pull", () => {
     const upright = progressForPull(80, pullOf({ direction: 0 }), FULL_RECT);
     const turned = progressForPull(
       80,
-      pullOf({ rotation: Math.PI / 2, direction: Math.PI / 2 }),
+      pullOf({ direction: Math.PI / 2, rotation: Math.PI / 2 }),
       FULL_RECT
     );
     expect(turned).toBeCloseTo(upright, 4);
@@ -204,7 +204,7 @@ describe("following the pull", () => {
   test("the held point is carried straight along the curl's direction", () => {
     for (const rotation of [0, 0.4, -1.1]) {
       for (const direction of [0, Math.PI / 3, -2.5]) {
-        const pull = pullOf({ rotation, direction });
+        const pull = pullOf({ direction, rotation });
         for (const progress of [0.1, 0.5, 0.96]) {
           const shift = heldShift(progress, pull, FULL_RECT, { x: 0, y: 0 });
           const along =
@@ -222,7 +222,7 @@ describe("following the pull", () => {
     const stuck = { x: 300, y: 200 };
     for (const rotation of [0, 0.5]) {
       for (const direction of [Math.PI, -Math.PI / 4]) {
-        const pull = pullOf({ rotation, direction });
+        const pull = pullOf({ direction, rotation });
         for (const length of [30, 150, 320]) {
           const progress = progressForPull(length, pull, FULL_RECT);
           const moved = {
@@ -268,7 +268,7 @@ describe("curlPoint", () => {
   test("progress 1 lifts every point", () => {
     for (const direction of [0, Math.PI / 4, 2, -2.5]) {
       const g = peelGeometry(
-        input({ progress: 1, direction }),
+        input({ direction, progress: 1 }),
         FULL_RECT,
         createGeometry()
       );

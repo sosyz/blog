@@ -38,9 +38,9 @@ export const GET: APIRoute = async ({ request, url }) => {
   const login = loginMethod(request, authConfig());
   const body: MeResponse = {
     enabled: login !== null,
-    user: viewer?.user ?? null,
     isOwner: viewer?.isOwner ?? false,
     login,
+    user: viewer?.user ?? null,
   };
   return json(body, { headers });
 };

@@ -9,14 +9,14 @@ import type { PublicUser } from "./types";
 
 /* ---------- caching of GET /api/comments and GET /api/stickers ---------- */
 
-export type CacheInput = {
-  /** `mine=` ids were sent (the visitor's own items). */
-  mine: boolean;
+export interface CacheInput {
   /** `me=1` was sent (the page thinks it is logged in). */
   me: boolean;
+  /** `mine=` ids were sent (the visitor's own items). */
+  mine: boolean;
   /** A valid GitHub session came with the request. */
   session: boolean;
-};
+}
 
 /**
  * Only the plain anonymous list may be kept by shared caches; anything that
@@ -34,18 +34,18 @@ export const listCacheHeaders = (
 
 /* ---------- who wrote a comment ---------- */
 
-export type FormAuthor = {
+export interface FormAuthor {
+  email?: string;
   name?: string;
   site?: string;
-  email?: string;
-};
+}
 
-export type CommentAuthorFields = {
-  name: string;
-  site: string | null;
+export interface CommentAuthorFields {
   /** Raw e-mail to hash (anonymous form only); never stored as is. */
   email: string | null;
-};
+  name: string;
+  site: string | null;
+}
 
 /**
  * Logged in: the GitHub account is the author (its name, else its login, and
@@ -57,12 +57,12 @@ export const commentAuthor = (
   form: FormAuthor
 ): CommentAuthorFields => {
   if (user) {
-    return { name: user.name || user.login, site: user.htmlUrl, email: null };
+    return { email: null, name: user.name || user.login, site: user.htmlUrl };
   }
   return {
+    email: form.email || null,
     name: form.name ?? "",
     site: form.site || null,
-    email: form.email || null,
   };
 };
 

@@ -12,12 +12,12 @@ import { stickerDisplayWidth } from "@/lib/server/image-header";
 import { STICKER_PLACEMENT } from "@/lib/server/sticker-limits";
 import type { CanvasApi, Point } from "@/scripts/canvas/api";
 
-export type EditPlacement = {
-  x: number;
-  y: number;
+export interface EditPlacement {
   rotation: number;
   scale: number;
-};
+  x: number;
+  y: number;
+}
 
 export type SizedPlacement = EditPlacement & { width: number; height: number };
 
@@ -47,14 +47,14 @@ export const clampEdit = <T extends EditPlacement>(placement: T): T => {
   const { world, rotation, scaleMin, scaleMax } = STICKER_PLACEMENT;
   return {
     ...placement,
-    x: clamp(Math.round(placement.x), -world, world),
-    y: clamp(Math.round(placement.y), -world, world),
     rotation: clamp(Math.round(placement.rotation), -rotation, rotation),
     scale: clamp(
       Math.round(placement.scale * SCALE_PRECISION) / SCALE_PRECISION,
       scaleMin,
       scaleMax
     ),
+    x: clamp(Math.round(placement.x), -world, world),
+    y: clamp(Math.round(placement.y), -world, world),
   };
 };
 
@@ -65,14 +65,14 @@ export const keyChange = (
 ): Partial<EditPlacement> | null => {
   const step = event.shiftKey ? MOVE_STEP_FAST : MOVE_STEP;
   const changes: Record<string, Partial<EditPlacement>> = {
+    "-": { scale: scale - SCALE_STEP },
+    "[": { rotation: rotation - ROTATE_STEP },
+    "]": { rotation: rotation + ROTATE_STEP },
+    "=": { scale: scale + SCALE_STEP },
+    ArrowDown: { y: y + step },
     ArrowLeft: { x: x - step },
     ArrowRight: { x: x + step },
     ArrowUp: { y: y - step },
-    ArrowDown: { y: y + step },
-    "[": { rotation: rotation - ROTATE_STEP },
-    "]": { rotation: rotation + ROTATE_STEP },
-    "-": { scale: scale - SCALE_STEP },
-    "=": { scale: scale + SCALE_STEP },
   };
   return changes[event.key] ?? null;
 };
@@ -94,19 +94,19 @@ export const applyPlacement = (el: HTMLElement, placement: SizedPlacement) => {
 /** What a press on a sticker does: move it, or turn / resize it by a handle. */
 export type DragMode = "move" | "rotate" | "resize";
 
-export type TransformDrag = {
+export interface TransformDrag {
   api: CanvasApi;
   el: HTMLElement;
   event: PointerEvent;
+  onChange: (change: Partial<EditPlacement>) => void;
+  /** `moved` is false for a press that stayed within the slop (a click). */
+  onEnd: (moved: boolean, event: PointerEvent, mode: DragMode) => void;
+  /** Every pointer move once it counts as a drag (e.g. over the trash). */
+  onMove?: (event: PointerEvent, mode: DragMode) => void;
   origin: EditPlacement;
   /** Screen px before a press counts as a drag (0: at once). */
   slop?: number;
-  onChange: (change: Partial<EditPlacement>) => void;
-  /** Every pointer move once it counts as a drag (e.g. over the trash). */
-  onMove?: (event: PointerEvent, mode: DragMode) => void;
-  /** `moved` is false for a press that stayed within the slop (a click). */
-  onEnd: (moved: boolean, event: PointerEvent, mode: DragMode) => void;
-};
+}
 
 /** Move, or turn / resize when the press is on a handle. */
 export const modeOf = (target: EventTarget | null): DragMode => {

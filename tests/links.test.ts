@@ -17,9 +17,9 @@ const HTTPS_THEN_DESCRIPTION = /https:\/\/[\s\S]*description/;
 const SHOWN_ON_CANVAS = 6;
 
 const friend = (overrides: Partial<FriendLink> = {}): FriendLink => ({
+  description: "写 Rust 和摄影。",
   name: "小明的博客",
   url: "https://xiaoming.example/",
-  description: "写 Rust 和摄影。",
   ...overrides,
 });
 
@@ -33,7 +33,7 @@ describe("friend link data", () => {
     expect(
       linkProblems([
         friend({ avatar: "xiaoming.webp", since: "2026-10-01" }),
-        friend({ name: "B", url: "https://b.example/blog", since: "2026-10" }),
+        friend({ name: "B", since: "2026-10", url: "https://b.example/blog" }),
       ])
     ).toEqual([]);
   });
@@ -110,7 +110,7 @@ describe("friend link data", () => {
 
   test("checkedLinks fails the build with every problem listed", () => {
     expect(() =>
-      checkedLinks([friend({ url: "http://a.example/", description: "" })])
+      checkedLinks([friend({ description: "", url: "http://a.example/" })])
     ).toThrow(HTTPS_THEN_DESCRIPTION);
   });
 });

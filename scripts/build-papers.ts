@@ -20,7 +20,7 @@ import sharp from "sharp";
 const PAPER = new URL("../public/journal/paper/", import.meta.url);
 const TOKENS = new URL("../src/styles/tokens.css", import.meta.url);
 const QUALITY = 84;
-const DESK_SIZE = { width: 960, height: 560 } as const;
+const DESK_SIZE = { height: 560, width: 960 } as const;
 
 type Rgb = readonly [number, number, number];
 
@@ -63,13 +63,13 @@ const softLight = (s: number, b: number) => {
 const MAX = 255;
 const CHANNELS = 3;
 
-type Bake = {
+interface Bake {
+  blend: (s: number, b: number) => number;
+  color: Rgb;
+  size?: { width: number; height: number };
   source: string;
   target: string;
-  color: Rgb;
-  blend: (s: number, b: number) => number;
-  size?: { width: number; height: number };
-};
+}
 
 const bake = async ({ source, target, color, blend, size }: Bake) => {
   let image = sharp(new URL(source, PAPER).pathname).removeAlpha();
@@ -87,31 +87,31 @@ const bake = async ({ source, target, color, blend, size }: Bake) => {
     out[i] = Math.round(blend(s, b) * MAX);
   }
   await sharp(out, {
-    raw: { width: info.width, height: info.height, channels: CHANNELS },
+    raw: { channels: CHANNELS, height: info.height, width: info.width },
   })
-    .jpeg({ quality: QUALITY, mozjpeg: true })
+    .jpeg({ mozjpeg: true, quality: QUALITY })
     .toFile(new URL(target, PAPER).pathname);
 };
 
 await Promise.all([
   bake({
+    blend: multiply,
+    color: token("desk"),
+    size: DESK_SIZE,
     source: "canvas-beige-fine.jpg",
     target: "desk.jpg",
-    color: token("desk"),
-    blend: multiply,
-    size: DESK_SIZE,
   }),
   bake({
+    blend: multiply,
+    color: token("doc"),
     source: "document-ivory.jpg",
     target: "doc.jpg",
-    color: token("doc"),
-    blend: multiply,
   }),
   bake({
+    blend: softLight,
+    color: token("sticky"),
     source: "grain-overlay-gray.jpg",
     target: "sticky.jpg",
-    color: token("sticky"),
-    blend: softLight,
   }),
 ]);
 process.stdout.write("desk, doc, sticky → public/journal/paper/\n");

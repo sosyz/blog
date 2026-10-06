@@ -21,19 +21,19 @@ const MIN_RADIUS = 2;
 /** Anti-aliasing room around the border. */
 const EDGE = 1;
 
-export type StickerLayout = {
+export interface StickerLayout {
+  contentHeight: number;
   /** Artwork size in the output, px. */
   contentWidth: number;
-  contentHeight: number;
-  /** Scale from the source crop to the output. */
-  scale: number;
-  /** Border width, px. */
-  radius: number;
+  height: number;
   /** Space on every side of the artwork for the border. */
   pad: number;
+  /** Border width, px. */
+  radius: number;
+  /** Scale from the source crop to the output. */
+  scale: number;
   width: number;
-  height: number;
-};
+}
 
 const layoutFor = (
   width: number,
@@ -47,13 +47,13 @@ const layoutFor = (
   const radius = Math.max(MIN_RADIUS, ratio * long);
   const pad = Math.ceil(radius) + EDGE;
   return {
-    contentWidth,
     contentHeight,
-    scale,
-    radius,
-    pad,
-    width: contentWidth + pad * 2,
+    contentWidth,
     height: contentHeight + pad * 2,
+    pad,
+    radius,
+    scale,
+    width: contentWidth + pad * 2,
   };
 };
 
@@ -78,7 +78,11 @@ export const layoutSticker = (
   return shrinkToFit(Math.min(long, Math.floor(maxSide / (1 + 2 * ratio))));
 };
 
-export type EncodeAttempt = { type: string; quality: number; shrink: number };
+export interface EncodeAttempt {
+  quality: number;
+  shrink: number;
+  type: string;
+}
 
 /** WebP qualities to try, best first. */
 const QUALITIES = [0.9, 0.82, 0.74, 0.66, 0.58, 0.5] as const;
@@ -89,8 +93,8 @@ const SHRINKS = [1, 0.85, 0.72, 0.6, 0.5] as const;
 export const encodeAttempts = (type: string): EncodeAttempt[] =>
   SHRINKS.flatMap((shrink) =>
     type === "image/png"
-      ? [{ type, quality: 1, shrink }]
-      : QUALITIES.map((quality) => ({ type, quality, shrink }))
+      ? [{ quality: 1, shrink, type }]
+      : QUALITIES.map((quality) => ({ quality, shrink, type }))
   );
 
 /**
@@ -133,20 +137,20 @@ export const checkWorkshopInput = (
   bytes: Uint8Array
 ): { ok: true; header: ImageHeader } | { ok: false; message: string } => {
   if (bytes.length === 0) {
-    return { ok: false, message: "没有收到图片。" };
+    return { message: "没有收到图片。", ok: false };
   }
   if (bytes.length > INPUT_MAX_BYTES) {
-    return { ok: false, message: "图片太大了，最大 10 MB。" };
+    return { message: "图片太大了，最大 10 MB。", ok: false };
   }
   const header = parseImageHeader(bytes);
   if (!header) {
-    return { ok: false, message: "只支持 PNG、WebP、GIF 或 JPEG 图片。" };
+    return { message: "只支持 PNG、WebP、GIF 或 JPEG 图片。", ok: false };
   }
   if (header.width * header.height > INPUT_MAX_PIXELS) {
     return {
-      ok: false,
       message: `这张图有 ${header.width}×${header.height} 像素，太大了，换一张小一点的吧。`,
+      ok: false,
     };
   }
-  return { ok: true, header };
+  return { header, ok: true };
 };

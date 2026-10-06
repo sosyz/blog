@@ -103,46 +103,46 @@ export const diagramFigure = (
 ): Element => {
   const id = diagramId(diagramHash(source));
   return {
-    type: "element",
-    tagName: "figure",
-    properties: {
-      className: ["diagram"],
-      ariaLabelledBy: [`chart-title-${id}`],
-    },
     children: [
       {
-        type: "element",
-        tagName: "div",
-        properties: { className: ["diagram-sheet"], tabIndex: 0 },
         children: svgContent(svg, format),
+        properties: { className: ["diagram-sheet"], tabIndex: 0 },
+        tagName: "div",
+        type: "element",
       },
       {
-        type: "element",
-        tagName: "details",
-        properties: { className: ["diagram-source"] },
         children: [
           {
-            type: "element",
-            tagName: "summary",
-            properties: {},
             children: [text("图的文字版")],
+            properties: {},
+            tagName: "summary",
+            type: "element",
           },
           {
-            type: "element",
-            tagName: "pre",
-            properties: { dataDiagramSource: "" },
             children: [
               {
-                type: "element",
-                tagName: "code",
-                properties: { className: [MERMAID_CLASS] },
                 children: [text(readableDiagramSource(source))],
+                properties: { className: [MERMAID_CLASS] },
+                tagName: "code",
+                type: "element",
               },
             ],
+            properties: { dataDiagramSource: "" },
+            tagName: "pre",
+            type: "element",
           },
         ],
+        properties: { className: ["diagram-source"] },
+        tagName: "details",
+        type: "element",
       },
     ],
+    properties: {
+      ariaLabelledBy: [`chart-title-${id}`],
+      className: ["diagram"],
+    },
+    tagName: "figure",
+    type: "element",
   };
 };
 
@@ -162,16 +162,16 @@ export const createMermaidDiagrams = (dir: string): HastPlugin => {
     let svg: string;
     try {
       svg = readFileSync(file, "utf8");
-    } catch {
+    } catch (error) {
       throw new Error(
-        `Mermaid 图 ${hash} 还没有渲染${where(fileURL)}：先运行 bun run diagrams，再提交 ${DIAGRAM_DIR}/${hash}.svg`
+        `Mermaid 图 ${hash} 还没有渲染${where(fileURL)}：先运行 bun run diagrams，再提交 ${DIAGRAM_DIR}/${hash}.svg`,
+        { cause: error }
       );
     }
     cache.set(hash, svg);
     return svg;
   };
   return {
-    name: "journal-mermaid-diagrams",
     element: {
       filter: ["pre"],
       visit(pre, ctx) {
@@ -183,6 +183,7 @@ export const createMermaidDiagrams = (dir: string): HastPlugin => {
         ctx.replaceNode(pre, diagramFigure(source, svg, ctx.sourceFormat));
       },
     },
+    name: "journal-mermaid-diagrams",
   };
 };
 
@@ -196,7 +197,6 @@ export const mermaidDiagrams = createMermaidDiagrams(
 
 /** A plugin that only records mermaid sources (build-diagrams.ts). */
 export const collectMermaid = (into: string[]): HastPlugin => ({
-  name: "journal-collect-mermaid",
   element: {
     filter: ["pre"],
     visit(pre, ctx) {
@@ -205,4 +205,5 @@ export const collectMermaid = (into: string[]): HastPlugin => ({
       }
     },
   },
+  name: "journal-collect-mermaid",
 });

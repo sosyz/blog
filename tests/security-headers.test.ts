@@ -8,7 +8,10 @@ import {
   withSecurityHeaders,
 } from "../src/lib/server/http";
 
-type HeaderRule = { path: string; headers: Map<string, string> };
+interface HeaderRule {
+  headers: Map<string, string>;
+  path: string;
+}
 
 const PATH_LINE = /^\//;
 const HEADER_LINE = /^(?<name>[^:\s]+):\s*(?<value>.*)$/;
@@ -24,7 +27,7 @@ const parseHeaders = (content: string) => {
       continue;
     }
     if (PATH_LINE.test(line)) {
-      rules.push({ path: line, headers: new Map() });
+      rules.push({ headers: new Map(), path: line });
       continue;
     }
     const match = HEADER_LINE.exec(line);
@@ -100,10 +103,10 @@ describe("public/_headers", () => {
       "/_astro/index.js",
     ]) {
       for (const [name, values] of headersFor(rules, path)) {
-        expect({ path, name, count: values.length }).toEqual({
-          path,
-          name,
+        expect({ count: values.length, name, path }).toEqual({
           count: 1,
+          name,
+          path,
         });
       }
     }

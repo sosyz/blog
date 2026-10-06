@@ -41,8 +41,8 @@ const HEX_DIGEST = /^[0-9a-f]{64}$/;
 const config = (overrides: Partial<AuthConfig> = {}): AuthConfig => ({
   clientId: "",
   clientSecret: "",
-  ownerId: 30_596_875,
   devLogin: false,
+  ownerId: 30_596_875,
   ...overrides,
 });
 const get = (url: string, headers: Record<string, string> = {}) =>
@@ -95,8 +95,8 @@ describe("OAuth state", () => {
     const state = randomToken();
     const cookie = encodeState(state, "/notes/go-context/#comments");
     expect(checkState(cookie, state)).toEqual({
-      ok: true,
       next: "/notes/go-context/#comments",
+      ok: true,
     });
   });
 
@@ -111,7 +111,7 @@ describe("OAuth state", () => {
   test("next is re-checked when read back from the cookie", () => {
     const state = randomToken();
     const forged = `${state}.${encodeURIComponent("//evil.example/")}`;
-    expect(checkState(forged, state)).toEqual({ ok: true, next: "/" });
+    expect(checkState(forged, state)).toEqual({ next: "/", ok: true });
     expect(encodeState(state, "https://evil.example/")).toBe(`${state}.%2F`);
   });
 
@@ -127,11 +127,11 @@ describe("OAuth state", () => {
       "https://github.com/login/oauth/authorize"
     );
     expect(Object.fromEntries(url.searchParams)).toEqual({
+      allow_signup: "true",
       client_id: "Iv1.abc",
       redirect_uri: "https://blog.sonui.cn/api/auth/github/callback",
       scope: "read:user",
       state: "s",
-      allow_signup: "true",
     });
   });
 });
@@ -221,35 +221,35 @@ const fakeDb = (row: unknown) => {
 describe("resolveViewer", () => {
   const now = 1_000_000_000_000;
   const row = (githubId: number, lastSeen = now) => ({
-    user_id: "u1",
+    avatar_url: "https://avatars.githubusercontent.com/u/1?v=4",
     expires_at: now + SESSION_TTL,
-    last_seen_at: lastSeen,
     github_id: githubId,
+    html_url: "https://github.com/someone",
+    last_seen_at: lastSeen,
     login: "someone",
     name: null,
-    avatar_url: "https://avatars.githubusercontent.com/u/1?v=4",
-    html_url: "https://github.com/someone",
+    user_id: "u1",
   });
 
   test("no cookie: nobody, and no database read", async () => {
     const { db, queries } = fakeDb(null);
     expect(await resolveViewer(db, null, 1, now)).toEqual({
-      viewer: null,
       clearCookie: false,
+      viewer: null,
     });
     expect(queries).toHaveLength(0);
   });
 
   test("a malformed or unknown sid is cleared", async () => {
     const bad = await resolveViewer(fakeDb(null).db, "sid=nope", 1, now);
-    expect(bad).toEqual({ viewer: null, clearCookie: true });
+    expect(bad).toEqual({ clearCookie: true, viewer: null });
     const unknown = await resolveViewer(
       fakeDb(null).db,
       `sid=${randomToken()}`,
       1,
       now
     );
-    expect(unknown).toEqual({ viewer: null, clearCookie: true });
+    expect(unknown).toEqual({ clearCookie: true, viewer: null });
   });
 
   test("owner detection is by numeric GitHub id", async () => {
@@ -269,10 +269,10 @@ describe("resolveViewer", () => {
     );
     expect(visitor.viewer?.isOwner).toBe(false);
     expect(visitor.viewer?.user).toEqual({
-      login: "someone",
-      name: null,
       avatarUrl: "https://avatars.githubusercontent.com/u/1?v=4",
       htmlUrl: "https://github.com/someone",
+      login: "someone",
+      name: null,
     });
     const noOwner = await resolveViewer(fakeDb(row(42)).db, cookie, null, now);
     expect(noOwner.viewer?.isOwner).toBe(false);
@@ -286,7 +286,7 @@ describe("resolveViewer", () => {
       null,
       now
     );
-    expect(expired).toEqual({ viewer: null, clearCookie: true });
+    expect(expired).toEqual({ clearCookie: true, viewer: null });
     const stale = await resolveViewer(
       fakeDb(row(1, now - REFRESH_AFTER - 1)).db,
       cookie,
@@ -344,17 +344,17 @@ describe("owner and dev login", () => {
   });
 
   test("dev login input", () => {
-    expect(devLoginInput.parse({ login: "sosyz", id: "30596875" })).toEqual({
-      login: "sosyz",
+    expect(devLoginInput.parse({ id: "30596875", login: "sosyz" })).toEqual({
       id: 30_596_875,
+      login: "sosyz",
     });
-    expect(devLoginInput.safeParse({ login: "-bad", id: "1" }).success).toBe(
+    expect(devLoginInput.safeParse({ id: "1", login: "-bad" }).success).toBe(
       false
     );
-    expect(devLoginInput.safeParse({ login: "ok", id: "0" }).success).toBe(
+    expect(devLoginInput.safeParse({ id: "0", login: "ok" }).success).toBe(
       false
     );
-    expect(devLoginInput.safeParse({ login: "ok", id: "x1" }).success).toBe(
+    expect(devLoginInput.safeParse({ id: "x1", login: "ok" }).success).toBe(
       false
     );
   });
@@ -362,21 +362,21 @@ describe("owner and dev login", () => {
 
 describe("GitHub profile", () => {
   const payload = {
+    avatar_url: "https://avatars.githubusercontent.com/u/30596875?v=4",
+    email: "secret@example.com",
+    html_url: "https://evil.example/sosyz",
     id: 30_596_875,
     login: "sosyz",
     name: " Sonui‮ ",
-    email: "secret@example.com",
-    avatar_url: "https://avatars.githubusercontent.com/u/30596875?v=4",
-    html_url: "https://evil.example/sosyz",
   };
 
   test("keeps only public fields, cleans the name, builds the profile URL", () => {
     expect(profileFromGithub(payload)).toEqual({
+      avatarUrl: "https://avatars.githubusercontent.com/u/30596875?v=4",
       githubId: 30_596_875,
+      htmlUrl: "https://github.com/sosyz",
       login: "sosyz",
       name: "Sonui",
-      avatarUrl: "https://avatars.githubusercontent.com/u/30596875?v=4",
-      htmlUrl: "https://github.com/sosyz",
     });
   });
 
@@ -400,11 +400,11 @@ describe("GitHub profile", () => {
 
   test("dev profile looks like a real one", () => {
     expect(devProfile(7, "someone")).toEqual({
+      avatarUrl: "https://avatars.githubusercontent.com/u/7?v=4",
       githubId: 7,
+      htmlUrl: "https://github.com/someone",
       login: "someone",
       name: "someone",
-      avatarUrl: "https://avatars.githubusercontent.com/u/7?v=4",
-      htmlUrl: "https://github.com/someone",
     });
   });
 });
@@ -422,12 +422,12 @@ describe("GitHub HTTP calls (fake fetch)", () => {
       clientId: "id",
       clientSecret: "secret",
       code: "abc",
-      redirectUri: "https://blog.sonui.cn/api/auth/github/callback",
       fetchFn: answer(
         { access_token: "gho_x", token_type: "bearer" },
         200,
         seen
       ),
+      redirectUri: "https://blog.sonui.cn/api/auth/github/callback",
     });
     expect(result).toEqual({ ok: true, value: "gho_x" });
     const [request] = seen;
@@ -466,7 +466,7 @@ describe("GitHub HTTP calls (fake fetch)", () => {
     const result = await fetchGithubUser(
       "gho_x",
       answer(
-        { id: 1, login: "someone", name: null, avatar_url: null },
+        { avatar_url: null, id: 1, login: "someone", name: null },
         200,
         seen
       )
@@ -482,31 +482,31 @@ describe("GitHub HTTP calls (fake fetch)", () => {
 describe("logged-in forms need no name or Turnstile", () => {
   test("member comments drop the anonymous-only fields", () => {
     const parsed = memberCommentInput.parse({
-      slug: "go-context",
-      kind: "comment",
       body: "你好",
+      kind: "comment",
       name: "someone else",
       site: "https://evil.example",
+      slug: "go-context",
       turnstile: "x",
     });
     expect(parsed).toEqual({
-      slug: "go-context",
-      kind: "comment",
       body: "你好",
+      kind: "comment",
       parentId: undefined,
+      slug: "go-context",
     });
     expect(
       commentInput.safeParse({
-        slug: "go-context",
-        kind: "comment",
         body: "你好",
+        kind: "comment",
+        slug: "go-context",
       }).success
     ).toBe(false);
   });
 
   test("member stickers need only the placement", () => {
     expect(
-      memberStickerInput.parse({ x: "1", y: "2", rotation: "", scale: "" })
-    ).toEqual({ x: 1, y: 2, rotation: 0, scale: 1 });
+      memberStickerInput.parse({ rotation: "", scale: "", x: "1", y: "2" })
+    ).toEqual({ rotation: 0, scale: 1, x: 1, y: 2 });
   });
 });

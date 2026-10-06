@@ -14,16 +14,16 @@
 import { createRemoteJWKSet, type JWTVerifyGetKey, jwtVerify } from "jose";
 import { readCookie } from "./http";
 
-export type AccessConfig = {
-  /** e.g. "myteam.cloudflareaccess.com" (with or without https://). */
-  teamDomain?: string;
+export interface AccessConfig {
   /** Application Audience (AUD) tag. */
   aud?: string;
   /** ADMIN_DEV_BYPASS === "1". */
   devBypass?: boolean;
   /** Tests only: verify against these keys instead of the team's JWKS URL. */
   keySet?: JWTVerifyGetKey;
-};
+  /** e.g. "myteam.cloudflareaccess.com" (with or without https://). */
+  teamDomain?: string;
+}
 
 export type AdminCheck =
   | { ok: true; email: string; bypass: boolean }
@@ -61,22 +61,22 @@ export const checkAdmin = async (
   config: AccessConfig
 ): Promise<AdminCheck> => {
   if (config.devBypass && isLocalRequest(request)) {
-    return { ok: true, email: "dev-bypass@localhost", bypass: true };
+    return { bypass: true, email: "dev-bypass@localhost", ok: true };
   }
   if (!(config.teamDomain && config.aud)) {
     return {
-      ok: false,
-      status: 503,
       message:
         "后台还没配置 Cloudflare Access（ACCESS_TEAM_DOMAIN / ACCESS_AUD）。",
+      ok: false,
+      status: 503,
     };
   }
   const token = readAccessToken(request);
   if (!token) {
     return {
+      message: "请先通过 Cloudflare Access 登录。",
       ok: false,
       status: 401,
-      message: "请先通过 Cloudflare Access 登录。",
     };
   }
   const issuer = teamOrigin(config.teamDomain);
@@ -85,18 +85,18 @@ export const checkAdmin = async (
       token,
       config.keySet ?? keySetFor(issuer),
       {
-        issuer,
-        audience: config.aud,
         algorithms: ["RS256"],
+        audience: config.aud,
+        issuer,
       }
     );
     const email = typeof payload.email === "string" ? payload.email : "";
     return {
-      ok: true,
-      email: email || String(payload.sub ?? "admin"),
       bypass: false,
+      email: email || String(payload.sub ?? "admin"),
+      ok: true,
     };
   } catch {
-    return { ok: false, status: 403, message: "登录已失效或无权访问后台。" };
+    return { message: "登录已失效或无权访问后台。", ok: false, status: 403 };
   }
 };

@@ -40,16 +40,20 @@ import {
   OUTPUT_MAX_SIDE,
 } from "./sticker-fit";
 
-export type WorkshopResult = { blob: Blob; width: number; height: number };
+export interface WorkshopResult {
+  blob: Blob;
+  height: number;
+  width: number;
+}
 
-type WorkshopHandlers = {
-  /** 用这张: the finished sticker. */
-  onUse: (result: WorkshopResult) => void;
-  /** 重新选图 picked a new, valid file. */
-  onRepick: (file: File) => void;
+interface WorkshopHandlers {
   /** 不贴了, Esc, or navigating away. */
   onCancel: () => void;
-};
+  /** 重新选图 picked a new, valid file. */
+  onRepick: (file: File) => void;
+  /** 用这张: the finished sticker. */
+  onUse: (result: WorkshopResult) => void;
+}
 
 /** Longest side the picture is decoded to; the output is ≤ 512 anyway. */
 const WORK_SIDE = 1024;
@@ -139,7 +143,7 @@ const encodeSticker = async (canvas: HTMLCanvasElement) => {
     }
     const blob = await toBlob(source, attempt.type, attempt.quality);
     return blob?.type === attempt.type
-      ? { size: blob.size, blob, width: source.width, height: source.height }
+      ? { blob, height: source.height, size: blob.size, width: source.width }
       : null;
   };
   const found = await firstThatFits(encodeAttempts(type), encode);
@@ -400,7 +404,7 @@ export class StickerWorkshop {
       return null;
     }
     if (mode === "rect") {
-      return { x: 0, y: 0, width: pixels.width, height: pixels.height };
+      return { height: pixels.height, width: pixels.width, x: 0, y: 0 };
     }
     const alpha =
       mode === "matte" && this.matte ? this.matte.alpha : alphaOf(pixels.data);
@@ -433,7 +437,7 @@ export class StickerWorkshop {
     if (token !== this.renderToken) {
       return;
     }
-    const sticker = this.compose({ art, bounds, layout, mode, filter, grain });
+    const sticker = this.compose({ art, bounds, filter, grain, layout, mode });
     const encoded = sticker ? await encodeSticker(sticker) : null;
     if (token !== this.renderToken || this.closed) {
       return;
@@ -507,8 +511,8 @@ export class StickerWorkshop {
     }
     this.result = {
       blob: encoded.blob,
-      width: encoded.width,
       height: encoded.height,
+      width: encoded.width,
     };
     this.previewUrl = URL.createObjectURL(encoded.blob);
     preview.src = this.previewUrl;
@@ -544,7 +548,7 @@ export class StickerWorkshop {
   }
 
   use() {
-    const result = this.result;
+    const { result } = this;
     if (!result || this.cutoutAbort) {
       return;
     }

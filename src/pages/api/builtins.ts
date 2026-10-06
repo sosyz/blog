@@ -64,15 +64,15 @@ export const POST: APIRoute = async ({ request }) => {
   }
   const db = database();
   await setBuiltinHidden(db, {
-    key,
-    hidden,
     by: editor.actor,
+    hidden,
+    key,
     now: Date.now(),
   });
   const body: BuiltinToggleResponse = {
-    key,
     hidden,
     hiddenBuiltins: await listHiddenBuiltins(db),
+    key,
   };
   return json(body);
 };

@@ -19,7 +19,14 @@ type MarkdownConfig = NonNullable<AstroUserConfig["markdown"]>;
  */
 export const markdownConfig: MarkdownConfig = {
   processor: satteri({
-    mdastPlugins: [highlightMarks],
+    features: {
+      gfm: {
+        footnotes: {
+          backLabel: "回到正文第 {reference} 处",
+          label: "注释",
+        },
+      },
+    },
     hastPlugins: [
       dropTitleHeading,
       // Before codeSlips: it swaps mermaid blocks for drawn diagrams, and
@@ -30,16 +37,9 @@ export const markdownConfig: MarkdownConfig = {
       responsivePictures,
       asideStickies,
     ],
-    features: {
-      gfm: {
-        footnotes: {
-          label: "注释",
-          backLabel: "回到正文第 {reference} 处",
-        },
-      },
-    },
+    mdastPlugins: [highlightMarks],
   }),
-  // Mermaid is drawn by mermaidDiagrams, so Shiki must leave it as source.
-  syntaxHighlight: { type: "shiki", excludeLangs: ["math", "mermaid"] },
   shikiConfig,
+  // Mermaid is drawn by mermaidDiagrams, so Shiki must leave it as source.
+  syntaxHighlight: { excludeLangs: ["math", "mermaid"], type: "shiki" },
 };
