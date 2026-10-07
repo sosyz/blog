@@ -180,9 +180,16 @@
   .world .peel-landing > :not(img) {
     display: none;
   }
-  /* Built-ins get their offset from [data-sticker-key], which it lacks. */
+  /* --land-x / --land-y: from the element to where the sheet is drawn,
+     which is where it lands. Built-ins get their offset from
+     [data-sticker-key], which the copy lacks. */
+  .world .vs.peel-landing {
+    translate: calc(-50% + var(--dx, 0px) + var(--land-x, 0px))
+      calc(-50% + var(--dy, 0px) + var(--land-y, 0px));
+  }
   .world .sticker.peel-landing-builtin {
-    translate: var(--dx, 0px) var(--dy, 0px);
+    translate: calc(var(--dx, 0px) + var(--land-x, 0px))
+      calc(var(--dy, 0px) + var(--land-y, 0px));
   }
   .world .sticker[data-sticker-key].vs-gliding,
   .world .vs.vs-gliding {

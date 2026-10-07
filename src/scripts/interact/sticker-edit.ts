@@ -541,13 +541,22 @@ const startEdit = (canvas: CanvasApi, el: HTMLElement, event: PointerEvent) => {
         return;
       }
       hideTrash();
+      let shift = { x: 0, y: 0 };
       if (e.type === "pointercancel") {
         peel?.end();
-      } else {
-        peel?.drop();
+      } else if (peel) {
+        shift = peel.drop();
       }
       // Let go before it came off: it never moved, nothing to save.
       if (moved && held) {
+        // Lands where the curl drew it (on the pencil silhouette).
+        if (shift.x !== 0 || shift.y !== 0) {
+          const scale = canvas.getCamera().scale || 1;
+          adjust(record, {
+            x: record.placement.x + shift.x / scale,
+            y: record.placement.y + shift.y / scale,
+          });
+        }
         save(record);
       }
     },
@@ -709,15 +718,21 @@ const startLocalDrag = (
       return;
     }
     hideTrash();
+    let shift = { x: 0, y: 0 };
     if (e.type === "pointercancel") {
       peel.end();
     } else {
-      peel.drop();
+      shift = peel.drop();
     }
     // A click, or let go before it came off: it stays where it was.
     if (!held) {
       return;
     }
+    // Lands where the curl drew it (on the pencil silhouette).
+    current = {
+      dx: current.dx + shift.x / scale,
+      dy: current.dy + shift.y / scale,
+    };
     offsets = withOffset(readOffsets(), key, current);
     writeOffsets(offsets);
     setOffsetVars(el, offsetOf(offsets, key));

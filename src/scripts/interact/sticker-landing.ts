@@ -12,13 +12,18 @@
  * as the drag moves it, without the CSS fallback's glide (--peel-lag-*),
  * which only shows the hand catching up, not where it lands.
  *
- * Used by sticker-peel.ts: shown once the sticker is off, hidden over the
- * trash, faded out when it is let go, removed when the gesture ends. Styled
+ * Used by sticker-peel.ts: shown once the sticker is off, moved each frame
+ * to where the curl draws the sheet (`shift`, --land-x / --land-y: that is
+ * where it is let go), hidden over the trash, faded out when it is let go,
+ * removed when the gesture ends. Styled
  * in StickerLayer.astro (`.peel-landing`).
  */
 
 const MARK = "peel-landing";
 const SHOWN = "is-shown";
+/** Where it lands, from the element (world px); used in `.peel-landing`'s translate. */
+const SHIFT_X = "--land-x";
+const SHIFT_Y = "--land-y";
 /** How long the fade out takes (ms); matches `.peel-landing` in StickerLayer.astro. */
 const FADE_MS = 160;
 
@@ -79,6 +84,12 @@ export interface Landing {
   fade: () => void;
   /** Gone now (thrown, cancelled, re-rendered). */
   remove: () => void;
+  /**
+   * Moves the mark (world px) from the element to where it really lands:
+   * the curl draws the sheet a little away from the element, and it is let
+   * go there (sticker-peel.ts `drop`).
+   */
+  shift: (x: number, y: number) => void;
   /** Shown or hidden (over the trash) while it is carried. */
   show: (on: boolean) => void;
 }
@@ -95,12 +106,17 @@ export const createLanding = (el: HTMLElement): Landing => {
   }
   mark.inert = true;
   mark.setAttribute("aria-hidden", "true");
-  mark.setAttribute("style", restingStyle(el.getAttribute("style") ?? ""));
+  let shiftX = "0px";
+  let shiftY = "0px";
+  const sync = () => {
+    mark.setAttribute("style", restingStyle(el.getAttribute("style") ?? ""));
+    mark.style.setProperty(SHIFT_X, shiftX);
+    mark.style.setProperty(SHIFT_Y, shiftY);
+  };
+  sync();
   el.insertAdjacentElement("afterend", mark);
 
-  const observer = new MutationObserver(() => {
-    mark.setAttribute("style", restingStyle(el.getAttribute("style") ?? ""));
-  });
+  const observer = new MutationObserver(sync);
   observer.observe(el, { attributeFilter: ["style"] });
 
   let timer = 0;
@@ -118,6 +134,12 @@ export const createLanding = (el: HTMLElement): Landing => {
       timer = window.setTimeout(remove, FADE_MS);
     },
     remove,
+    shift: (x, y) => {
+      shiftX = `${x}px`;
+      shiftY = `${y}px`;
+      mark.style.setProperty(SHIFT_X, shiftX);
+      mark.style.setProperty(SHIFT_Y, shiftY);
+    },
     show: (on) => {
       mark.classList.toggle(SHOWN, on);
     },

@@ -25,11 +25,14 @@
  *   curls a bit more the faster it goes (`dragProgress`) and over the trash
  *   eases towards PEEL.trash;
  * - while it is off, a pencil silhouette on the paper marks where it lands
- *   if let go now (sticker-landing.ts); not over the trash;
+ *   if let go now (sticker-landing.ts): where the sheet is drawn, not where
+ *   the element is (the curl draws it `heldShift` back from the element);
+ *   not over the trash;
  * - let go (`drop`): the curl flattens and it is pressed onto the desk
  *   (PEEL_MS.layBack) — where it was stuck if it never came off; once off,
- *   still pinned, so it unrolls onto the element where it is let go — then
- *   the element shows again;
+ *   right where it is drawn: `drop` returns how far (screen px) the caller
+ *   moves the element to get it there, and the sheet flattens in place onto
+ *   it, on the silhouette — then the element shows again;
  * - into the trash (`fall`, only once off): it peels right off and shrinks
  *   into the bin (PEEL_MS.throw); the caller then runs the usual throw.
  *
@@ -137,8 +140,12 @@ type Phase =
 type Mode = "pending" | "gl" | "css";
 
 export interface Peel {
-  /** Let go on the desk (or a click): 贴回去. */
-  drop: () => void;
+  /**
+   * Let go on the desk (or a click): 贴回去. Returns how far (screen px) to
+   * move the element so it lands where it is drawn (zero unless it was off
+   * and drawn with WebGL); move it before the next frame.
+   */
+  drop: () => Vec;
   /** Ends at once, the element shown as it is (pointercancel, after a throw). */
   end: () => void;
   /**
@@ -530,7 +537,9 @@ export const startPeel = (
     if (phase === "throw") {
       return fallAt;
     }
-    if (!off) {
+    // Not off: where it is stuck. Let go: `drop` moved the element to where
+    // it was drawn, so it flattens right there.
+    if (!off || phase === "layBack") {
       return at.centre;
     }
     const pinned = pinnedCentre(
@@ -607,7 +616,15 @@ export const startPeel = (
     }
     const going = steps[phase]?.(now, dt, at) ?? false;
     steer(at, dt);
-    draw(layer, at, centreOf(at, now));
+    const centre = centreOf(at, now);
+    draw(layer, at, centre);
+    if (phase === "pop" || phase === "held") {
+      // It lands where it is drawn, not where the element is.
+      landing?.shift(
+        (centre.x - at.centre.x) / zoom(),
+        (centre.y - at.centre.y) / zoom()
+      );
+    }
     // Hidden in the same frame as the first drawing, so it never blinks; the
     // CSS glide's shift goes with it (the drawing carries the slack now).
     hide(true);
@@ -687,9 +704,12 @@ export const startPeel = (
       // It is pressed down right there: the mark goes as it lands.
       dropLanding(true);
       if (mode === "gl" && isMoving(phase)) {
+        // Measured before the caller moves the element onto the drawing.
+        const shift = handOff() ?? STILL;
+        slackFrom = STILL;
         enter("layBack", performance.now());
         run();
-        return;
+        return shift;
       }
       if (mode === "css" && isMoving(phase)) {
         if (off) {
@@ -700,6 +720,7 @@ export const startPeel = (
       }
       // The CSS glide (if any) goes on: it ends where it is let go.
       finish(true);
+      return STILL;
     },
     end: () => {
       dropLanding(false);
