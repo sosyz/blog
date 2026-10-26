@@ -128,7 +128,9 @@ export interface TurnstileHandle {
 
 /**
  * Renders the widget into a `.ts-wrap`. Safe to call once per wrap; later
- * calls return the same handle.
+ * calls return the same handle until `remove()`, after which the next call
+ * renders a fresh widget (the comment form keeps its wrap across logging in
+ * and out).
  */
 const handles = new WeakMap<HTMLElement, TurnstileHandle>();
 
@@ -146,8 +148,15 @@ export const mountTurnstile = (wrap: HTMLElement): TurnstileHandle => {
   let siteKey = "";
   /** After a failure: the widget is always visible, for a manual click. */
   let manual = false;
+  /** remove() ran: a script or site key that arrives later renders nothing. */
+  let removed = false;
+  const listening = new AbortController();
 
   const set = (state: State, text = TEXT[state]) => {
+    // The status line may already belong to the next handle on this wrap.
+    if (removed) {
+      return;
+    }
     if (status) {
       status.dataset.state = state;
       status.disabled = state !== "fail";
@@ -161,6 +170,9 @@ export const mountTurnstile = (wrap: HTMLElement): TurnstileHandle => {
   const handle: TurnstileHandle = {
     available: true,
     remove: () => {
+      removed = true;
+      handles.delete(wrap);
+      listening.abort();
       if (api && widgetId) {
         api.remove(widgetId);
         widgetId = undefined;
@@ -211,7 +223,7 @@ export const mountTurnstile = (wrap: HTMLElement): TurnstileHandle => {
     }
     const loaded = await loadTurnstile();
     api = loaded;
-    if (wrap.isConnected) {
+    if (wrap.isConnected && !removed) {
       render(loaded);
     }
   };
@@ -234,7 +246,9 @@ export const mountTurnstile = (wrap: HTMLElement): TurnstileHandle => {
   };
 
   set("wait");
-  status?.addEventListener("click", retryManually);
+  status?.addEventListener("click", retryManually, {
+    signal: listening.signal,
+  });
   start().catch(() => set("fail"));
   return handle;
 };
