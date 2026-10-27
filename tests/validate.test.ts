@@ -5,6 +5,7 @@ import {
   commentInput,
   decisionInput,
   firstIssue,
+  formAnchor,
   parseMineIds,
   stickerInput,
 } from "../src/lib/server/validate";
@@ -181,6 +182,33 @@ describe("stickerInput", () => {
     expect(stickerInput.safeParse({ ...sticker, x: "Infinity" }).success).toBe(
       false
     );
+  });
+
+  test("the anchor fields make an anchor only when all three came", () => {
+    const anchored = stickerInput.parse({
+      ...sticker,
+      anchor: "card:wireguard-use-notes",
+      anchorX: "791.4",
+      anchorY: "-20.6",
+    });
+    expect(formAnchor(anchored)).toEqual({
+      key: "card:wireguard-use-notes",
+      x: 791,
+      y: -21,
+    });
+    expect(formAnchor(stickerInput.parse(sticker))).toBeNull();
+    expect(
+      formAnchor(
+        stickerInput.parse({ ...sticker, anchor: "intro", anchorX: "" })
+      )
+    ).toBeNull();
+    expect(
+      stickerInput.safeParse({ ...sticker, anchor: "card:../x" }).success
+    ).toBe(false);
+    expect(
+      stickerInput.safeParse({ ...sticker, anchor: "intro", anchorX: "abc" })
+        .success
+    ).toBe(false);
   });
 });
 

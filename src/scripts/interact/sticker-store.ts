@@ -8,12 +8,14 @@
  *   approval so the uploader can still move the sticker (PATCH
  *   /api/stickers/:id). Dropped when the sticker is rejected or gone.
  */
-import type { PublicSticker } from "@/lib/server/types";
+import type { PublicSticker, StickerAnchor } from "@/lib/server/types";
 import { STICKERS_CHANGED } from "./events";
 import type { EditPlacement } from "./sticker-transform";
 import { readStore, writeStore } from "./util";
 
-export type PendingSticker = Omit<PublicSticker, "src" | "name"> & {
+export type PendingSticker = Omit<PublicSticker, "src" | "name" | "anchor"> & {
+  /** Missing in copies saved before stickers had anchors. */
+  anchor?: StickerAnchor | null;
   name: string | null;
   dataUrl: string;
   createdAt: number;
@@ -48,7 +50,10 @@ export const addPendingSticker = (item: PendingSticker) => {
 };
 
 /** Moved by its owner: keep the pending copy where the sticker now is. */
-export const movePendingSticker = (id: string, placement: EditPlacement) => {
+export const movePendingSticker = (
+  id: string,
+  placement: EditPlacement & { anchor: StickerAnchor | null }
+) => {
   const items = readPendingStickers();
   const item = items.find((entry) => entry.id === id);
   if (item) {

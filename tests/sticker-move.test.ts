@@ -96,7 +96,7 @@ describe("stickerMoveInput", () => {
   };
 
   test("accepts a move within the upload ranges", () => {
-    expect(stickerMoveInput.parse(base)).toEqual(base);
+    expect(stickerMoveInput.parse(base)).toEqual({ ...base, anchor: null });
     expect(
       messageOf({ ...base, scale: LIMITS.scaleMin, x: LIMITS.world })
     ).toBeNull();
@@ -135,12 +135,41 @@ describe("stickerMoveInput", () => {
 
   test("no token is fine at this stage: a GitHub session may own it", () => {
     const { token: _t, ...noToken } = base;
-    expect(stickerMoveInput.parse(noToken)).toEqual(noToken);
+    expect(stickerMoveInput.parse(noToken)).toEqual({
+      ...noToken,
+      anchor: null,
+    });
+  });
+
+  test("an anchor is rounded like the position; bad ones are refused", () => {
+    const anchor = { key: "card:wireguard-use-notes", x: 791.4, y: -20.6 };
+    expect(stickerMoveInput.parse({ ...base, anchor }).anchor).toEqual({
+      key: "card:wireguard-use-notes",
+      x: 791,
+      y: -21,
+    });
+    expect(stickerMoveInput.parse({ ...base, anchor: null }).anchor).toBeNull();
+    expect(
+      stickerMoveInput.parse({ ...base, anchor: { key: "intro", x: 0, y: 0 } })
+        .anchor
+    ).toEqual({ key: "intro", x: 0, y: 0 });
+    for (const bad of [
+      { ...anchor, key: "card:Bad Slug" },
+      { ...anchor, key: "pile:Web" },
+      { ...anchor, x: "1" },
+      { ...anchor, y: LIMITS.world + 1 },
+      "intro",
+    ]) {
+      expect(messageOf({ ...base, anchor: bad })).toBe("不知道贴纸贴在哪儿。");
+    }
   });
 
   test("admin moves need no token", () => {
     const { token: _t, ...placement } = base;
-    expect(adminMoveInput.parse(placement)).toEqual(placement);
+    expect(adminMoveInput.parse(placement)).toEqual({
+      ...placement,
+      anchor: null,
+    });
     expect(adminMoveInput.safeParse({ ...placement, x: "1" }).success).toBe(
       false
     );

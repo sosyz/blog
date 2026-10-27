@@ -5,7 +5,9 @@
  *      ones in full in `ownPending`. `hiddenBuiltins`: keys of the built-in
  *      stickers the owner threw away (POST /api/builtins).
  * POST /api/stickers  multipart/form-data: image (≤ 300 KB, PNG/WebP/GIF/JPEG,
- *      ≤ 512×512), x, y, rotation, scale, name?, turnstile.
+ *      ≤ 512×512), x, y, rotation, scale, anchor? + anchorX? + anchorY?
+ *      (what it is stuck to, see migrations/0002_sticker_anchor.sql), name?,
+ *      turnstile.
  *      → {id, status, token}: `token` lets the uploader move the sticker
  *      later (PATCH /api/stickers/:id); only its salted hash is stored.
  *      With a GitHub session: no Turnstile, the login is the signature, the
@@ -63,6 +65,7 @@ import type {
 import {
   type AnyStickerInput,
   firstIssue,
+  formAnchor,
   LIMITS,
   memberStickerInput,
   parseMineIds,
@@ -137,6 +140,9 @@ const readUpload = async (request: Request, member: boolean) => {
     };
   }
   const fields = {
+    anchor: form.get("anchor"),
+    anchorX: form.get("anchorX"),
+    anchorY: form.get("anchorY"),
     name: form.get("name") ?? undefined,
     rotation: form.get("rotation"),
     scale: form.get("scale"),
@@ -296,6 +302,7 @@ export const POST: APIRoute = async ({ request, url }) => {
       r2Key,
       width,
       ...placement,
+      anchor: formAnchor(input),
       createdAt: now,
       editTokenHash,
       ipHash,

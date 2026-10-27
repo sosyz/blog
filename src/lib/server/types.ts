@@ -2,6 +2,9 @@
  * JSON shapes of the public API, shared by the API routes and the client
  * scripts (type-only imports on the client).
  */
+import type { StickerAnchor } from "./sticker-limits";
+
+export type { StickerAnchor } from "./sticker-limits";
 
 export type ItemStatus = "pending" | "approved" | "rejected";
 
@@ -88,6 +91,8 @@ export interface MovedResponse {
 }
 
 export interface PublicSticker {
+  /** What it is stuck to; null for stickers placed without one. */
+  anchor: StickerAnchor | null;
   height: number;
   id: string;
   name: string | null;
@@ -95,7 +100,10 @@ export interface PublicSticker {
   scale: number;
   src: string;
   width: number;
-  /** World coordinates of the centre. */
+  /**
+   * World coordinates of the centre when it was placed; the canvas moves it
+   * along with its anchor (src/scripts/interact/sticker-anchor.ts).
+   */
   x: number;
   y: number;
 }

@@ -93,7 +93,13 @@ import {
   throwBuiltin,
   trashBox,
 } from "./sticker-trash";
-import { isAccountOwned, isTidy, setTidy, updateShown } from "./stickers";
+import {
+  anchorAt,
+  isAccountOwned,
+  isTidy,
+  setTidy,
+  updateShown,
+} from "./stickers";
 import { requestJson } from "./util";
 
 /** Screen px a press may wander and still be a click (as for the canvas). */
@@ -254,6 +260,8 @@ const canMoveOwn = (id: string) =>
 
 const moveRequest = (record: Selected) => {
   const { x, y, rotation, scale } = record.placement;
+  // Stuck to whatever is next to it now (sticker-anchor.ts).
+  const anchor = anchorAt({ x, y });
   const token = ownedToken(record.id);
   const init = (body: object): RequestInit => ({
     body: JSON.stringify(body),
@@ -262,19 +270,19 @@ const moveRequest = (record: Selected) => {
   });
   if (token) {
     return {
-      init: init({ rotation, scale, token, x, y }),
+      init: init({ anchor, rotation, scale, token, x, y }),
       url: `/api/stickers/${record.id}`,
     };
   }
   // The GitHub session proves ownership (or that this is the owner).
   if (isAccountOwned(record.id) || sessionOwner()) {
     return {
-      init: init({ rotation, scale, x, y }),
+      init: init({ anchor, rotation, scale, x, y }),
       url: `/api/stickers/${record.id}`,
     };
   }
   return {
-    init: init({ rotation, scale, x, y }),
+    init: init({ anchor, rotation, scale, x, y }),
     url: `/api/admin/stickers/${record.id}`,
   };
 };
@@ -307,7 +315,13 @@ const save = async (record: Selected) => {
   }
   const { x, y, rotation, scale } = result.data;
   record.saved = { ...record.saved, rotation, scale, x, y };
-  movePendingSticker(record.id, { rotation, scale, x, y });
+  movePendingSticker(record.id, {
+    anchor: anchorAt({ x, y }),
+    rotation,
+    scale,
+    x,
+    y,
+  });
   if (same(record.placement, record.saved)) {
     say(record, MOVED, false);
     return;

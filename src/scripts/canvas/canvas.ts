@@ -11,6 +11,7 @@
  */
 import { navigate } from "astro:transitions/client";
 import {
+  CANVAS_LAYOUT,
   type CanvasApi,
   emitDrawerClose,
   emitDrawerOpen,
@@ -355,6 +356,10 @@ const createCanvas = (root: HTMLElement) => {
     drawLinks(world, layout);
     if (current) {
       heat(current, true);
+    }
+    // Already published: stickers stuck to cards follow them.
+    if (window.__canvas === api) {
+      window.dispatchEvent(new CustomEvent(CANVAS_LAYOUT, { detail: api }));
     }
   };
 

@@ -7,7 +7,12 @@
 import { z } from "astro/zod";
 import { BUILTIN_KEY, BUILTIN_KEY_MAX } from "../builtin-stickers";
 import { EDIT_TOKEN } from "./edit-token";
-import { STICKER_PLACEMENT } from "./sticker-limits";
+import {
+  ANCHOR_KEY,
+  roundAnchor,
+  STICKER_PLACEMENT,
+  type StickerAnchor,
+} from "./sticker-limits";
 
 export const LIMITS = {
   body: 800,
@@ -236,8 +241,22 @@ const requiredNumber = (message: string, min: number, max: number) =>
     finiteNumber(message, min, max)
   );
 
+const ANCHOR_MESSAGE = "不知道贴纸贴在哪儿。";
+
+const anchorKey = z
+  .string({ error: ANCHOR_MESSAGE })
+  .regex(ANCHOR_KEY, ANCHOR_MESSAGE);
+
+/** A number a form may leave out (blank or missing → undefined). */
+const optionalNumber = (message: string, min: number, max: number) =>
+  z.preprocess(blankToUndefined, finiteNumber(message, min, max).optional());
+
 /** Where a new sticker goes (upload form fields, as strings). */
 const stickerPlacementFields = {
+  /** What it is stuck to (see formAnchor); left out by older pages. */
+  anchor: z.preprocess(blankToUndefined, anchorKey.optional()),
+  anchorX: optionalNumber(ANCHOR_MESSAGE, -LIMITS.world, LIMITS.world),
+  anchorY: optionalNumber(ANCHOR_MESSAGE, -LIMITS.world, LIMITS.world),
   rotation: z.preprocess(
     (value) => blankToUndefined(value) ?? 0,
     finiteNumber("贴纸的角度不对。", -LIMITS.rotation, LIMITS.rotation)
@@ -273,6 +292,20 @@ export const memberStickerInput = z.object(stickerPlacementFields);
 export type AnyStickerInput = z.infer<typeof memberStickerInput> &
   Partial<Pick<StickerInput, "name" | "turnstile">>;
 
+/** The upload's anchor fields → an anchor, or null unless all three came. */
+export const formAnchor = ({
+  anchor,
+  anchorX,
+  anchorY,
+}: {
+  anchor?: string;
+  anchorX?: number;
+  anchorY?: number;
+}): StickerAnchor | null =>
+  anchor === undefined || anchorX === undefined || anchorY === undefined
+    ? null
+    : roundAnchor({ key: anchor, x: anchorX, y: anchorY });
+
 /** A JSON number (strings, null and missing values fail, not coerced). */
 const jsonNumber = (message: string, min: number, max: number) =>
   z.preprocess(
@@ -280,8 +313,22 @@ const jsonNumber = (message: string, min: number, max: number) =>
     finiteNumber(message, min, max)
   );
 
-/** Position of a moved sticker: all four fields are required. */
+/**
+ * Position of a moved sticker: all four placement fields are required;
+ * `anchor` (what it is stuck to now) is optional, and missing means none.
+ */
 const placementFields = {
+  anchor: z
+    .object(
+      {
+        key: anchorKey,
+        x: jsonNumber(ANCHOR_MESSAGE, -LIMITS.world, LIMITS.world),
+        y: jsonNumber(ANCHOR_MESSAGE, -LIMITS.world, LIMITS.world),
+      },
+      { error: ANCHOR_MESSAGE }
+    )
+    .nullish()
+    .transform((anchor) => (anchor ? roundAnchor(anchor) : null)),
   rotation: jsonNumber("贴纸的角度不对。", -LIMITS.rotation, LIMITS.rotation),
   scale: jsonNumber("贴纸的大小不对。", LIMITS.scaleMin, LIMITS.scaleMax),
   x: jsonNumber("贴纸的位置不对。", -LIMITS.world, LIMITS.world),

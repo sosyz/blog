@@ -1,5 +1,5 @@
 /**
- * PATCH /api/stickers/:id {x, y, rotation, scale, token?} — move a placed
+ * PATCH /api/stickers/:id {x, y, rotation, scale, anchor?, token?} — move a placed
  * sticker (pending or approved) for everyone. Allowed for:
  *   - the uploader's browser: `token` is the edit token POST /api/stickers
  *     returned, checked against the stored salted hash;
@@ -158,6 +158,7 @@ export const PATCH: APIRoute = async ({ params, request }) => {
   // Who moved it: the edit token, the GitHub account or the owner.
   const who = moveActor(plan.via, viewer?.user.login);
   const moved = await moveStickerWithinLimit(db, id.data, {
+    anchor: move.input.anchor,
     limits: moveLimits(plan.via, { ipHash, now }),
     log: {
       actor: who.actor,

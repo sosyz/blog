@@ -50,6 +50,31 @@ export const roundPlacement = (placement: Placement): Placement => {
   };
 };
 
+/**
+ * What a sticker is stuck to (migrations/0002_sticker_anchor.sql): the intro
+ * card, the 友链 pile or a note's card, and that thing's top-left corner in
+ * world px when the sticker was placed.
+ */
+export interface StickerAnchor {
+  /** 'intro', 'friends' or 'card:<slug>'. */
+  key: string;
+  x: number;
+  y: number;
+}
+
+/** Anchor keys the canvas can resolve (slugs as in validate.ts). */
+export const ANCHOR_KEY = /^(?:intro|friends|card:[a-z0-9][a-z0-9-]{0,119})$/;
+
+/** Stored like the position: whole world px, inside the world box. */
+export const roundAnchor = (anchor: StickerAnchor): StickerAnchor => {
+  const { world } = STICKER_PLACEMENT;
+  return {
+    key: anchor.key,
+    x: clamp(Math.round(anchor.x), -world, world),
+    y: clamp(Math.round(anchor.y), -world, world),
+  };
+};
+
 export const samePlacement = (a: Placement, b: Placement) =>
   a.x === b.x &&
   a.y === b.y &&

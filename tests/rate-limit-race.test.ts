@@ -232,6 +232,7 @@ const stickerRow = (
     userId: null,
   }
 ): NewSticker => ({
+  anchor: null,
   bytes: 3,
   createdAt: NOW,
   editTokenHash: null,
@@ -479,6 +480,7 @@ describe("moves and tear-offs: the move limit is checked in the batch", () => {
         });
         expect(rateLimitMessage("move", lastHour, lastDay)).toBeNull();
         return moveStickerWithinLimit(db.d1, STICKER, {
+          anchor: null,
           limits: moveLimits(),
           log: moveLog("move", IP),
           to: { rotation: 0, scale: 1, x: n, y: 0 },
@@ -504,6 +506,7 @@ describe("moves and tear-offs: the move limit is checked in the batch", () => {
     const results = await Promise.all(
       Array.from({ length: 70 }, (_, n) =>
         moveStickerWithinLimit(db.d1, STICKER, {
+          anchor: null,
           limits: [],
           log: moveLog("move", null),
           to: { rotation: 0, scale: 1, x: n, y: 0 },
@@ -519,6 +522,7 @@ describe("moves and tear-offs: the move limit is checked in the batch", () => {
     addSticker();
     for (let n = 0; n < RATE_LIMITS.move.perHour; n += 1) {
       await moveStickerWithinLimit(db.d1, STICKER, {
+        anchor: null,
         limits: moveLimits(),
         log: moveLog("move", IP),
         to: { rotation: 0, scale: 1, x: n, y: 0 },

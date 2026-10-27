@@ -70,12 +70,18 @@ export interface DrawerCloseDetail {
 }
 
 export const CANVAS_READY = "canvas:ready";
+/**
+ * The world was laid out again after `canvas:ready` (web fonts arrived, or
+ * it became visible again): cards may have moved a little.
+ */
+export const CANVAS_LAYOUT = "canvas:layout";
 export const DRAWER_OPEN = "drawer:open";
 export const DRAWER_RENDERED = "drawer:rendered";
 export const DRAWER_CLOSE = "drawer:close";
 
 declare global {
   interface WindowEventMap {
+    "canvas:layout": CustomEvent<CanvasApi>;
     "canvas:ready": CustomEvent<CanvasApi>;
     /** The drawer closed. */
     "drawer:close": CustomEvent<DrawerCloseDetail>;

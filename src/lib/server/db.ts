@@ -5,7 +5,7 @@
 import { isOwnerId } from "./auth";
 import type { Decision } from "./moderation";
 import type { LimitWindow } from "./rate-limit";
-import type { Placement } from "./sticker-limits";
+import type { Placement, StickerAnchor } from "./sticker-limits";
 import type {
   AdminComment,
   AdminCommentsResponse,
@@ -400,6 +400,9 @@ export const insertComment = async (
 };
 
 interface StickerRow {
+  anchor: string | null;
+  anchor_x: number | null;
+  anchor_y: number | null;
   height: number;
   id: string;
   name: string | null;
@@ -410,17 +413,34 @@ interface StickerRow {
   y: number;
 }
 
+/** The columns of StickerRow, for the public and review reads. */
+const STICKER_COLUMNS =
+  "id, x, y, rotation, scale, width, height, name, anchor, anchor_x, anchor_y";
+
 export const stickerImagePath = (id: string) => `/api/stickers/${id}/image`;
 
+const anchorOf = (row: StickerRow): StickerAnchor | null =>
+  row.anchor === null || row.anchor_x === null || row.anchor_y === null
+    ? null
+    : { key: row.anchor, x: row.anchor_x, y: row.anchor_y };
+
 const toPublicSticker = (row: StickerRow): PublicSticker => ({
-  ...row,
+  anchor: anchorOf(row),
+  height: row.height,
+  id: row.id,
+  name: row.name,
+  rotation: row.rotation,
+  scale: row.scale,
   src: stickerImagePath(row.id),
+  width: row.width,
+  x: row.x,
+  y: row.y,
 });
 
 export const listApprovedStickers = async (db: Db) => {
   const { results } = await db
     .prepare(
-      `SELECT id, x, y, rotation, scale, width, height, name FROM stickers
+      `SELECT ${STICKER_COLUMNS} FROM stickers
        WHERE status = 'approved' ORDER BY created_at ASC LIMIT ?`
     )
     .bind(MAX_STICKERS)
@@ -428,7 +448,11 @@ export const listApprovedStickers = async (db: Db) => {
   return results.map(toPublicSticker);
 };
 
-export type NewSticker = StickerRow & {
+export type NewSticker = Omit<
+  StickerRow,
+  "anchor" | "anchor_x" | "anchor_y"
+> & {
+  anchor: StickerAnchor | null;
   /** Salted hash of the edit token (see edit-token.ts); null when not kept. */
   editTokenHash: string | null;
   r2Key: string;
@@ -457,8 +481,9 @@ export const insertSticker = async (
     db
       .prepare(
         `INSERT INTO stickers (id, r2_key, mime, width, height, bytes, x, y, rotation, scale,
-           name, status, created_at, decided_at, ip_hash, edit_token_hash, user_id)
-         SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+           anchor, anchor_x, anchor_y, name, status, created_at, decided_at, ip_hash,
+           edit_token_hash, user_id)
+         SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
          WHERE ${limit.sql}`
       )
       .bind(
@@ -472,6 +497,9 @@ export const insertSticker = async (
         row.y,
         row.rotation,
         row.scale,
+        row.anchor?.key ?? null,
+        row.anchor?.x ?? null,
+        row.anchor?.y ?? null,
         row.name,
         row.status,
         row.createdAt,
@@ -533,7 +561,7 @@ export const discardSticker = async (db: Db, id: string) => {
 export const listOwnStickers = async (db: Db, userId: string) => {
   const { results } = await db
     .prepare(
-      `SELECT id, x, y, rotation, scale, width, height, name, status FROM stickers
+      `SELECT ${STICKER_COLUMNS}, status FROM stickers
        WHERE user_id = ? AND status != 'rejected'
        ORDER BY created_at DESC LIMIT ?`
     )
@@ -639,6 +667,8 @@ const limitedStickerWrite = async (
 };
 
 export interface LimitedMove {
+  /** What it is stuck to at the new place (null: none). */
+  anchor: StickerAnchor | null;
   limits: readonly LimitKey[];
   log: LogEntry;
   to: Placement;
@@ -654,14 +684,25 @@ export interface LimitedMove {
 export const moveStickerWithinLimit = (
   db: Db,
   id: string,
-  { to, log, limits }: LimitedMove
+  { to, anchor, log, limits }: LimitedMove
 ) =>
   limitedStickerWrite(
     db,
     {
-      sql: `UPDATE stickers SET x = ?, y = ?, rotation = ?, scale = ?, updated_at = ?
+      sql: `UPDATE stickers SET x = ?, y = ?, rotation = ?, scale = ?,
+           anchor = ?, anchor_x = ?, anchor_y = ?, updated_at = ?
          WHERE id = ? AND status != 'rejected'`,
-      values: [to.x, to.y, to.rotation, to.scale, log.createdAt, id],
+      values: [
+        to.x,
+        to.y,
+        to.rotation,
+        to.scale,
+        anchor?.key ?? null,
+        anchor?.x ?? null,
+        anchor?.y ?? null,
+        log.createdAt,
+        id,
+      ],
     },
     log,
     limits
@@ -671,9 +712,10 @@ export const moveStickerWithinLimit = (
 export const moveSticker = async (
   db: Db,
   id: string,
-  to: Placement,
-  log: LogEntry
-) => (await moveStickerWithinLimit(db, id, { limits: [], log, to })).changed;
+  { to, anchor, log }: Omit<LimitedMove, "limits">
+) =>
+  (await moveStickerWithinLimit(db, id, { anchor, limits: [], log, to }))
+    .changed;
 
 /**
  * Tears off a sticker (DELETE /api/stickers/:id): status 'rejected' and
@@ -686,7 +728,7 @@ export const moveSticker = async (
 export const tearOffStickerWithinLimit = (
   db: Db,
   id: string,
-  { log, limits }: Omit<LimitedMove, "to">
+  { log, limits }: Pick<LimitedMove, "log" | "limits">
 ) =>
   limitedStickerWrite(
     db,
@@ -805,6 +847,7 @@ export type AdminStickerRow = StickerRow & {
 
 /** A sticker for in-place review; only public columns plus the review ones. */
 export const toAdminSticker = (row: AdminStickerRow): AdminSticker => ({
+  anchor: anchorOf(row),
   createdAt: row.created_at,
   fingerprint: (row.fingerprint ?? "").slice(0, FINGERPRINT_LENGTH),
   height: row.height,
@@ -823,7 +866,7 @@ export const toAdminSticker = (row: AdminStickerRow): AdminSticker => ({
 export const listPendingStickers = async (db: Db) => {
   const { results } = await db
     .prepare(
-      `SELECT id, x, y, rotation, scale, width, height, name, status, created_at,
+      `SELECT ${STICKER_COLUMNS}, status, created_at,
          ${fingerprintColumn("ip_hash")}
        FROM stickers WHERE status = 'pending'
        ORDER BY created_at ASC, id ASC LIMIT ?`

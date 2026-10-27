@@ -224,6 +224,7 @@ describe("listPendingStickers", () => {
     const stickers = await listPendingStickers(db.d1);
     expect(stickers.map((s) => s.id)).toEqual([earlier, later]);
     expect(stickers.at(0)).toEqual({
+      anchor: null,
       createdAt: 10,
       fingerprint: "abcdef01",
       height: 80,

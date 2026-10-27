@@ -31,6 +31,9 @@ describe("migrations", () => {
     expect(() => db.query(logInsert).run("teleport")).toThrow();
     expect(columns(db, "comments")).toContain("user_id");
     expect(columns(db, "stickers")).toContain("user_id");
+    expect(columns(db, "stickers")).toEqual(
+      expect.arrayContaining(["anchor", "anchor_x", "anchor_y"])
+    );
     expect(columns(db, "users")).toEqual([
       "id",
       "github_id",

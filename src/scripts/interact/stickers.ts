@@ -16,14 +16,23 @@
  * The same response lists the built-in stickers the owner threw away
  * (`hiddenBuiltins`); builtin-hidden.ts hides them.
  *
+ * Each sticker is shown moved along with what it is stuck to (the note
+ * card next to it, see sticker-anchor.ts), so a new note that reshuffles the
+ * piles does not leave it next to another note.
+ *
  * The layer element (StickerLayer.astro) lives inside the persisted canvas;
  * it is attached to `CanvasApi.worldEl` (src/scripts/canvas/api.ts) so its
  * children use world px. Set up once per layer element; a new canvas (after
  * visiting a page without one) gets a new layer and is set up again.
  */
 import { stickerDisplayWidth } from "@/lib/server/image-header";
-import type { AdminSticker, StickersResponse } from "@/lib/server/types";
+import type {
+  AdminSticker,
+  StickerAnchor,
+  StickersResponse,
+} from "@/lib/server/types";
 import {
+  CANVAS_LAYOUT,
   CANVAS_READY,
   type CanvasApi,
   whenCanvasReady,
@@ -31,6 +40,12 @@ import {
 import { getAuth, subscribe as subscribeAuth } from "./auth";
 import { setServerHidden } from "./builtin-hidden";
 import { STICKERS_CHANGED, STICKERS_RENDERED } from "./events";
+import {
+  type AnchorBoxes,
+  anchorBoxes,
+  anchoredPoint,
+  nearestAnchor,
+} from "./sticker-anchor";
 import { offsetOf, readOffsets, visitorStickerKey } from "./sticker-offsets";
 import { withoutIds } from "./sticker-review";
 import {
@@ -48,6 +63,8 @@ import {
 import { esc, requestJson } from "./util";
 
 export interface Shown {
+  /** What it is stuck to (x/y are from when it was placed there). */
+  anchor?: StickerAnchor | null;
   height: number;
   id: string;
   name: string | null;
@@ -86,6 +103,7 @@ export const isTidy = () => tidy;
 export const isAccountOwned = (id: string) => accountOwned.has(id);
 
 interface Context {
+  boxes: AnchorBoxes;
   offsets: ReturnType<typeof readOffsets>;
   owned: Set<string>;
 }
@@ -132,6 +150,7 @@ const stickerHtml = (item: Shown, context: Context) => {
   const editable =
     own || tidy || item.review === true || item.id === reviewFocus;
   const { dx, dy } = offsetOf(context.offsets, visitorStickerKey(item.id));
+  const { x, y } = anchoredPoint(context.boxes, item);
   const classes = [
     "vs",
     item.pending ? "pending" : "",
@@ -141,7 +160,7 @@ const stickerHtml = (item: Shown, context: Context) => {
   ]
     .filter(Boolean)
     .join(" ");
-  const attributes = `class="${classes}" data-vs-id="${esc(item.id)}" data-x="${item.x}" data-y="${item.y}" data-rotation="${item.rotation}" data-scale="${item.scale}" data-width="${item.width}" data-height="${item.height}" title="${esc(titleFor(item, own, editable))}" style="left: ${item.x}px; top: ${item.y}px; --w: ${width}px; --r: ${item.rotation}deg; --dx: ${dx}px; --dy: ${dy}px"`;
+  const attributes = `class="${classes}" data-vs-id="${esc(item.id)}" data-x="${x}" data-y="${y}" data-rotation="${item.rotation}" data-scale="${item.scale}" data-width="${item.width}" data-height="${item.height}" title="${esc(titleFor(item, own, editable))}" style="left: ${x}px; top: ${y}px; --w: ${width}px; --r: ${item.rotation}deg; --dx: ${dx}px; --dy: ${dy}px"`;
   const inner = `<img src="${esc(item.src)}" alt="" width="${width}" height="${height}" loading="lazy" decoding="async" draggable="false" />
     ${tagHtml(item)}`;
   if (!editable) {
@@ -162,6 +181,7 @@ const render = (layer: HTMLElement) => {
     [...reviewPending, ...approved].map((item) => item.id)
   );
   const context: Context = {
+    boxes: layer.parentElement ? anchorBoxes(layer.parentElement) : new Map(),
     offsets: readOffsets(),
     owned: new Set([
       ...readOwnedStickers().map((item) => item.id),
@@ -175,13 +195,23 @@ const render = (layer: HTMLElement) => {
   window.dispatchEvent(new CustomEvent(STICKERS_RENDERED));
 };
 
+const readyLayer = () =>
+  document.querySelector<HTMLElement>("[data-sticker-layer][data-ready]");
+
 const rerender = () => {
-  const layer = document.querySelector<HTMLElement>(
-    "[data-sticker-layer][data-ready]"
-  );
+  const layer = readyLayer();
   if (layer) {
     render(layer);
   }
+};
+
+/**
+ * What a sticker with its centre at this world point (in the layout shown
+ * now) is stuck to; sent along when it is placed or moved.
+ */
+export const anchorAt = (point: { x: number; y: number }) => {
+  const world = readyLayer()?.parentElement;
+  return world ? nearestAnchor(anchorBoxes(world), point) : null;
 };
 
 /** The owner switched 整理贴纸 on or off. */
@@ -202,7 +232,8 @@ export const updateShown = (id: string, placement: EditPlacement) => {
     reviewPending.find((entry) => entry.id === id) ??
     accountPending.find((entry) => entry.id === id);
   if (item) {
-    Object.assign(item, placement);
+    // The placement is in the layout shown now: stuck to what is there now.
+    Object.assign(item, placement, { anchor: anchorAt(placement) });
   }
 };
 
@@ -221,6 +252,7 @@ export const findShown = (id: string) =>
 /** Access session present: show these pending stickers; null hides them. */
 export const setReviewPending = (items: AdminSticker[] | null) => {
   reviewPending = (items ?? []).map((item) => ({
+    anchor: item.anchor,
     height: item.height,
     id: item.id,
     name: item.name,
@@ -366,5 +398,6 @@ subscribeAuth((state) => {
 });
 
 window.addEventListener(STICKERS_CHANGED, rerender);
+window.addEventListener(CANVAS_LAYOUT, rerender);
 window.addEventListener(CANVAS_READY, (event) => attach(event.detail));
 whenCanvasReady().then(attach);

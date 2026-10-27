@@ -40,6 +40,7 @@ import {
   wheelScale,
 } from "./sticker-transform";
 import { StickerWorkshop, type WorkshopResult } from "./sticker-workshop";
+import { anchorAt } from "./stickers";
 import {
   mountTurnstile,
   type TurnstileHandle,
@@ -323,6 +324,13 @@ class StickerSession {
     data.set("y", String(this.placement.y));
     data.set("rotation", String(this.placement.rotation));
     data.set("scale", String(this.placement.scale));
+    // Stuck to whatever is next to it (sticker-anchor.ts).
+    const anchor = anchorAt(this.placement);
+    if (anchor) {
+      data.set("anchor", anchor.key);
+      data.set("anchorX", String(anchor.x));
+      data.set("anchorY", String(anchor.y));
+    }
     if (!this.member) {
       data.set("name", name);
       data.set("turnstile", token);
@@ -365,6 +373,7 @@ class StickerSession {
     }
     const { x, y, rotation, scale, width, height } = this.placement;
     addPendingSticker({
+      anchor: anchorAt({ x, y }),
       createdAt: Date.now(),
       dataUrl: await readAsDataUrl(this.image),
       height,

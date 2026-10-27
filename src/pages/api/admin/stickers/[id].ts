@@ -1,5 +1,5 @@
 /**
- * PATCH /api/admin/stickers/:id {x, y, rotation, scale} — the owner moves any
+ * PATCH /api/admin/stickers/:id {x, y, rotation, scale, anchor?} — the owner moves any
  * visitor sticker (整理贴纸 on the canvas). Behind Cloudflare Access (and the
  * localhost-only dev bypass). Logged as 'move' with the admin as actor.
  */
@@ -58,13 +58,17 @@ export const PATCH: APIRoute = async ({ params, request }) => {
   if (!plan.changed) {
     return json(body);
   }
-  const moved = await moveSticker(db, id.data, plan.to, {
-    actor: `admin:${admin.email}`,
-    createdAt: Date.now(),
-    decision: "move",
-    itemId: id.data,
-    itemType: "sticker",
-    note: moveNote(plan.from, plan.to, "博主整理贴纸"),
+  const moved = await moveSticker(db, id.data, {
+    anchor: parsed.data.anchor,
+    log: {
+      actor: `admin:${admin.email}`,
+      createdAt: Date.now(),
+      decision: "move",
+      itemId: id.data,
+      itemType: "sticker",
+      note: moveNote(plan.from, plan.to, "博主整理贴纸"),
+    },
+    to: plan.to,
   });
   if (!moved) {
     return fail(STATUS.conflict, "这张贴纸已经被拒绝，没法再挪了。");
