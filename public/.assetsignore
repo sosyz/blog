@@ -1,3 +1,6 @@
 # Kept in the repo but not deployed: nothing references these fonts.
 fonts/lxgw-wenkai/
 fonts/atkinson-*.woff
+
+# macOS metadata must never be served.
+.DS_Store
