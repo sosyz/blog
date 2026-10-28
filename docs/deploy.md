@@ -147,7 +147,7 @@ Worker 不能直接挂 `blog.sonui.cn`：这个主机名要解析到 EdgeOne，�
 
 **限流规则**：留言、贴纸和挪贴纸的频率限制在 Worker 里检查（写入 D1 时一起判断，并发请求也绕不过）。经 EdgeOne 的请求在 Cloudflare 看来都来自 EdgeOne 的回源节点，所以**不要**在 Cloudflare WAF 里按 IP 限流（会把大量访客算成同一个 IP 一起挡掉）；要加的话加在 EdgeOne 上，按访客 IP 计数。
 
-**回滚**：在 DNS 里把 `blog` 改回 CNAME `blog-6mi.pages.dev`（开代理），并把 `blog.sonui.cn` 加回 Pages 项目 `blog`。旧站源码在 `master` 分支。只回滚代码版本时用 `bunx wrangler rollback`。
+**回滚**：在 DNS 里把 `blog` 改回 CNAME `blog-6mi.pages.dev`（开代理），并把 `blog.sonui.cn` 加回 Pages 项目 `blog`。旧站源码在 `1.0` 分支。只回滚代码版本时用 `bunx wrangler rollback`。
 
 ## 8. AI 爬虫设置（GEO）
 

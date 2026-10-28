@@ -1,6 +1,6 @@
 # 旧博客迁移记录
 
-2026-09-29 从旧 Hexo 博客（`master` 分支的 `source/_posts`）迁移了 24 篇文章到 `src/posts`。草稿 `implementing-ioc-with-the-wire-tool.md` 没有迁移。
+2026-09-29 从旧 Hexo 博客（`1.0` 分支的 `source/_posts`）迁移了 24 篇文章到 `src/posts`。草稿 `implementing-ioc-with-the-wire-tool.md` 没有迁移。
 
 迁移时做过的改动：
 
